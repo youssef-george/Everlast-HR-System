@@ -14,13 +14,13 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             customButtons: {
                 prev: {
-                    text: '<i class="fas fa-chevron-left"></i>',
+                    text: '←',
                     click: function() {
                         calendar.prev();
                     }
                 },
                 next: {
-                    text: '<i class="fas fa-chevron-right"></i>',
+                    text: '→',
                     click: function() {
                         calendar.next();
                     }
