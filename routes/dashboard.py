@@ -105,6 +105,9 @@ def admin():
     recent_leaves = LeaveRequest.query.order_by(LeaveRequest.updated_at.desc()).limit(5).all()
     recent_permissions = PermissionRequest.query.order_by(PermissionRequest.updated_at.desc()).limit(5).all()
     
+    # Get all users for the admin view (including active and inactive)
+    all_users = User.query.order_by(User.created_at.desc()).limit(10).all()
+    
     # Get department data for analytics
     departments = Department.query.all()
     department_data = []
@@ -135,7 +138,8 @@ def admin():
                           recent_leaves=recent_leaves,
                           recent_permissions=recent_permissions,
                           departments=departments,
-                          department_data=department_data)
+                          department_data=department_data,
+                          all_users=all_users)
 
 @dashboard_bp.route('/director')
 @login_required
