@@ -399,7 +399,7 @@ body {
 }
 
 /* Calendar */
-#calendar {
+#calendar, #mini-calendar {
     max-width: 100%;
     margin: 0 auto;
 }
@@ -407,6 +407,29 @@ body {
 .fc-toolbar-title {
     font-size: 1.25rem !important;
     font-weight: 600;
+}
+
+/* Mini Calendar Specific */
+#mini-calendar .fc-toolbar-title {
+    font-size: 1rem !important;
+}
+
+#mini-calendar .fc-daygrid-day {
+    min-height: 35px;
+}
+
+#mini-calendar .fc-col-header-cell {
+    padding: 4px;
+}
+
+#mini-calendar .fc-daygrid-day-number {
+    font-size: 0.8rem;
+    padding: 2px 4px;
+}
+
+#mini-calendar .fc-daygrid-event {
+    margin-top: 1px;
+    margin-bottom: 1px;
 }
 
 .fc .fc-button-primary {
@@ -427,6 +450,23 @@ body {
 .fc-event {
     cursor: pointer;
     border-radius: 0.25rem;
+}
+
+/* Responsive Calendar */
+@media (max-width: 768px) {
+    .fc .fc-toolbar {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .fc .fc-toolbar-title {
+        font-size: 1rem !important;
+    }
+    
+    .fc .fc-button {
+        padding: 0.2rem 0.5rem;
+        font-size: 0.8rem;
+    }
 }
 
 /* Notifications */
