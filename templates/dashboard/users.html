@@ -86,6 +86,9 @@
                                     <td>
                                         <div class="d-flex gap-1">
                                             {% if current_user.id != user.id %}
+                                            <a href="{{ url_for('dashboard.edit_user', user_id=user.id) }}" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-edit me-1"></i>Edit
+                                            </a>
                                             <form action="{{ url_for('dashboard.toggle_user_status', user_id=user.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to {% if user.status == 'active' %}deactivate{% else %}activate{% endif %} this user?');">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <button type="submit" class="btn btn-sm {% if user.status == 'active' %}btn-danger{% else %}btn-success{% endif %}">
@@ -96,9 +99,6 @@
                                                     {% endif %}
                                                 </button>
                                             </form>
-                                            <a href="{{ url_for('dashboard.edit_user', user_id=user.id) }}" class="btn btn-sm btn-primary">
-                                                <i class="fas fa-edit me-1"></i>Edit
-                                            </a>
                                             <form action="{{ url_for('dashboard.delete_member', user_id=user.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete {{ user.first_name }} {{ user.last_name }}? This action cannot be undone.');">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <button type="submit" class="btn btn-sm btn-danger">
