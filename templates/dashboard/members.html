@@ -1,0 +1,142 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="content-header">
+    <h1 class="page-title">Company Members</h1>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="card-title">All Active Members</h3>
+                <div class="card-tools d-flex">
+                    <div class="input-group input-group-sm me-2" style="width: 200px;">
+                        <select id="departmentFilter" class="form-select">
+                            <option value="all">All Departments</option>
+                            {% for dept in departments %}
+                            <option value="{{ dept.id }}">{{ dept.department_name }}</option>
+                            {% endfor %}
+                            <option value="none">No Department</option>
+                        </select>
+                    </div>
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" id="memberSearch" placeholder="Search members...">
+                        <div class="input-group-append">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="membersTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Department</th>
+                                <th>Contact</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if active_users %}
+                                {% for user in active_users %}
+                                <tr data-department="{{ user.department_id if user.department_id else 'none' }}">
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar me-3">
+                                                {% if user.profile_picture %}
+                                                <img src="{{ user.profile_picture }}" alt="Profile" class="avatar-img rounded-circle" style="width: 40px; height: 40px;">
+                                                {% else %}
+                                                <div class="avatar-initial rounded-circle bg-label-primary d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-size: 14px;">
+                                                    {{ user.first_name[0] }}{{ user.last_name[0] }}
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold">{{ user.first_name }} {{ user.last_name }}</div>
+                                                {% if user.managed_department %}
+                                                <small class="text-muted">Manager of {{ user.managed_department[0].department_name }}</small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ user.email }}</td>
+                                    <td>
+                                        {% if user.role == 'admin' %}
+                                        <span class="badge bg-primary">Admin</span>
+                                        {% elif user.role == 'director' %}
+                                        <span class="badge bg-info">Director</span>
+                                        {% elif user.role == 'manager' %}
+                                        <span class="badge bg-success">Manager</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Employee</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if user.department %}
+                                        <span class="badge bg-light text-dark">{{ user.department.department_name }}</span>
+                                        {% else %}
+                                        <small class="text-muted">No Department</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="mailto:{{ user.email }}" class="btn btn-sm btn-icon btn-light me-1" title="Email"><i class="fas fa-envelope"></i></a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center">No active members found.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Simple search functionality
+        document.getElementById('memberSearch').addEventListener('keyup', function() {
+            filterMembers();
+        });
+        
+        // Department filter
+        document.getElementById('departmentFilter').addEventListener('change', function() {
+            filterMembers();
+        });
+        
+        function filterMembers() {
+            const searchText = document.getElementById('memberSearch').value.toLowerCase();
+            const departmentFilter = document.getElementById('departmentFilter').value;
+            const rows = document.querySelectorAll('#membersTable tbody tr');
+            
+            rows.forEach(row => {
+                const rowText = row.textContent.toLowerCase();
+                const rowDepartment = row.getAttribute('data-department');
+                
+                // Check if row matches both search text and department filter
+                const matchesSearch = rowText.includes(searchText);
+                const matchesDepartment = 
+                    departmentFilter === 'all' || 
+                    (departmentFilter === 'none' && rowDepartment === 'none') || 
+                    rowDepartment === departmentFilter;
+                
+                if (matchesSearch && matchesDepartment) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -182,6 +182,21 @@ def toggle_user_status(user_id):
     
     return redirect(url_for('dashboard.users'))
 
+@dashboard_bp.route('/members')
+@login_required
+def members():
+    """Page showing all active members in the system"""
+    # Get all active users ordered by last name
+    active_users = User.query.filter_by(status='active').order_by(User.last_name, User.first_name).all()
+    
+    # Get all departments for filtering
+    departments = Department.query.all()
+    
+    return render_template('dashboard/members.html',
+                          title='Company Members',
+                          active_users=active_users,
+                          departments=departments)
+
 @dashboard_bp.route('/director')
 @login_required
 @role_required('director')

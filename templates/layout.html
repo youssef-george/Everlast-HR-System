@@ -74,6 +74,12 @@
                         <span class="nav-text">Permission Requests</span>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('dashboard.members') }}" class="nav-link {{ 'active' if request.path == '/dashboard/members' }}">
+                        <i class="fas fa-users nav-icon"></i>
+                        <span class="nav-text">Company Members</span>
+                    </a>
+                </li>
                 {% if current_user.role == 'admin' %}
                 <li class="nav-item">
                     <a href="{{ url_for('departments.index') }}" class="nav-link {{ 'active' if request.path.startswith('/departments') }}">
@@ -157,6 +163,7 @@
                             <li><h6 class="dropdown-header">{{ current_user.get_full_name() }}</h6></li>
                             <li><a class="dropdown-item" href="{{ url_for('profile.index') }}">My Profile</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('dashboard.members') }}">Company Members</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Logout</a></li>
                         </ul>
