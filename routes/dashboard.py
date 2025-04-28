@@ -216,23 +216,11 @@ def admin():
 @role_required('admin')
 def users():
     """Admin page showing all users and allowing user management"""
-    # Filter by department if admin has specific department assignments
-    if current_user.managed_department:
-        admin_dept_ids = [dept.id for dept in current_user.managed_department]
-        # Get only users belonging to departments this admin manages
-        all_users = User.query.filter(
-            (User.department_id.in_(admin_dept_ids)) | (User.department_id == None)
-        ).order_by(User.last_name).all()
-        
-        # Get only the departments this admin manages
-        departments = Department.query.filter(
-            Department.id.in_(admin_dept_ids)
-        ).all()
-    else:
-        # Get all users, both active and inactive
-        all_users = User.query.order_by(User.last_name).all()
-        # Get all departments for filtering
-        departments = Department.query.all()
+    # All admins now see all users, regardless of department assignments
+    # Get all users, both active and inactive
+    all_users = User.query.order_by(User.last_name).all()
+    # Get all departments for filtering
+    departments = Department.query.all()
     
     return render_template('dashboard/users.html',
                           title='User Management',
@@ -251,12 +239,8 @@ def toggle_user_status(user_id):
         flash('You cannot deactivate your own account.', 'danger')
         return redirect(url_for('dashboard.users'))
     
-    # Check if department-specific admin has permission
-    if current_user.managed_department:
-        admin_dept_ids = [dept.id for dept in current_user.managed_department]
-        if user.department_id and user.department_id not in admin_dept_ids:
-            flash('You do not have permission to change this user\'s status.', 'danger')
-            return redirect(url_for('dashboard.users'))
+    # Admins now have full access to all users regardless of department
+    # No need to check for department-specific permissions
     
     # Toggle status
     user.status = 'inactive' if user.status == 'active' else 'active'
@@ -281,12 +265,8 @@ def delete_member(user_id):
         flash('You cannot delete your own account.', 'danger')
         return redirect(url_for('dashboard.users'))
     
-    # Check if department-specific admin has permission
-    if current_user.managed_department:
-        admin_dept_ids = [dept.id for dept in current_user.managed_department]
-        if user.department_id and user.department_id not in admin_dept_ids:
-            flash('You do not have permission to delete this user.', 'danger')
-            return redirect(url_for('dashboard.users'))
+    # Admins now have full access to all users regardless of department
+    # No need to check for department-specific permissions
     
     # Store user info for the flash message
     user_name = f"{user.first_name} {user.last_name}"
@@ -309,19 +289,8 @@ def edit_user(user_id):
     """Edit user information"""
     user = User.query.get_or_404(user_id)
     
-    # Get departments for the dropdown based on admin permissions
-    if current_user.managed_department:
-        admin_dept_ids = [dept.id for dept in current_user.managed_department]
-        departments = Department.query.filter(
-            Department.id.in_(admin_dept_ids)
-        ).all()
-        
-        # Check if the user belongs to a department this admin can manage
-        if user.department_id and user.department_id not in admin_dept_ids:
-            flash('You do not have permission to edit this user.', 'danger')
-            return redirect(url_for('dashboard.users'))
-    else:
-        departments = Department.query.all()
+    # All admins now have access to all departments
+    departments = Department.query.all()
     
     # Create form and populate with user data
     form = UserEditForm(obj=user)
