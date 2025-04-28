@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask_login import login_required, current_user
-from models import User, Department, LeaveRequest, PermissionRequest
+from models import User, Department, LeaveRequest, PermissionRequest, Notification
 from helpers import get_dashboard_stats, role_required
+from forms import UserEditForm
 from app import db
 from datetime import datetime
 
@@ -182,7 +183,7 @@ def toggle_user_status(user_id):
     
     return redirect(url_for('dashboard.users'))
 
-@dashboard_bp.route('/members/delete/<int:user_id>', methods=['POST'])
+@dashboard_bp.route('/users/delete/<int:user_id>', methods=['POST'])
 @login_required
 @role_required('admin')
 def delete_member(user_id):
@@ -192,7 +193,7 @@ def delete_member(user_id):
     # Don't allow deleting yourself
     if user.id == current_user.id:
         flash('You cannot delete your own account.', 'danger')
-        return redirect(url_for('dashboard.members'))
+        return redirect(url_for('dashboard.users'))
     
     # Store user info for the flash message
     user_name = f"{user.first_name} {user.last_name}"
@@ -206,7 +207,53 @@ def delete_member(user_id):
         db.session.rollback()
         flash(f'Error deleting user: {str(e)}', 'danger')
     
-    return redirect(url_for('dashboard.members'))
+    return redirect(url_for('dashboard.users'))
+
+@dashboard_bp.route('/users/edit/<int:user_id>', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def edit_user(user_id):
+    """Edit user information"""
+    user = User.query.get_or_404(user_id)
+    
+    # Get all departments for the department dropdown
+    departments = Department.query.all()
+    
+    # Create form and populate with user data
+    form = UserEditForm(obj=user)
+    
+    # Update department choices
+    department_choices = [(0, 'No Department')] + [(d.id, d.department_name) for d in departments]
+    form.department_id.choices = department_choices
+    
+    if form.validate_on_submit():
+        # Update user data
+        user.first_name = form.first_name.data
+        user.last_name = form.last_name.data
+        user.email = form.email.data
+        user.role = form.role.data
+        user.status = form.status.data
+        
+        # Handle department selection
+        if form.department_id.data == 0:
+            user.department_id = None
+        else:
+            user.department_id = form.department_id.data
+            
+        user.updated_at = datetime.utcnow()
+        
+        try:
+            db.session.commit()
+            flash(f'User {user.first_name} {user.last_name} has been updated successfully.', 'success')
+            return redirect(url_for('dashboard.users'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating user: {str(e)}', 'danger')
+            
+    return render_template('dashboard/edit_user.html',
+                          title='Edit User',
+                          form=form,
+                          user=user)
 
 @dashboard_bp.route('/members')
 @login_required

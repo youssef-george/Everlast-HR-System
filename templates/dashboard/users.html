@@ -94,6 +94,9 @@
                                                     {% endif %}
                                                 </button>
                                             </form>
+                                            <a href="{{ url_for('dashboard.edit_user', user_id=user.id) }}" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-edit me-1"></i>Edit
+                                            </a>
                                             <form action="{{ url_for('dashboard.delete_member', user_id=user.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete {{ user.first_name }} {{ user.last_name }}? This action cannot be undone.');">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <button type="submit" class="btn btn-sm btn-danger">
