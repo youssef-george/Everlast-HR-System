@@ -1,0 +1,219 @@
+🔷 Prompt for Everlast ERP - Full Specification (Metronic UI Style + Enhanced Admin Role)
+🧾 Overview:
+This is Everlast ERP – a complete employee leave and permission management system designed for structured workflows, flexible user management, real-time tracking, and high-quality UX/UI based on Metronic design system.
+
+📌 Application Functionalities:
+🔐 User Management:
+User roles:
+
+Employee
+
+Direct Manager
+
+Account Manager (Admin role)
+
+Company Director
+
+User registration, authentication, and profile management
+
+Admin Role (Account Manager):
+
+Can view, approve, and reject any request across all departments
+
+Multiple users can be assigned this role
+
+Full system access including user, department, and request management
+
+Default Admin Account:
+
+Username: admin@everlast.com
+
+Password: Everlast@123
+
+🏢 Department Management:
+Create, edit, delete departments
+
+Assign direct managers to departments
+
+Group employees by departments
+
+📆 Leave Request System:
+Employees can submit leave requests (past, present, or future dates allowed)
+
+Editable/deletable only while status is pending
+
+Approval workflow:
+
+Direct Manager → Account Manager (Admin)
+
+Managers can approve or reject requests with optional comments
+
+Statuses:
+
+Pending / Approved / Rejected
+
+Employee leave counters (monthly/yearly)
+
+⏱️ Permission Request System:
+Short-term time-off requests
+
+Only for present or future dates (past date permission not allowed)
+
+Editable/deletable only while status is pending
+
+Approval workflow:
+
+Direct Manager → Company Director → Account Manager (Admin)
+
+Managers can approve/reject requests with optional comments
+
+Statuses:
+
+Pending / Approved / Rejected
+
+Employee permission counters (monthly)
+
+📅 Calendar System:
+Role-based dynamic calendar:
+
+Employee: Sees only their own leaves and permissions
+
+Direct Manager: Sees their team's leaves and permissions
+
+Account Manager (Admin) and Company Director: Sees all company-wide leaves and permissions
+
+Calendar displays:
+
+Number of leaves and permissions per employee for the month
+
+Interactive filtering by request type and status
+
+📊 Dashboard System:
+Employee Dashboard:
+
+Their submitted requests and statuses
+
+Manager Dashboard:
+
+Department employees requests
+
+Admin Dashboard (Account Manager):
+
+Full company-wide tracking
+
+Analytics and reporting
+
+Statistics widgets for leaves, permissions, pending approvals
+
+🔔 Notification System:
+Instant notifications for:
+
+New requests
+
+Approvals and rejections
+
+Manager comments
+
+🧱 Core Features Summary:
+Dynamic role-based access control
+
+Multi-level customizable approval flows
+
+Editable/deletable pending requests
+
+Counters for leaves and permissions
+
+Real-time notifications
+
+Integrated interactive calendar
+
+Department-based organization
+
+Secure authentication and authorization
+
+Fully responsive Metronic-style web app
+
+Admins have total system control
+
+🎨 Frontend UI/UX Design Requirements:
+🔧 Sidebar Layout:
+Left fixed sidebar (replace top bar)
+
+Smooth animations and collapsible for mobile
+
+Active page highlighting
+
+Menu Items:
+
+Dashboard
+
+Calendar
+
+Leave Requests
+
+Permission Requests
+
+Departments
+
+Profile Settings
+
+Notifications
+
+Logout
+
+🎨 Color Palette:
+Primary Color: #005d99
+
+Secondary Color: #17a74a
+
+Accent Color: #006e94
+
+📱 Responsive Design:
+Fully responsive desktop + mobile version
+
+Light/dark mode ready (optional)
+
+Clean typography, clear icons, good spacing, proper Arabic/English font compatibility
+
+🗂️ Database Structure Overview:
+🧑‍💼 Users Table
+user_id, first_name, last_name, email, role, department_id, password_hash, profile_picture, status
+
+🏢 Departments Table
+department_id, department_name, manager_id
+
+📝 Leave Requests Table
+leave_id, user_id, start_date, end_date, status, reason, comment, created_at, updated_at
+
+🕑 Permission Requests Table
+permission_id, user_id, start_time, end_time, status, reason, comment, created_at, updated_at
+
+📅 Calendar Events View (Virtual Layer)
+Fetch from Leave and Permission tables
+
+Filtered by role
+
+🔔 Notifications Table
+notification_id, user_id, message, notification_type, status, created_at
+
+🎯 UX/UI and Development Goals:
+Professional Metronic-style UI
+
+Real-time dynamic interactions
+
+Calendar-centric user flow for all request tracking
+
+Highly optimized mobile experience
+
+Easy to use for all user levels (Employee → Admin)
+
+💡 Final Notes:
+
+Application Name: Everlast ERP
+
+Backend: Flask + SQLAlchemy
+
+Frontend: Bootstrap + Metronic customized
+
+Goal: Build a powerful ERP app for managing employee time off with an excellent user experience and flexible administration.
+
