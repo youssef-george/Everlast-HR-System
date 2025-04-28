@@ -95,8 +95,21 @@ def get_user_managers(user):
         'directors': []
     }
     
+    # First check if there's a department manager assigned
     if user.department and user.department.manager_id:
         managers['direct_manager'] = User.query.get(user.department.manager_id)
+    
+    # If no department manager, look for any manager in the same department
+    if not managers['direct_manager'] and user.department_id:
+        dept_managers = User.query.filter_by(
+            department_id=user.department_id,
+            role='manager',
+            status='active'
+        ).all()
+        
+        if dept_managers:
+            # Just use the first manager found in the department
+            managers['direct_manager'] = dept_managers[0]
     
     # Get all admin users
     all_admins = User.query.filter_by(role='admin', status='active').all()
@@ -128,6 +141,16 @@ def get_employees_for_manager(manager_id):
     for dept in departments:
         dept_employees = User.query.filter_by(department_id=dept.id, status='active').all()
         employees.extend(dept_employees)
+        
+    # If no employees found via department management, check if this user is a manager by role
+    # and get employees from the same department
+    if not employees:
+        manager = User.query.get(manager_id)
+        if manager and manager.role == 'manager' and manager.department_id:
+            employees = User.query.filter_by(
+                department_id=manager.department_id, 
+                status='active'
+            ).filter(User.id != manager_id).all()
     
     return employees
 
