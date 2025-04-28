@@ -1,9 +1,12 @@
 /* Everlast ERP - Main Stylesheet */
 
 :root {
+    /* Primary colors as specified in requirements */
     --primary-color: #005d99;
     --secondary-color: #17a74a;
-    --accent-color: #006e94;
+    --tertiary-color: #006e94;
+    
+    /* System colors */
     --light-bg: #f5f8fa;
     --dark-bg: #1e1e2d;
     --text-color: #181c32;
@@ -12,6 +15,8 @@
     --card-bg: #ffffff;
     --sidebar-width: 265px;
     --sidebar-collapsed-width: 70px;
+    
+    /* Status colors */
     --success-color: #17a74a;
     --danger-color: #f1416c;
     --warning-color: #ffc700;

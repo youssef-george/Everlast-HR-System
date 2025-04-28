@@ -107,6 +107,7 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch('/notifications/unread_count')
             .then(response => response.json())
             .then(data => {
+                // Update regular sidebar badge
                 const notificationBadge = document.getElementById('notification-badge');
                 if (notificationBadge) {
                     if (data.count > 0) {
@@ -116,6 +117,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         notificationBadge.style.display = 'none';
                     }
                 }
+                
+                // Also update mobile notification badge
+                const mobileNotificationBadge = document.getElementById('mobile-notification-badge');
+                if (mobileNotificationBadge) {
+                    if (data.count > 0) {
+                        mobileNotificationBadge.textContent = data.count;
+                        mobileNotificationBadge.style.display = 'flex';
+                    } else {
+                        mobileNotificationBadge.style.display = 'none';
+                    }
+                }
             })
             .catch(error => console.error('Error loading notification count:', error));
 
@@ -123,49 +135,55 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch('/notifications/get_recent')
             .then(response => response.json())
             .then(data => {
+                // Update both desktop and mobile notification lists
                 const notificationsList = document.getElementById('notifications-list');
-                if (notificationsList) {
-                    notificationsList.innerHTML = '';
-                    
-                    if (data.length === 0) {
-                        notificationsList.innerHTML = '<div class="notification-item"><div class="notification-content"><div class="notification-text">No new notifications</div></div></div>';
-                    } else {
-                        data.forEach(notification => {
-                            let iconClass = 'fas fa-bell';
-                            let iconColor = 'text-primary';
-                            
-                            if (notification.type === 'approval') {
-                                iconClass = 'fas fa-check-circle';
-                                iconColor = 'text-success';
-                            } else if (notification.type === 'rejection') {
-                                iconClass = 'fas fa-times-circle';
-                                iconColor = 'text-danger';
-                            } else if (notification.type === 'comment') {
-                                iconClass = 'fas fa-comment';
-                                iconColor = 'text-info';
-                            }
-                            
-                            let url = `/notifications`;
-                            if (notification.reference_type && notification.reference_id) {
-                                url = `/${notification.reference_type}/view/${notification.reference_id}`;
-                            }
-                            
-                            const notificationItem = `
-                                <a href="${url}" class="notification-item">
-                                    <div class="notification-icon">
-                                        <i class="${iconClass} ${iconColor}"></i>
-                                    </div>
-                                    <div class="notification-content">
-                                        <div class="notification-text">${notification.message}</div>
-                                        <div class="notification-time">${notification.created_at}</div>
-                                    </div>
-                                </a>
-                            `;
-                            
-                            notificationsList.innerHTML += notificationItem;
-                        });
+                const mobileNotificationsList = document.getElementById('mobile-notifications-list');
+                const notificationLists = [notificationsList, mobileNotificationsList];
+                
+                notificationLists.forEach(list => {
+                    if (list) {
+                        list.innerHTML = '';
+                        
+                        if (data.length === 0) {
+                            list.innerHTML = '<div class="notification-item"><div class="notification-content"><div class="notification-text">No new notifications</div></div></div>';
+                        } else {
+                            data.forEach(notification => {
+                                let iconClass = 'fas fa-bell';
+                                let iconColor = 'text-primary';
+                                
+                                if (notification.type === 'approval') {
+                                    iconClass = 'fas fa-check-circle';
+                                    iconColor = 'text-success';
+                                } else if (notification.type === 'rejection') {
+                                    iconClass = 'fas fa-times-circle';
+                                    iconColor = 'text-danger';
+                                } else if (notification.type === 'comment') {
+                                    iconClass = 'fas fa-comment';
+                                    iconColor = 'text-info';
+                                }
+                                
+                                let url = `/notifications`;
+                                if (notification.reference_type && notification.reference_id) {
+                                    url = `/${notification.reference_type}/view/${notification.reference_id}`;
+                                }
+                                
+                                const notificationItem = `
+                                    <a href="${url}" class="notification-item">
+                                        <div class="notification-icon">
+                                            <i class="${iconClass} ${iconColor}"></i>
+                                        </div>
+                                        <div class="notification-content">
+                                            <div class="notification-text">${notification.message}</div>
+                                            <div class="notification-time">${notification.created_at}</div>
+                                        </div>
+                                    </a>
+                                `;
+                                
+                                list.innerHTML += notificationItem;
+                            });
+                        }
                     }
-                }
+                });
             })
             .catch(error => console.error('Error loading recent notifications:', error));
     }
@@ -176,28 +194,33 @@ document.addEventListener('DOMContentLoaded', function() {
     // Refresh notifications every 30 seconds
     setInterval(loadNotifications, 30000);
 
-    // Mark all notifications as read
+    // Mark all notifications as read (desktop and mobile)
     const markAllAsRead = document.getElementById('mark-all-as-read');
-    if (markAllAsRead) {
-        markAllAsRead.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            fetch('/notifications/mark_all_as_read', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    loadNotifications();
-                }
-            })
-            .catch(error => console.error('Error marking notifications as read:', error));
-        });
-    }
+    const markAllAsReadMobile = document.getElementById('mark-all-as-read-mobile');
+    const markAllAsReadButtons = [markAllAsRead, markAllAsReadMobile];
+    
+    markAllAsReadButtons.forEach(button => {
+        if (button) {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                fetch('/notifications/mark_all_as_read', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        loadNotifications();
+                    }
+                })
+                .catch(error => console.error('Error marking notifications as read:', error));
+            });
+        }
+    });
 
     // Page loader
     const pageLoader = document.getElementById('page-loader');
