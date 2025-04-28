@@ -369,24 +369,11 @@ def edit_user(user_id):
 @login_required
 def members():
     """Page showing all active members in the system"""
-    # Filter by department if user is an admin with specific department assignments
-    if current_user.role == 'admin' and current_user.managed_department:
-        admin_dept_ids = [dept.id for dept in current_user.managed_department]
-        # Get only active users belonging to departments this admin manages
-        active_users = User.query.filter(
-            User.status == 'active',
-            User.department_id.in_(admin_dept_ids)
-        ).order_by(User.last_name, User.first_name).all()
-        
-        # Get only the departments this admin manages
-        departments = Department.query.filter(
-            Department.id.in_(admin_dept_ids)
-        ).all()
-    else:
-        # Get all active users ordered by last name
-        active_users = User.query.filter_by(status='active').order_by(User.last_name, User.first_name).all()
-        # Get all departments for filtering
-        departments = Department.query.all()
+    # All users can see all active members, regardless of role
+    # Get all active users ordered by last name
+    active_users = User.query.filter_by(status='active').order_by(User.last_name, User.first_name).all()
+    # Get all departments for filtering
+    departments = Department.query.all()
     
     return render_template('dashboard/members.html',
                           title='Company Members',

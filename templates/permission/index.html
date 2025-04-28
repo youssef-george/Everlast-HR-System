@@ -2,8 +2,20 @@
 
 {% block content %}
 <div class="content-header">
-    <h1 class="page-title">Permission Requests</h1>
+    <h1 class="page-title">{{ title }}</h1>
     <div class="content-header-actions">
+        {% if current_user.role == 'manager' %}
+            <!-- Manager-specific view control -->
+            <div class="btn-group me-3">
+                <a href="{{ url_for('permission.index', view='my') }}" class="btn btn-light {{ 'active' if view_type == 'my' else '' }}">
+                    <i class="fas fa-user me-1"></i> My Requests
+                </a>
+                <a href="{{ url_for('permission.index', view='team') }}" class="btn btn-light {{ 'active' if view_type == 'team' or not view_type else '' }}">
+                    <i class="fas fa-users me-1"></i> Team Requests
+                </a>
+            </div>
+        {% endif %}
+        
         <a href="{{ url_for('permission.create') }}" class="btn btn-primary">
             <i class="fas fa-plus-circle me-1"></i> New Permission Request
         </a>
