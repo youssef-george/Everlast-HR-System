@@ -28,6 +28,10 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get("SESSION_SECRET", "everlast_erp_default_secret")
 app.config['WTF_CSRF_ENABLED'] = True
 app.config['WTF_CSRF_SECRET_KEY'] = os.environ.get("CSRF_SECRET", "everlast_erp_csrf_secret")
+app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = 3600  # 1 hour
+app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)  # needed for url_for to generate with https
 
 # Configure the SQLite database for development, use environment variable for production
@@ -98,12 +102,6 @@ with app.app_context():
 def load_user(user_id):
     from models import User
     return User.query.get(int(user_id))
-
-# Error handler for CSRF errors
-@app.errorhandler(CSRFError)
-def handle_csrf_error(e):
-    logging.error(f"CSRF error: {e}")
-    return render_template('errors/csrf_error.html', reason=e.description), 400
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
