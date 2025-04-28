@@ -99,8 +99,13 @@ def view(id):
     approval_form = None
     
     if user_role == 'manager':
-        # Check if current user is the manager of the requester's department
+        # First, check if current user is the manager of the requester's department
         if requester.department and requester.department.manager_id == current_user.id:
+            if leave_request.status == 'pending' and not leave_request.manager_approved:
+                can_approve = True
+                approval_form = ApprovalForm()
+        # If not explicitly set as department manager, check if they're in the same dept with manager role
+        elif requester.department_id and requester.department_id == current_user.department_id:
             if leave_request.status == 'pending' and not leave_request.manager_approved:
                 can_approve = True
                 approval_form = ApprovalForm()
