@@ -1,7 +1,9 @@
-from flask import Blueprint, render_template, redirect, url_for
+from flask import Blueprint, render_template, redirect, url_for, request, flash
 from flask_login import login_required, current_user
 from models import User, Department, LeaveRequest, PermissionRequest
 from helpers import get_dashboard_stats, role_required
+from app import db
+from datetime import datetime
 
 dashboard_bp = Blueprint('dashboard', __name__, url_prefix='/dashboard')
 
@@ -140,6 +142,45 @@ def admin():
                           departments=departments,
                           department_data=department_data,
                           all_users=all_users)
+
+@dashboard_bp.route('/users')
+@login_required
+@role_required('admin')
+def users():
+    """Admin page showing all users and allowing user management"""
+    # Get all users, both active and inactive
+    all_users = User.query.order_by(User.last_name).all()
+    
+    # Get all departments for filtering
+    departments = Department.query.all()
+    
+    return render_template('dashboard/users.html',
+                          title='User Management',
+                          all_users=all_users,
+                          departments=departments)
+
+@dashboard_bp.route('/users/toggle_status/<int:user_id>', methods=['POST'])
+@login_required
+@role_required('admin')
+def toggle_user_status(user_id):
+    """Toggle a user's active/inactive status"""
+    user = User.query.get_or_404(user_id)
+    
+    # Don't allow deactivating yourself
+    if user.id == current_user.id:
+        flash('You cannot deactivate your own account.', 'danger')
+        return redirect(url_for('dashboard.users'))
+    
+    # Toggle status
+    user.status = 'inactive' if user.status == 'active' else 'active'
+    user.updated_at = datetime.utcnow()
+    
+    db.session.commit()
+    
+    status_text = 'activated' if user.status == 'active' else 'deactivated'
+    flash(f'User {user.first_name} {user.last_name} has been {status_text}.', 'success')
+    
+    return redirect(url_for('dashboard.users'))
 
 @dashboard_bp.route('/director')
 @login_required

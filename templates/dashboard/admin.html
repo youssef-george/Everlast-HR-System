@@ -4,6 +4,9 @@
 <div class="content-header">
     <h1 class="page-title">Admin Dashboard</h1>
     <div class="content-header-actions">
+        <a href="{{ url_for('dashboard.users') }}" class="btn btn-info me-2">
+            <i class="fas fa-users me-1"></i> Manage Users
+        </a>
         <a href="{{ url_for('auth.register') }}" class="btn btn-primary me-2">
             <i class="fas fa-user-plus me-1"></i> Register User
         </a>

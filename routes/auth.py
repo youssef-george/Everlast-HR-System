@@ -5,6 +5,7 @@ from flask_wtf.csrf import CSRFError
 from forms import LoginForm, RegistrationForm
 from models import User, Department
 from app import db, app
+from datetime import datetime
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -73,11 +74,28 @@ def register():
     form.department_id.choices = [(0, 'No Department')] + [(d.id, d.department_name) for d in departments]
     
     if form.validate_on_submit():
-        # Check if user with this email already exists
-        existing_user = User.query.filter_by(email=form.email.data).first()
+        # Check if an active user with this email already exists
+        existing_user = User.query.filter_by(email=form.email.data, status='active').first()
         if existing_user:
-            flash('A user with this email already exists.', 'danger')
+            flash('An active user with this email already exists.', 'danger')
             return render_template('auth/register.html', form=form, title='Register New User')
+        
+        # Check if an inactive user with this email exists, and update that user instead of creating a new one
+        inactive_user = User.query.filter_by(email=form.email.data, status='inactive').first()
+        if inactive_user:
+            # Update the inactive user's information
+            inactive_user.first_name = form.first_name.data
+            inactive_user.last_name = form.last_name.data
+            inactive_user.password_hash = generate_password_hash(form.password.data)
+            inactive_user.role = form.role.data
+            inactive_user.department_id = form.department_id.data if form.department_id.data != 0 else None
+            inactive_user.status = 'active'
+            inactive_user.updated_at = datetime.utcnow()
+            
+            db.session.commit()
+            
+            flash(f'User {inactive_user.first_name} {inactive_user.last_name} has been reactivated!', 'success')
+            return redirect(url_for('dashboard.index'))
         
         # Create new user
         user = User(
