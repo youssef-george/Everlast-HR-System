@@ -35,6 +35,7 @@
                             <tr>
                                 <th>Name</th>
                                 <th>Email</th>
+                                <th>Fingerprint</th>
                                 <th>Role</th>
                                 <th>Department</th>
                                 <th>Actions</th>
@@ -64,6 +65,7 @@
                                         </div>
                                     </td>
                                     <td>{{ user.email }}</td>
+                                    <td>{{ user.fingerprint_number if user.fingerprint_number else '-' }}</td>
                                     <td>
                                         {% if user.role == 'admin' %}
                                         <span class="badge bg-primary">Admin</span>
@@ -89,7 +91,7 @@
                                 {% endfor %}
                             {% else %}
                                 <tr>
-                                    <td colspan="5" class="text-center">No active members found.</td>
+                                    <td colspan="6" class="text-center">No active members found.</td>
                                 </tr>
                             {% endif %}
                         </tbody>

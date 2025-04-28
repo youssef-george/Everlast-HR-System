@@ -40,10 +40,16 @@
                             <span class="badge badge-light-danger">Inactive</span>
                         {% endif %}
                     </div>
-                    <p class="mb-0">
+                    <p class="mb-2">
                         <i class="fas fa-building me-1 text-muted"></i>
                         {{ current_user.department.department_name if current_user.department else 'No Department' }}
                     </p>
+                    {% if current_user.fingerprint_number %}
+                    <p class="mb-0">
+                        <i class="fas fa-fingerprint me-1 text-muted"></i>
+                        {{ current_user.fingerprint_number }}
+                    </p>
+                    {% endif %}
                 </div>
             </div>
         </div>
