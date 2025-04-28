@@ -1,10 +1,15 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, TextAreaField, SelectField, DateField, TimeField, BooleanField, HiddenField, SubmitField, EmailField, ValidationError
-from wtforms.validators import DataRequired, Email, EqualTo, Length, Optional
+from wtforms.validators import DataRequired, Email, EqualTo, Length, Optional, Regexp
 from datetime import datetime, date
 
+# Custom validator for @everlastwellness.com domain
+def validate_everlast_domain(form, field):
+    if not field.data.endswith('@everlastwellness.com'):
+        raise ValidationError('Only @everlastwellness.com email addresses are allowed.')
+
 class LoginForm(FlaskForm):
-    email = EmailField('Email', validators=[DataRequired(), Email()])
+    email = EmailField('Email', validators=[DataRequired(), Email(), validate_everlast_domain])
     password = PasswordField('Password', validators=[DataRequired()])
     remember = BooleanField('Remember Me')
     submit = SubmitField('Login')
@@ -12,7 +17,7 @@ class LoginForm(FlaskForm):
 class RegistrationForm(FlaskForm):
     first_name = StringField('First Name', validators=[DataRequired(), Length(min=2, max=50)])
     last_name = StringField('Last Name', validators=[DataRequired(), Length(min=2, max=50)])
-    email = EmailField('Email', validators=[DataRequired(), Email()])
+    email = EmailField('Email', validators=[DataRequired(), Email(), validate_everlast_domain])
     password = PasswordField('Password', validators=[
         DataRequired(),
         Length(min=8, message='Password must be at least 8 characters')
@@ -33,7 +38,7 @@ class RegistrationForm(FlaskForm):
 class UserEditForm(FlaskForm):
     first_name = StringField('First Name', validators=[DataRequired(), Length(min=2, max=50)])
     last_name = StringField('Last Name', validators=[DataRequired(), Length(min=2, max=50)])
-    email = EmailField('Email', validators=[DataRequired(), Email()])
+    email = EmailField('Email', validators=[DataRequired(), Email(), validate_everlast_domain])
     department_id = SelectField('Department', coerce=int, validators=[Optional()])
     role = SelectField('Role', choices=[
         ('employee', 'Employee'),
@@ -50,7 +55,7 @@ class UserEditForm(FlaskForm):
 class ProfileEditForm(FlaskForm):
     first_name = StringField('First Name', validators=[DataRequired(), Length(min=2, max=50)])
     last_name = StringField('Last Name', validators=[DataRequired(), Length(min=2, max=50)])
-    email = EmailField('Email', validators=[DataRequired(), Email()])
+    email = EmailField('Email', validators=[DataRequired(), Email(), validate_everlast_domain])
     current_password = PasswordField('Current Password', validators=[Optional()])
     new_password = PasswordField('New Password', validators=[Optional(), Length(min=8, message='Password must be at least 8 characters')])
     confirm_new_password = PasswordField('Confirm New Password', validators=[

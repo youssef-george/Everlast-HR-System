@@ -72,13 +72,13 @@ with app.app_context():
     db.create_all()
     
     # Create default admin user if doesn't exist
-    admin_email = 'admin@everlast.com'
+    admin_email = 'youssef.george@everlastwellness.com'
     admin = User.query.filter_by(email=admin_email).first()
     if not admin:
         logging.info("Creating default admin user")
         admin = User(
-            first_name="Admin",
-            last_name="User",
+            first_name="Youssef",
+            last_name="George",
             email=admin_email,
             password_hash=generate_password_hash("Everlast@123"),
             role="admin",
