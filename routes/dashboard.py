@@ -182,6 +182,32 @@ def toggle_user_status(user_id):
     
     return redirect(url_for('dashboard.users'))
 
+@dashboard_bp.route('/members/delete/<int:user_id>', methods=['POST'])
+@login_required
+@role_required('admin')
+def delete_member(user_id):
+    """Delete a user from the system"""
+    user = User.query.get_or_404(user_id)
+    
+    # Don't allow deleting yourself
+    if user.id == current_user.id:
+        flash('You cannot delete your own account.', 'danger')
+        return redirect(url_for('dashboard.members'))
+    
+    # Store user info for the flash message
+    user_name = f"{user.first_name} {user.last_name}"
+    
+    try:
+        # Delete user
+        db.session.delete(user)
+        db.session.commit()
+        flash(f'User {user_name} has been deleted successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting user: {str(e)}', 'danger')
+    
+    return redirect(url_for('dashboard.members'))
+
 @dashboard_bp.route('/members')
 @login_required
 def members():
