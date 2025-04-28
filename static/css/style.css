@@ -435,7 +435,7 @@ body {
 .fc .fc-button-primary {
     background-color: var(--primary-color);
     border-color: var(--primary-color);
-    border-radius: 0.5rem;
+    border-radius: 2rem;
     padding: 0.5rem 1rem;
     font-weight: 500;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -454,16 +454,26 @@ body {
     border-color: #004d80 !important;
 }
 
+/* Button specifically for Today to match the image */
+.fc .fc-today-button {
+    background-color: #5698e8;
+    border-color: #5698e8;
+    border-radius: 1rem;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+}
+
 .fc .fc-prev-button, .fc .fc-next-button {
-    width: 40px;
+    width: 65px;
     height: 40px;
-    border-radius: 50%;
+    border-radius: 2rem;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0;
     font-size: 20px;
     font-weight: bold;
+    background-color: #005d99;
 }
 
 .fc .fc-prev-button:hover, .fc .fc-next-button:hover {

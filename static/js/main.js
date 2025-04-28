@@ -80,7 +80,9 @@ document.addEventListener('DOMContentLoaded', function() {
         return new bootstrap.Popover(popoverTriggerEl);
     });
 
-    // Flash messages auto-dismiss
+    // Flash messages auto-dismiss (removing auto-dismiss to prevent quick disappearance)
+    // We're commenting this out to prevent notifications from disappearing too quickly
+    /*
     const alerts = document.querySelectorAll('.alert-dismissible.auto-dismiss');
     alerts.forEach(function(alert) {
         setTimeout(function() {
@@ -88,6 +90,7 @@ document.addEventListener('DOMContentLoaded', function() {
             dismiss.close();
         }, 5000);
     });
+    */
 
     // Handle form submission with confirmation
     document.querySelectorAll('form[data-confirm]').forEach(form => {

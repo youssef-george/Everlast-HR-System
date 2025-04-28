@@ -57,61 +57,51 @@ def events():
             })
     
     elif user_role == 'manager':
-        # Managers see leaves and permissions for their department
-        department_id = None
-        if current_user.managed_department:
-            department_id = current_user.managed_department[0].id
+        # Use the improved helper function to get all employees this manager manages
+        from helpers import get_employees_for_manager
+        employees = get_employees_for_manager(current_user.id)
+        employee_ids = [emp.id for emp in employees]
         
-        if department_id:
-            # Get employees from this department
-            employees = User.query.filter_by(department_id=department_id).all()
-            employee_ids = [emp.id for emp in employees]
+        if employee_ids:
+            # Get leave requests for these employees
+            leaves = LeaveRequest.query.filter(LeaveRequest.user_id.in_(employee_ids)).all()
+            for leave in leaves:
+                employee = User.query.get(leave.user_id)
+                color = '#17a74a' if leave.status == 'approved' else '#dc3545' if leave.status == 'rejected' else '#ffc107'
+                events.append({
+                    'id': f"leave_{leave.id}",
+                    'title': f"{employee.get_full_name()} - Leave",
+                    'start': leave.start_date.isoformat(),
+                    'end': (leave.end_date + timedelta(days=1)).isoformat(),
+                    'color': color,
+                    'url': f"/leave/view/{leave.id}",
+                    'status': leave.status,
+                    'type': 'leave'
+                })
             
-            if employee_ids:
-                # Get leave requests for these employees
-                leaves = LeaveRequest.query.filter(LeaveRequest.user_id.in_(employee_ids)).all()
-                for leave in leaves:
-                    employee = User.query.get(leave.user_id)
-                    color = '#17a74a' if leave.status == 'approved' else '#dc3545' if leave.status == 'rejected' else '#ffc107'
-                    events.append({
-                        'id': f"leave_{leave.id}",
-                        'title': f"{employee.get_full_name()} - Leave",
-                        'start': leave.start_date.isoformat(),
-                        'end': (leave.end_date + timedelta(days=1)).isoformat(),
-                        'color': color,
-                        'url': f"/leave/view/{leave.id}",
-                        'status': leave.status,
-                        'type': 'leave'
-                    })
-                
-                # Get permission requests for these employees
-                permissions = PermissionRequest.query.filter(PermissionRequest.user_id.in_(employee_ids)).all()
-                for permission in permissions:
-                    employee = User.query.get(permission.user_id)
-                    color = '#17a74a' if permission.status == 'approved' else '#dc3545' if permission.status == 'rejected' else '#ffc107'
-                    events.append({
-                        'id': f"permission_{permission.id}",
-                        'title': f"{employee.get_full_name()} - Permission",
-                        'start': permission.start_time.isoformat(),
-                        'end': permission.end_time.isoformat(),
-                        'color': color,
-                        'url': f"/permission/view/{permission.id}",
-                        'status': permission.status,
-                        'type': 'permission'
-                    })
-    
-    elif user_role in ['admin', 'director']:
-        # Admins and directors see all company-wide leaves and permissions
+            # Get permission requests for these employees
+            permissions = PermissionRequest.query.filter(PermissionRequest.user_id.in_(employee_ids)).all()
+            for permission in permissions:
+                employee = User.query.get(permission.user_id)
+                color = '#17a74a' if permission.status == 'approved' else '#dc3545' if permission.status == 'rejected' else '#ffc107'
+                events.append({
+                    'id': f"permission_{permission.id}",
+                    'title': f"{employee.get_full_name()} - Permission",
+                    'start': permission.start_time.isoformat(),
+                    'end': permission.end_time.isoformat(),
+                    'color': color,
+                    'url': f"/permission/view/{permission.id}",
+                    'status': permission.status,
+                    'type': 'permission'
+                })
         
-        # Get all leave requests
-        leaves = LeaveRequest.query.all()
-        for leave in leaves:
-            employee = User.query.get(leave.user_id)
+        # ALSO include the manager's own leave and permission requests
+        manager_leaves = LeaveRequest.query.filter_by(user_id=current_user.id).all()
+        for leave in manager_leaves:
             color = '#17a74a' if leave.status == 'approved' else '#dc3545' if leave.status == 'rejected' else '#ffc107'
-            department = employee.department.department_name if employee.department else 'No Department'
             events.append({
                 'id': f"leave_{leave.id}",
-                'title': f"{employee.get_full_name()} ({department}) - Leave",
+                'title': f"My Leave: {leave.reason[:20]}{'...' if len(leave.reason) > 20 else ''}",
                 'start': leave.start_date.isoformat(),
                 'end': (leave.end_date + timedelta(days=1)).isoformat(),
                 'color': color,
@@ -120,15 +110,12 @@ def events():
                 'type': 'leave'
             })
         
-        # Get all permission requests
-        permissions = PermissionRequest.query.all()
-        for permission in permissions:
-            employee = User.query.get(permission.user_id)
+        manager_permissions = PermissionRequest.query.filter_by(user_id=current_user.id).all()
+        for permission in manager_permissions:
             color = '#17a74a' if permission.status == 'approved' else '#dc3545' if permission.status == 'rejected' else '#ffc107'
-            department = employee.department.department_name if employee.department else 'No Department'
             events.append({
                 'id': f"permission_{permission.id}",
-                'title': f"{employee.get_full_name()} ({department}) - Permission",
+                'title': f"My Permission: {permission.reason[:20]}{'...' if len(permission.reason) > 20 else ''}",
                 'start': permission.start_time.isoformat(),
                 'end': permission.end_time.isoformat(),
                 'color': color,
@@ -136,5 +123,85 @@ def events():
                 'status': permission.status,
                 'type': 'permission'
             })
+    
+    elif user_role in ['admin', 'director']:
+        # Admins and directors see all company-wide leaves and permissions
+        # but distinguish between their own and others' requests
+        
+        # First get all leave requests
+        if user_role == 'admin' and current_user.managed_department:
+            # If admin is assigned to specific departments, only show requests from those departments
+            admin_dept_ids = [dept.id for dept in current_user.managed_department]
+            leaves = LeaveRequest.query.join(User).filter(User.department_id.in_(admin_dept_ids)).all()
+        else:
+            # Otherwise show all requests
+            leaves = LeaveRequest.query.all()
+            
+        for leave in leaves:
+            employee = User.query.get(leave.user_id)
+            color = '#17a74a' if leave.status == 'approved' else '#dc3545' if leave.status == 'rejected' else '#ffc107'
+            department = employee.department.department_name if employee.department else 'No Department'
+            
+            # Highlight the admin/director's own requests differently
+            if leave.user_id == current_user.id:
+                events.append({
+                    'id': f"leave_{leave.id}",
+                    'title': f"My Leave: {leave.reason[:20]}{'...' if len(leave.reason) > 20 else ''}",
+                    'start': leave.start_date.isoformat(),
+                    'end': (leave.end_date + timedelta(days=1)).isoformat(),
+                    'color': color,
+                    'url': f"/leave/view/{leave.id}",
+                    'status': leave.status,
+                    'type': 'leave'
+                })
+            else:
+                events.append({
+                    'id': f"leave_{leave.id}",
+                    'title': f"{employee.get_full_name()} ({department}) - Leave",
+                    'start': leave.start_date.isoformat(),
+                    'end': (leave.end_date + timedelta(days=1)).isoformat(),
+                    'color': color,
+                    'url': f"/leave/view/{leave.id}",
+                    'status': leave.status,
+                    'type': 'leave'
+                })
+        
+        # Get all permission requests
+        if user_role == 'admin' and current_user.managed_department:
+            # If admin is assigned to specific departments, only show requests from those departments
+            admin_dept_ids = [dept.id for dept in current_user.managed_department]
+            permissions = PermissionRequest.query.join(User).filter(User.department_id.in_(admin_dept_ids)).all()
+        else:
+            # Otherwise show all requests
+            permissions = PermissionRequest.query.all()
+            
+        for permission in permissions:
+            employee = User.query.get(permission.user_id)
+            color = '#17a74a' if permission.status == 'approved' else '#dc3545' if permission.status == 'rejected' else '#ffc107'
+            department = employee.department.department_name if employee.department else 'No Department'
+            
+            # Highlight the admin/director's own requests differently
+            if permission.user_id == current_user.id:
+                events.append({
+                    'id': f"permission_{permission.id}",
+                    'title': f"My Permission: {permission.reason[:20]}{'...' if len(permission.reason) > 20 else ''}",
+                    'start': permission.start_time.isoformat(),
+                    'end': permission.end_time.isoformat(),
+                    'color': color,
+                    'url': f"/permission/view/{permission.id}",
+                    'status': permission.status,
+                    'type': 'permission'
+                })
+            else:
+                events.append({
+                    'id': f"permission_{permission.id}",
+                    'title': f"{employee.get_full_name()} ({department}) - Permission",
+                    'start': permission.start_time.isoformat(),
+                    'end': permission.end_time.isoformat(),
+                    'color': color,
+                    'url': f"/permission/view/{permission.id}",
+                    'status': permission.status,
+                    'type': 'permission'
+                })
     
     return jsonify(events)
