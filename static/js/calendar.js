@@ -12,6 +12,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 center: 'title',
                 right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
             },
+            customButtons: {
+                prev: {
+                    text: '<i class="fas fa-chevron-left"></i>',
+                    click: function() {
+                        calendar.prev();
+                    }
+                },
+                next: {
+                    text: '<i class="fas fa-chevron-right"></i>',
+                    click: function() {
+                        calendar.next();
+                    }
+                },
+                today: {
+                    text: 'Today',
+                    click: function() {
+                        calendar.today();
+                    }
+                }
+            },
             themeSystem: 'bootstrap5',
             height: 'auto',
             eventTimeFormat: {

@@ -93,8 +93,12 @@ class PermissionRequestForm(FlaskForm):
     submit = SubmitField('Submit Permission Request')
     
     def validate_start_date(self, start_date):
-        if start_date.data < date.today():
-            raise ValidationError('Permission requests can only be for present or future dates')
+        # Allow selecting the previous day
+        from datetime import timedelta
+        today = date.today()
+        yesterday = today - timedelta(days=1)
+        if start_date.data < yesterday:
+            raise ValidationError('Permission requests can only be for yesterday, today, or future dates')
     
     def validate_end_time(self, end_time):
         if self.start_time.data and end_time.data <= self.start_time.data:

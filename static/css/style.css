@@ -435,16 +435,38 @@ body {
 .fc .fc-button-primary {
     background-color: var(--primary-color);
     border-color: var(--primary-color);
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
 }
 
 .fc .fc-button-primary:hover {
     background-color: #004d80;
     border-color: #004d80;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .fc .fc-button-active {
     background-color: #004d80 !important;
     border-color: #004d80 !important;
+}
+
+.fc .fc-prev-button, .fc .fc-next-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.fc .fc-prev-button:hover, .fc .fc-next-button:hover {
+    background-color: #004d80;
+    transform: scale(1.1);
 }
 
 .fc-event {

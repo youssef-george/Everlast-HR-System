@@ -48,9 +48,12 @@ def create():
         start_datetime = datetime.combine(form.start_date.data, form.start_time.data)
         end_datetime = datetime.combine(form.start_date.data, form.end_time.data)
         
-        # Ensure start date is present or future
-        if start_datetime.date() < date.today():
-            flash('Permission requests can only be for present or future dates.', 'danger')
+        # Allow selecting the previous day
+        from datetime import timedelta
+        yesterday = date.today() - timedelta(days=1)
+        
+        if start_datetime.date() < yesterday:
+            flash('Permission requests can only be for yesterday, today, or future dates.', 'danger')
             return render_template('permission/create.html', title='Create Permission Request', form=form)
         
         permission_request = PermissionRequest(
