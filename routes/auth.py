@@ -67,5 +67,40 @@ def register():
         flash('You do not have permission to register new users.', 'danger')
         return redirect(url_for('dashboard.index'))
     
-    # Redirect to the User Management page
-    return redirect(url_for('dashboard.users'))
+    form = RegistrationForm()
+    
+    # Populate department dropdown
+    departments = Department.query.all()
+    form.department_id.choices = [(0, 'No Department')] + [(d.id, d.department_name) for d in departments]
+    
+    if form.validate_on_submit():
+        try:
+            # Check if user with this email already exists
+            existing_user = User.query.filter_by(email=form.email.data).first()
+            if existing_user:
+                flash('A user with that email already exists.', 'danger')
+                return render_template('auth/register.html', form=form, title='Register New User')
+            
+            # Create new user
+            hashed_password = generate_password_hash(form.password.data)
+            new_user = User(
+                first_name=form.first_name.data,
+                last_name=form.last_name.data,
+                email=form.email.data,
+                password_hash=hashed_password,
+                role=form.role.data,
+                department_id=form.department_id.data if form.department_id.data != 0 else None,
+                status='active'
+            )
+            
+            db.session.add(new_user)
+            db.session.commit()
+            flash('User registered successfully!', 'success')
+            return redirect(url_for('dashboard.users'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error registering user: {str(e)}', 'danger')
+            app.logger.error(f'Registration error: {str(e)}')
+    
+    return render_template('auth/register.html', form=form, title='Register New User')
