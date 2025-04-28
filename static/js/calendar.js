@@ -54,7 +54,39 @@ document.addEventListener('DOMContentLoaded', function() {
                     failure: function() {
                         alert('There was an error while fetching events!');
                     },
-                    color: '#005d99'  // Primary color for all events (will be overridden by individual event colors)
+                    eventDataTransform: function(event) {
+                        // Color-coding based on request type and status
+                        let color;
+                        
+                        // Base colors for status
+                        if (event.status === 'approved') {
+                            color = '#17a74a';  // Success green
+                        } else if (event.status === 'rejected') {
+                            color = '#dc3545';  // Danger red
+                        } else { // pending
+                            color = '#ffc107';  // Warning yellow
+                        }
+                        
+                        // Add opacity/variation based on type and if it's a personal request
+                        if (event.title.startsWith('My')) {
+                            // Highlight personal requests with a stronger color
+                            event.backgroundColor = color;
+                            event.borderColor = '#005d99';
+                            event.textColor = '#ffffff';
+                        } else if (event.type === 'leave') {
+                            // Leave requests (team members)
+                            event.backgroundColor = color;
+                            event.borderColor = color;
+                            event.textColor = '#ffffff';
+                        } else { // permission
+                            // Permission requests (team members)
+                            event.backgroundColor = color;
+                            event.borderColor = '#006e94'; // Tertiary color
+                            event.textColor = '#ffffff';
+                        }
+                        
+                        return event;
+                    }
                 }
             ],
             eventClick: function(info) {

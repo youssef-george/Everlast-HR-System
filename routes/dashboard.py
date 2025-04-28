@@ -63,6 +63,10 @@ def manager():
         pending_permission_requests = []
         
         for employee in employees:
+            # Skip if this is the manager's own request (we'll display in a separate section)
+            if employee.id == current_user.id:
+                continue
+                
             # Get leave requests needing manager approval
             leave_requests = LeaveRequest.query.filter_by(
                 user_id=employee.id,
@@ -84,12 +88,24 @@ def manager():
         pending_leave_requests = []
         pending_permission_requests = []
     
+    # Get manager's own leave requests
+    personal_leave_requests = LeaveRequest.query.filter_by(
+        user_id=current_user.id
+    ).order_by(LeaveRequest.created_at.desc()).limit(5).all()
+    
+    # Get manager's own permission requests
+    personal_permission_requests = PermissionRequest.query.filter_by(
+        user_id=current_user.id
+    ).order_by(PermissionRequest.created_at.desc()).limit(5).all()
+    
     return render_template('dashboard/manager.html',
                           title='Manager Dashboard',
                           stats=stats,
                           employees=employees,
                           pending_leave_requests=pending_leave_requests[:5],
-                          pending_permission_requests=pending_permission_requests[:5])
+                          pending_permission_requests=pending_permission_requests[:5],
+                          personal_leave_requests=personal_leave_requests,
+                          personal_permission_requests=personal_permission_requests)
 
 @dashboard_bp.route('/admin')
 @login_required

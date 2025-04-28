@@ -74,11 +74,161 @@
         </div>
     </div>
     
-    <!-- Pending Leave Requests -->
+    <!-- Manager's Own Requests -->
+    <div class="col-lg-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">My Requests</h3>
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-tabs" id="myTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="leave-tab" data-bs-toggle="tab" data-bs-target="#leave-tab-pane" type="button" role="tab" aria-controls="leave-tab-pane" aria-selected="true">My Leave Requests</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="permission-tab" data-bs-toggle="tab" data-bs-target="#permission-tab-pane" type="button" role="tab" aria-controls="permission-tab-pane" aria-selected="false">My Permission Requests</button>
+                    </li>
+                </ul>
+                <div class="tab-content mt-3" id="myTabContent">
+                    <div class="tab-pane fade show active" id="leave-tab-pane" role="tabpanel" aria-labelledby="leave-tab" tabindex="0">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Start Date</th>
+                                        <th>End Date</th>
+                                        <th>Duration</th>
+                                        <th>Reason</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if personal_leave_requests %}
+                                        {% for leave in personal_leave_requests %}
+                                        <tr>
+                                            <td>{{ leave.start_date.strftime('%d/%m/%Y') }}</td>
+                                            <td>{{ leave.end_date.strftime('%d/%m/%Y') }}</td>
+                                            <td>{{ (leave.end_date - leave.start_date).days + 1 }} days</td>
+                                            <td>{{ leave.reason|truncate(30) }}</td>
+                                            <td>
+                                                {% if leave.status == 'pending' %}
+                                                    <span class="badge badge-light-warning">Pending</span>
+                                                {% elif leave.status == 'approved' %}
+                                                    <span class="badge badge-light-success">Approved</span>
+                                                {% else %}
+                                                    <span class="badge badge-light-danger">Rejected</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <a href="{{ url_for('leave.view', id=leave.id) }}" class="btn btn-sm btn-icon btn-light me-1" data-bs-toggle="tooltip" title="View Details">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                {% if leave.status == 'pending' %}
+                                                    <a href="{{ url_for('leave.edit', id=leave.id) }}" class="btn btn-sm btn-icon btn-light me-1" data-bs-toggle="tooltip" title="Edit">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <form method="POST" action="{{ url_for('leave.delete', id=leave.id) }}" class="d-inline" data-confirm="Are you sure you want to delete this leave request?">
+                                                        {{ csrf_token() }}
+                                                        <button type="submit" class="btn btn-sm btn-icon btn-light-danger" data-bs-toggle="tooltip" title="Delete">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="6" class="text-center p-4">No leave requests found.</td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="d-flex justify-content-end mt-3">
+                            <a href="{{ url_for('leave.create') }}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-plus-circle me-1"></i> New Leave Request
+                            </a>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="permission-tab-pane" role="tabpanel" aria-labelledby="permission-tab" tabindex="0">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Time Period</th>
+                                        <th>Duration</th>
+                                        <th>Reason</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if personal_permission_requests %}
+                                        {% for permission in personal_permission_requests %}
+                                        <tr>
+                                            <td>{{ permission.start_time.strftime('%d/%m/%Y') }}</td>
+                                            <td>{{ permission.start_time.strftime('%H:%M') }} - {{ permission.end_time.strftime('%H:%M') }}</td>
+                                            <td>
+                                                {% set duration_seconds = (permission.end_time - permission.start_time).total_seconds() %}
+                                                {% set hours = (duration_seconds // 3600)|int %}
+                                                {% set minutes = ((duration_seconds % 3600) // 60)|int %}
+                                                {{ hours }}h {{ minutes }}m
+                                            </td>
+                                            <td>{{ permission.reason|truncate(30) }}</td>
+                                            <td>
+                                                {% if permission.status == 'pending' %}
+                                                    <span class="badge badge-light-warning">Pending</span>
+                                                {% elif permission.status == 'approved' %}
+                                                    <span class="badge badge-light-success">Approved</span>
+                                                {% else %}
+                                                    <span class="badge badge-light-danger">Rejected</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <a href="{{ url_for('permission.view', id=permission.id) }}" class="btn btn-sm btn-icon btn-light me-1" data-bs-toggle="tooltip" title="View Details">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                {% if permission.status == 'pending' %}
+                                                    <a href="{{ url_for('permission.edit', id=permission.id) }}" class="btn btn-sm btn-icon btn-light me-1" data-bs-toggle="tooltip" title="Edit">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <form method="POST" action="{{ url_for('permission.delete', id=permission.id) }}" class="d-inline" data-confirm="Are you sure you want to delete this permission request?">
+                                                        {{ csrf_token() }}
+                                                        <button type="submit" class="btn btn-sm btn-icon btn-light-danger" data-bs-toggle="tooltip" title="Delete">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="6" class="text-center p-4">No permission requests found.</td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="d-flex justify-content-end mt-3">
+                            <a href="{{ url_for('permission.create') }}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-plus-circle me-1"></i> New Permission Request
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Team's Pending Leave Requests -->
     <div class="col-lg-6 mb-4">
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">Pending Leave Requests</h3>
+                <h3 class="card-title">Team's Pending Leave Requests</h3>
                 <div class="card-toolbar">
                     <a href="{{ url_for('leave.index') }}" class="btn btn-sm btn-light">View All</a>
                 </div>
@@ -127,11 +277,11 @@
         </div>
     </div>
     
-    <!-- Pending Permission Requests -->
+    <!-- Team's Pending Permission Requests -->
     <div class="col-lg-6 mb-4">
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">Pending Permission Requests</h3>
+                <h3 class="card-title">Team's Pending Permission Requests</h3>
                 <div class="card-toolbar">
                     <a href="{{ url_for('permission.index') }}" class="btn btn-sm btn-light">View All</a>
                 </div>

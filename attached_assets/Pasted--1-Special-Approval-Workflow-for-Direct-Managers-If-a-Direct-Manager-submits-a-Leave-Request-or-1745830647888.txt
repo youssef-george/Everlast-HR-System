@@ -1,0 +1,89 @@
+🛠️ 1. Special Approval Workflow for Direct Managers:
+If a Direct Manager submits a Leave Request or a Permission Request, it should only require approval from the Account Manager (Admin).
+
+It should NOT require approval from higher managers like Company Director.
+
+Approval Flow:
+
+Normal Employee:
+
+Leave Request: Direct Manager → Account Manager
+
+Permission Request: Direct Manager → Company Director → Account Manager
+
+Direct Manager:
+
+Leave Request: Direct → Account Manager
+
+Permission Request: Direct → Account Manager
+
+➕ 2. Admin Ability to Create Requests for Any Employee:
+Admin can create Leave or Permission requests on behalf of any employee.
+
+Admin selects employee from a searchable dropdown (name or email).
+
+Request is inserted into the normal workflow based on employee role.
+
+Employee should receive a notification that a request was submitted for them.
+
+Admin can edit or cancel any request they created.
+
+👨‍💼 3. Direct Manager Account Enhancements:
+A user assigned as Direct Manager should:
+
+See their own leave and permission requests clearly in their dashboard.
+
+See the leave and permission requests of their team members grouped and listed separately.
+
+📅 4. Calendar View per Role:
+Direct Managers should have a calendar showing:
+
+Their own requests (leave and permissions).
+
+Their team members' requests (in the same calendar view, color-coded if possible).
+
+Normal employees see only their own requests.
+
+Company Director and Admin see all requests across the company.
+
+🧩 5. Admin Role Behavior:
+Account Manager (Admin) is the Super Admin.
+
+Admin users:
+
+Can view everything across all departments.
+
+Can approve or reject any request at any stage.
+
+Multiple Admins are allowed (role-based assignment).
+
+The default Admin account should be:
+
+Username: admin
+
+Password: Admin@123
+
+🎨 6. UI/UX Requirements:
+Application design must use Metronic UI style (professional, modern UI and UX).
+
+Sidebar should be on the left instead of top bar.
+
+Colors should be:
+
+Primary Color: #005d99
+
+Secondary Color: #17a74a
+
+Tertiary Color: #006e94
+
+The entire UI/UX should be clean, responsive, and fully in English (no Arabic texts or background issues).
+
+🛠️ 7. Critical Bugs to Fix:
+Department Analytics and Request Status Overview are not working in the Admin Dashboard — needs fixing.
+
+In the Department List under the Manager column:
+
+Even if managers are assigned to departments, the system shows "No Manager Assigned" — this must be fixed.
+
+✅ Please follow clean code practices, organized database structure, and professional UI/UX standards. ✅ Prioritize real-time updating of the dashboard and calendars where possible.
+
