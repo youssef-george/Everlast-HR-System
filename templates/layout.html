@@ -84,7 +84,7 @@
                 <li class="nav-item">
                     <a href="{{ url_for('dashboard.users') }}" class="nav-link {{ 'active' if request.path == '/dashboard/users' }}">
                         <i class="fas fa-user-cog nav-icon"></i>
-                        <span class="nav-text">User Management</span>
+                        <span class="nav-text">User Management System</span>
                     </a>
                 </li>
                 <li class="nav-item">
@@ -165,7 +165,7 @@
                             <li><a class="dropdown-item" href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('dashboard.members') }}">Company Members</a></li>
                             {% if current_user.role == 'admin' %}
-                            <li><a class="dropdown-item" href="{{ url_for('dashboard.users') }}">User Management</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('dashboard.users') }}">User Management System</a></li>
                             {% endif %}
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Logout</a></li>
