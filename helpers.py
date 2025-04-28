@@ -120,6 +120,33 @@ def get_employees_for_manager(manager_id):
     
     return employees
 
+def leave_request_to_dict(leave_request):
+    """Convert a LeaveRequest object to a dictionary for JSON serialization."""
+    return {
+        'id': leave_request.id,
+        'start_date': leave_request.start_date.strftime('%Y-%m-%d'),
+        'end_date': leave_request.end_date.strftime('%Y-%m-%d'),
+        'status': leave_request.status,
+        'reason': leave_request.reason,
+        'created_at': leave_request.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+        'manager_approved': leave_request.manager_approved,
+        'admin_approved': leave_request.admin_approved
+    }
+
+def permission_request_to_dict(permission_request):
+    """Convert a PermissionRequest object to a dictionary for JSON serialization."""
+    return {
+        'id': permission_request.id,
+        'start_time': permission_request.start_time.strftime('%Y-%m-%d %H:%M:%S'),
+        'end_time': permission_request.end_time.strftime('%Y-%m-%d %H:%M:%S'),
+        'status': permission_request.status,
+        'reason': permission_request.reason,
+        'created_at': permission_request.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+        'manager_approved': permission_request.manager_approved,
+        'director_approved': permission_request.director_approved,
+        'admin_approved': permission_request.admin_approved
+    }
+
 def get_dashboard_stats(user):
     """Get statistics for the dashboard based on user role."""
     stats = {

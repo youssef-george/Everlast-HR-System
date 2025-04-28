@@ -26,17 +26,25 @@ def index():
 @login_required
 def employee():
     """Employee dashboard showing their requests"""
+    from helpers import leave_request_to_dict, permission_request_to_dict
+    
     stats = get_dashboard_stats(current_user)
     
     # Get the user's leave and permission requests
-    leave_requests = LeaveRequest.query.filter_by(user_id=current_user.id).order_by(LeaveRequest.created_at.desc()).limit(5).all()
-    permission_requests = PermissionRequest.query.filter_by(user_id=current_user.id).order_by(PermissionRequest.created_at.desc()).limit(5).all()
+    leave_requests_db = LeaveRequest.query.filter_by(user_id=current_user.id).order_by(LeaveRequest.created_at.desc()).limit(5).all()
+    permission_requests_db = PermissionRequest.query.filter_by(user_id=current_user.id).order_by(PermissionRequest.created_at.desc()).limit(5).all()
+    
+    # Convert to JSON-serializable format for chart data
+    leave_requests_json = [leave_request_to_dict(lr) for lr in leave_requests_db]
+    permission_requests_json = [permission_request_to_dict(pr) for pr in permission_requests_db]
     
     return render_template('dashboard/employee.html', 
                            title='Employee Dashboard',
                            stats=stats,
-                           leave_requests=leave_requests,
-                           permission_requests=permission_requests)
+                           leave_requests=leave_requests_json,
+                           permission_requests=permission_requests_json,
+                           leave_requests_db=leave_requests_db,
+                           permission_requests_db=permission_requests_db)
 
 @dashboard_bp.route('/manager')
 @login_required

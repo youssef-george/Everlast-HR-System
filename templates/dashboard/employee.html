@@ -141,7 +141,7 @@
                         </thead>
                         <tbody>
                             {% if leave_requests %}
-                                {% for leave in leave_requests %}
+                                {% for leave in leave_requests_db %}
                                 <tr>
                                     <td>{{ leave.start_date.strftime('%d/%m/%Y') }} - {{ leave.end_date.strftime('%d/%m/%Y') }}</td>
                                     <td>{{ leave.reason|truncate(30) }}</td>
