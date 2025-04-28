@@ -1,0 +1,66 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h3 class="card-title">{{ title }}</h3>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('leave.admin_create') }}">
+            {{ form.hidden_tag() }}
+            
+            <div class="mb-3">
+                {{ form.employee_id.label(class="form-label") }}
+                {{ form.employee_id(class="form-select", **{"data-control": "select2", "data-placeholder": "Select Employee"}) }}
+                {% for error in form.employee_id.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            
+            <div class="mb-3">
+                {{ form.start_date.label(class="form-label") }}
+                {{ form.start_date(class="form-control", type="date") }}
+                {% for error in form.start_date.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            
+            <div class="mb-3">
+                {{ form.end_date.label(class="form-label") }}
+                {{ form.end_date(class="form-control", type="date") }}
+                {% for error in form.end_date.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            
+            <div class="mb-3">
+                {{ form.reason.label(class="form-label") }}
+                {{ form.reason(class="form-control", rows=4) }}
+                {% for error in form.reason.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+            
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('leave.index') }}" class="btn btn-light">Cancel</a>
+                {{ form.submit(class="btn btn-primary") }}
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Initialize select2 for enhanced dropdown
+        $('#employee_id').select2({
+            placeholder: "Select an employee",
+            allowClear: true,
+            width: '100%'
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,72 @@
+🛠️ 1. Special Approval Workflow for Direct Managers:
+When a Direct Manager submits a Leave Request or a Permission Request:
+
+✅ It should only require approval from the Account Manager (Admin).
+
+❌ It should not require any approval from any other manager (like Company Director).
+
+Approval Flows Summary:
+
+Normal Employee:
+
+Leave Request: Direct Manager → Account Manager
+
+Permission Request: Direct Manager → Company Director → Account Manager
+
+Direct Manager (Special Rule):
+
+Leave Request: Direct → Account Manager only
+
+Permission Request: Direct → Account Manager only
+
+➕ 2. Admin Ability to Create Requests for Employees:
+Account Manager (Admin) can create Leave Requests and Permission Requests on behalf of any employee in the company.
+
+Admin should be able to:
+
+Select an employee from a searchable dropdown (by name or email).
+
+Fill all necessary request fields (dates, reason, etc.).
+
+Submit the request following the normal approval flow based on the employee’s role.
+
+After submission:
+
+The employee gets notified about the created request.
+
+Admin has the right to edit or cancel any request they created.
+
+👨‍💼 3. Direct Manager Account View Enhancements:
+Any user who holds the Direct Manager role should:
+
+See their own personal requests (leaves and permissions) in their account dashboard clearly.
+
+See their team’s requests in a separate section under their dashboard (organized by employee).
+
+📅 4. Direct Manager Calendar View:
+In the calendar view for any Direct Manager:
+
+The calendar must show:
+
+All of their own personal requests (leaves and permissions).
+
+All requests of employees in their assigned department/team (filtered and color-coded if possible).
+
+This makes it easy for Direct Managers to monitor:
+
+Their team's attendance behavior (leaves and permissions trends).
+
+Their personal activities at the same time.
+
+✅ Summary of Key Improvements:
+
+Smarter approval flow based on roles.
+
+Admin full flexibility to manage requests.
+
+Direct Manager full visibility on both personal and team requests.
+
+Calendar highly personalized per role.
+
+Improved transparency and tracking across the system.
+

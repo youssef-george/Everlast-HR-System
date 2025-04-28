@@ -106,6 +106,10 @@ def view(id):
     can_approve = False
     approval_form = None
     
+    # SPECIAL CASE: If the requester is a manager, they should bypass manager and director approval
+    # and only require admin approval (implementing the new special workflow)
+    requester_is_manager = requester.role == 'manager'
+    
     if user_role == 'manager':
         # First, check if current user is the manager of the requester's department
         if requester.department and requester.department.manager_id == current_user.id:
@@ -119,28 +123,46 @@ def view(id):
                 approval_form = ApprovalForm()
     
     elif user_role == 'director':
-        # Directors can approve if status is pending and manager has approved
-        if permission_request.status == 'pending' and permission_request.manager_approved and not permission_request.director_approved:
-            can_approve = True
-            approval_form = ApprovalForm()
+        # Regular approval flow: Directors can approve if status is pending and manager has approved
+        # EXCEPT for manager's own requests which don't need director approval
+        if not requester_is_manager:
+            if permission_request.status == 'pending' and permission_request.manager_approved and not permission_request.director_approved:
+                can_approve = True
+                approval_form = ApprovalForm()
     
     elif user_role == 'admin':
         # Get the department of the requester
         requester_department = requester.department
         
-        # Admins can approve if status is pending, manager and director have approved, and request is from their department
-        if permission_request.status == 'pending' and permission_request.manager_approved and permission_request.director_approved and not permission_request.admin_approved:
-            # If the admin is specifically assigned to handle a department
-            if current_user.managed_department:
-                # Check if the requester is from a department this admin manages
-                admin_managed_departments = [dept.id for dept in current_user.managed_department]
-                if requester_department and requester_department.id in admin_managed_departments:
+        # If requester is a manager, admins can approve directly even without manager/director approval
+        if requester_is_manager:
+            if permission_request.status == 'pending' and not permission_request.admin_approved:
+                # If the admin is specifically assigned to handle a department
+                if current_user.managed_department:
+                    # Check if the requester is from a department this admin manages
+                    admin_managed_departments = [dept.id for dept in current_user.managed_department]
+                    if requester_department and requester_department.id in admin_managed_departments:
+                        can_approve = True
+                        approval_form = ApprovalForm()
+                else:
+                    # If admin is not assigned to any specific department, they can approve any department
                     can_approve = True
                     approval_form = ApprovalForm()
-            else:
-                # If admin is not assigned to any specific department, they can approve any department
-                can_approve = True
-                approval_form = ApprovalForm()
+        else:
+            # Regular approval flow for non-manager employees
+            # Admins can approve if status is pending, manager and director have approved, and request is from their department
+            if permission_request.status == 'pending' and permission_request.manager_approved and permission_request.director_approved and not permission_request.admin_approved:
+                # If the admin is specifically assigned to handle a department
+                if current_user.managed_department:
+                    # Check if the requester is from a department this admin manages
+                    admin_managed_departments = [dept.id for dept in current_user.managed_department]
+                    if requester_department and requester_department.id in admin_managed_departments:
+                        can_approve = True
+                        approval_form = ApprovalForm()
+                else:
+                    # If admin is not assigned to any specific department, they can approve any department
+                    can_approve = True
+                    approval_form = ApprovalForm()
     
     # Handle approval/rejection submission
     if approval_form and approval_form.validate_on_submit():
@@ -148,17 +170,45 @@ def view(id):
             if user_role == 'manager':
                 permission_request.manager_approved = True
                 
-                # Notify directors about the request
-                for director in get_user_managers(requester)['directors']:
-                    create_notification(
-                        user_id=director.id,
-                        message=f"Permission request from {requester.get_full_name()} approved by manager and needs your review",
-                        notification_type='approval',
-                        reference_id=permission_request.id,
-                        reference_type='permission'
-                    )
-                
-                flash('Permission request has been approved as manager.', 'success')
+                # For regular employees, follow the normal flow - notify directors
+                if not requester_is_manager:
+                    # Notify directors about the request
+                    for director in get_user_managers(requester)['directors']:
+                        create_notification(
+                            user_id=director.id,
+                            message=f"Permission request from {requester.get_full_name()} approved by manager and needs your review",
+                            notification_type='approval',
+                            reference_id=permission_request.id,
+                            reference_type='permission'
+                        )
+                    
+                    flash('Permission request has been approved as manager.', 'success')
+                else:
+                    # For manager requests, skip director approval and notify admins directly
+                    all_admins = get_user_managers(requester)['admin_managers']
+                    department_specific_admins = []
+                    
+                    # First, try to identify department-specific admins
+                    if requester.department:
+                        for admin in all_admins:
+                            if admin.managed_department:
+                                admin_managed_depts = [dept.id for dept in admin.managed_department]
+                                if requester.department.id in admin_managed_depts:
+                                    department_specific_admins.append(admin)
+                    
+                    # If no department-specific admins found, notify all admins
+                    admins_to_notify = department_specific_admins if department_specific_admins else all_admins
+                    
+                    for admin in admins_to_notify:
+                        create_notification(
+                            user_id=admin.id,
+                            message=f"Permission request from manager {requester.get_full_name()} needs your review",
+                            notification_type='approval',
+                            reference_id=permission_request.id,
+                            reference_type='permission'
+                        )
+                    
+                    flash('Permission request has been approved and sent to admin for review.', 'success')
             
             elif user_role == 'director':
                 permission_request.director_approved = True
@@ -192,6 +242,11 @@ def view(id):
             elif user_role == 'admin':
                 permission_request.admin_approved = True
                 permission_request.status = 'approved'
+                
+                # If requester is a manager, auto-approve the manager and director parts for completeness
+                if requester_is_manager:
+                    permission_request.manager_approved = True
+                    permission_request.director_approved = True
                 
                 # Notify the employee
                 create_notification(

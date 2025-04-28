@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from datetime import datetime, date
-from forms import LeaveRequestForm, ApprovalForm
+from forms import LeaveRequestForm, ApprovalForm, AdminLeaveRequestForm
 from models import LeaveRequest, User
 from app import db
 from helpers import role_required, create_notification, get_user_managers, get_employees_for_manager
@@ -98,6 +98,10 @@ def view(id):
     can_approve = False
     approval_form = None
     
+    # SPECIAL CASE: If the requester is a manager, they should bypass manager approval
+    # and only require admin approval (implementing the new special workflow)
+    requester_is_manager = requester.role == 'manager'
+    
     if user_role == 'manager':
         # First, check if current user is the manager of the requester's department
         if requester.department and requester.department.manager_id == current_user.id:
@@ -114,19 +118,35 @@ def view(id):
         # Get the department of the requester
         requester_department = requester.department
         
-        # Admins can approve if status is pending, manager has approved, and request is from their department
-        if leave_request.status == 'pending' and leave_request.manager_approved and not leave_request.admin_approved:
-            # If the admin is specifically assigned to handle a department (through managed_department relationship)
-            if current_user.managed_department:
-                # Check if the requester is from a department this admin manages
-                admin_managed_departments = [dept.id for dept in current_user.managed_department]
-                if requester_department and requester_department.id in admin_managed_departments:
+        # If requester is a manager, admins can approve directly even without manager approval
+        if requester_is_manager:
+            if leave_request.status == 'pending' and not leave_request.admin_approved:
+                # If the admin is specifically assigned to handle a department
+                if current_user.managed_department:
+                    # Check if the requester is from a department this admin manages
+                    admin_managed_departments = [dept.id for dept in current_user.managed_department]
+                    if requester_department and requester_department.id in admin_managed_departments:
+                        can_approve = True
+                        approval_form = ApprovalForm()
+                else:
+                    # If admin is not assigned to any specific department, they can approve any department
                     can_approve = True
                     approval_form = ApprovalForm()
-            else:
-                # If admin is not assigned to any specific department, they can approve any department
-                can_approve = True
-                approval_form = ApprovalForm()
+        else:
+            # Regular approval flow for non-manager employees
+            # Admins can approve if status is pending, manager has approved, and request is from their department
+            if leave_request.status == 'pending' and leave_request.manager_approved and not leave_request.admin_approved:
+                # If the admin is specifically assigned to handle a department (through managed_department relationship)
+                if current_user.managed_department:
+                    # Check if the requester is from a department this admin manages
+                    admin_managed_departments = [dept.id for dept in current_user.managed_department]
+                    if requester_department and requester_department.id in admin_managed_departments:
+                        can_approve = True
+                        approval_form = ApprovalForm()
+                else:
+                    # If admin is not assigned to any specific department, they can approve any department
+                    can_approve = True
+                    approval_form = ApprovalForm()
     
     # Handle approval/rejection submission
     if approval_form and approval_form.validate_on_submit():
@@ -163,6 +183,10 @@ def view(id):
             elif user_role == 'admin':
                 leave_request.admin_approved = True
                 leave_request.status = 'approved'
+                
+                # If requester is a manager, auto-approve the manager part too for completeness
+                if requester_is_manager:
+                    leave_request.manager_approved = True
                 
                 # Notify the employee
                 create_notification(
@@ -264,3 +288,84 @@ def delete(id):
     
     flash('Your leave request has been deleted successfully!', 'success')
     return redirect(url_for('leave.index'))
+
+
+@leave_bp.route('/admin-create', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def admin_create():
+    """Allow admin to create leave requests on behalf of employees"""
+    form = AdminLeaveRequestForm()
+    
+    # Populate employee dropdown with active employees
+    if current_user.managed_department:
+        # If admin is assigned to specific departments, show only employees from those departments
+        admin_dept_ids = [dept.id for dept in current_user.managed_department]
+        employees = User.query.filter(
+            User.status == 'active',
+            User.department_id.in_(admin_dept_ids)
+        ).order_by(User.first_name).all()
+    else:
+        # If admin is not assigned to specific departments, show all active employees
+        employees = User.query.filter_by(status='active').order_by(User.first_name).all()
+    
+    # Create choices list for the dropdown: [(id, "First Last (Department)")]
+    employee_choices = []
+    for employee in employees:
+        dept_name = employee.department.department_name if employee.department else "No Department"
+        display_text = f"{employee.get_full_name()} ({dept_name})"
+        employee_choices.append((employee.id, display_text))
+    
+    form.employee_id.choices = employee_choices
+    
+    if form.validate_on_submit():
+        # Get the selected employee
+        employee = User.query.get(form.employee_id.data)
+        
+        if not employee:
+            flash('Selected employee does not exist.', 'danger')
+            return redirect(url_for('leave.admin_create'))
+        
+        # Create the leave request for the employee
+        leave_request = LeaveRequest(
+            user_id=employee.id,
+            start_date=form.start_date.data,
+            end_date=form.end_date.data,
+            reason=form.reason.data,
+            status='pending'
+        )
+        
+        # If the employee is a manager, automatically set manager_approved to True
+        if employee.role == 'manager':
+            leave_request.manager_approved = True
+        
+        db.session.add(leave_request)
+        db.session.commit()
+        
+        # Notify the employee
+        create_notification(
+            user_id=employee.id,
+            message=f"An admin has created a leave request on your behalf from {form.start_date.data} to {form.end_date.data}",
+            notification_type='new_request',
+            reference_id=leave_request.id,
+            reference_type='leave'
+        )
+        
+        # If employee is not a manager, notify their direct manager
+        if employee.role != 'manager':
+            managers = get_user_managers(employee)
+            if managers['direct_manager']:
+                create_notification(
+                    user_id=managers['direct_manager'].id,
+                    message=f"New leave request for {employee.get_full_name()} (created by admin) from {form.start_date.data} to {form.end_date.data}",
+                    notification_type='new_request',
+                    reference_id=leave_request.id,
+                    reference_type='leave'
+                )
+        
+        flash(f'Leave request for {employee.get_full_name()} has been submitted successfully!', 'success')
+        return redirect(url_for('leave.index'))
+    
+    return render_template('leave/admin_create.html', 
+                          title='Create Leave Request for Employee', 
+                          form=form)

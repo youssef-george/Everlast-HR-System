@@ -111,3 +111,13 @@ class ApprovalForm(FlaskForm):
     ], validators=[DataRequired()])
     comment = TextAreaField('Comment', validators=[Optional(), Length(max=500)])
     submit = SubmitField('Submit Decision')
+
+class AdminLeaveRequestForm(LeaveRequestForm):
+    """Form for admin to create leave requests on behalf of employees"""
+    employee_id = SelectField('Employee', coerce=int, validators=[DataRequired()])
+    submit = SubmitField('Submit Leave Request for Employee')
+
+class AdminPermissionRequestForm(PermissionRequestForm):
+    """Form for admin to create permission requests on behalf of employees"""
+    employee_id = SelectField('Employee', coerce=int, validators=[DataRequired()])
+    submit = SubmitField('Submit Permission Request for Employee')
