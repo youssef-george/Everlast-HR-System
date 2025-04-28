@@ -52,6 +52,10 @@ class UserEditForm(FlaskForm):
         ('active', 'Active'),
         ('inactive', 'Inactive')
     ], validators=[DataRequired()])
+    new_password = PasswordField('New Password', validators=[Optional(), Length(min=8, message='Password must be at least 8 characters')])
+    confirm_password = PasswordField('Confirm Password', validators=[
+        EqualTo('new_password', message='Passwords must match')
+    ])
     submit = SubmitField('Update User')
 
 class ProfileEditForm(FlaskForm):

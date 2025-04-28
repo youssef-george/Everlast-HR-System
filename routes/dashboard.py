@@ -241,6 +241,11 @@ def edit_user(user_id):
         else:
             user.department_id = form.department_id.data
             
+        # Update password if provided
+        if form.new_password.data:
+            from werkzeug.security import generate_password_hash
+            user.password_hash = generate_password_hash(form.new_password.data)
+            
         user.updated_at = datetime.utcnow()
         
         try:
