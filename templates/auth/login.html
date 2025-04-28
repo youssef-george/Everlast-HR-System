@@ -116,7 +116,7 @@
                 
                 <!-- Login Form -->
                 <form method="POST" action="{{ url_for('auth.login') }}">
-                    {{ form.hidden_tag() }}
+                    {{ form.csrf_token }}
                     
                     <!-- Email Field -->
                     <div class="mb-3">

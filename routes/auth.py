@@ -16,25 +16,39 @@ def login():
     
     form = LoginForm()
     
-    if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
-        
-        if user and check_password_hash(user.password_hash, form.password.data):
-            if user.status != 'active':
-                flash('Your account is inactive. Please contact an administrator.', 'danger')
-                return redirect(url_for('auth.login'))
-            
-            login_user(user, remember=form.remember.data)
-            next_page = request.args.get('next')
-            
-            # Redirect to dashboard based on role
-            if not next_page or not next_page.startswith('/'):
-                return redirect(url_for('dashboard.index'))
-            
-            return redirect(next_page)
-        else:
-            flash('Login failed. Please check your email and password.', 'danger')
+    # When the form is submitted and passes validation
+    if request.method == 'POST':
+        try:
+            # Validate the form which will include CSRF check
+            if form.validate_on_submit():
+                user = User.query.filter_by(email=form.email.data).first()
+                
+                if user and check_password_hash(user.password_hash, form.password.data):
+                    if user.status != 'active':
+                        flash('Your account is inactive. Please contact an administrator.', 'danger')
+                        return redirect(url_for('auth.login'))
+                    
+                    login_user(user, remember=form.remember.data)
+                    next_page = request.args.get('next')
+                    
+                    # Redirect to dashboard based on role
+                    if not next_page or not next_page.startswith('/'):
+                        return redirect(url_for('dashboard.index'))
+                    
+                    return redirect(next_page)
+                else:
+                    flash('Login failed. Please check your email and password.', 'danger')
+            else:
+                # Form validation failed, check if there are form errors to display
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        flash(f"{field}: {error}", 'danger')
+        except Exception as e:
+            # Catch any other exceptions
+            flash(f'An error occurred: {str(e)}', 'danger')
+            app.logger.error(f'Login error: {str(e)}')
     
+    # For GET request or if form validation fails
     return render_template('auth/login.html', form=form, title='Login')
 
 @auth_bp.route('/logout')
