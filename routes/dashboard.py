@@ -311,7 +311,8 @@ def director():
     """Director dashboard focusing on permission requests approval"""
     stats = get_dashboard_stats(current_user)
     
-    # Get pending permission requests that need director approval
+    # For directors, we'll show all department requests, but we could limit to specific
+    # departments if the director has specific department responsibilities in the future
     pending_permission_requests = PermissionRequest.query.filter_by(
         status='pending',
         manager_approved=True,

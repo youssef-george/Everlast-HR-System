@@ -87,10 +87,11 @@ def create_notification(user_id, message, notification_type, reference_id=None, 
     return notification
 
 def get_user_managers(user):
-    """Get the managers for a user (direct manager, admin, and director)."""
+    """Get the managers for a user (direct manager, admin, and director), with department-specific filtering."""
     managers = {
         'direct_manager': None,
         'admin_managers': [],
+        'department_admin_managers': [],
         'directors': []
     }
     
@@ -98,7 +99,17 @@ def get_user_managers(user):
         managers['direct_manager'] = User.query.get(user.department.manager_id)
     
     # Get all admin users
-    managers['admin_managers'] = User.query.filter_by(role='admin', status='active').all()
+    all_admins = User.query.filter_by(role='admin', status='active').all()
+    managers['admin_managers'] = all_admins
+    
+    # Filter admins by department, if applicable
+    if user.department:
+        for admin in all_admins:
+            if admin.managed_department:
+                # Check if this admin manages the user's department
+                admin_managed_depts = [dept.id for dept in admin.managed_department]
+                if user.department.id in admin_managed_depts:
+                    managers['department_admin_managers'].append(admin)
     
     # Get all directors
     managers['directors'] = User.query.filter_by(role='director', status='active').all()
@@ -215,19 +226,41 @@ def get_dashboard_stats(user):
         ).count()
         
     elif user.role == 'admin':
-        # Admin sees company-wide stats
-        stats['pending_leave_requests'] = LeaveRequest.query.filter(
-            LeaveRequest.status == 'pending',
-            LeaveRequest.manager_approved == True,
-            LeaveRequest.admin_approved == False
-        ).count()
-        
-        stats['pending_permission_requests'] = PermissionRequest.query.filter(
-            PermissionRequest.status == 'pending',
-            PermissionRequest.manager_approved == True,
-            PermissionRequest.director_approved == True,
-            PermissionRequest.admin_approved == False
-        ).count()
+        # Admin sees stats based on department assignments
+        if user.managed_department:
+            # If admin is assigned to specific departments, only show stats for those departments
+            admin_dept_ids = [dept.id for dept in user.managed_department]
+            
+            # Find leave requests from users in these departments
+            stats['pending_leave_requests'] = LeaveRequest.query.join(User).filter(
+                LeaveRequest.status == 'pending',
+                LeaveRequest.manager_approved == True,
+                LeaveRequest.admin_approved == False,
+                User.department_id.in_(admin_dept_ids)
+            ).count()
+            
+            # Find permission requests from users in these departments
+            stats['pending_permission_requests'] = PermissionRequest.query.join(User).filter(
+                PermissionRequest.status == 'pending',
+                PermissionRequest.manager_approved == True,
+                PermissionRequest.director_approved == True,
+                PermissionRequest.admin_approved == False,
+                User.department_id.in_(admin_dept_ids)
+            ).count()
+        else:
+            # If not assigned to specific departments, show all company-wide stats
+            stats['pending_leave_requests'] = LeaveRequest.query.filter(
+                LeaveRequest.status == 'pending',
+                LeaveRequest.manager_approved == True,
+                LeaveRequest.admin_approved == False
+            ).count()
+            
+            stats['pending_permission_requests'] = PermissionRequest.query.filter(
+                PermissionRequest.status == 'pending',
+                PermissionRequest.manager_approved == True,
+                PermissionRequest.director_approved == True,
+                PermissionRequest.admin_approved == False
+            ).count()
         
         stats['approved_leave_requests'] = LeaveRequest.query.filter_by(status='approved').count()
         stats['approved_permission_requests'] = PermissionRequest.query.filter_by(status='approved').count()
