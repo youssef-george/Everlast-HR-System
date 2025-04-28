@@ -1,0 +1,55 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="content-header">
+    <h1 class="page-title">{{ 'Create Department' if is_create else 'Edit Department' }}</h1>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">{{ 'Department Information' }}</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('departments.create') if is_create else url_for('departments.edit', id=department.id) }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <!-- Department Name Field -->
+                    <div class="mb-3">
+                        <label for="{{ form.department_name.id }}" class="form-label">Department Name</label>
+                        {{ form.department_name(class="form-control", placeholder="Enter department name") }}
+                        {% if form.department_name.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.department_name.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Manager Field -->
+                    <div class="mb-3">
+                        <label for="{{ form.manager_id.id }}" class="form-label">Department Manager</label>
+                        {{ form.manager_id(class="form-select") }}
+                        {% if form.manager_id.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.manager_id.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Select a manager for this department. Only users with Manager or Admin role can be assigned.</div>
+                    </div>
+                    
+                    <!-- Submit Button -->
+                    <div class="d-flex justify-content-end mt-4">
+                        <a href="{{ url_for('departments.index') }}" class="btn btn-light me-2">Cancel</a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

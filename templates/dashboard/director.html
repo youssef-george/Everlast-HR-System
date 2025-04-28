@@ -1,0 +1,184 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="content-header">
+    <h1 class="page-title">Director Dashboard</h1>
+    <div class="content-header-actions">
+        <a href="{{ url_for('calendar.index') }}" class="btn btn-primary">
+            <i class="fas fa-calendar-alt me-1"></i> Company Calendar
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Stats Cards -->
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card">
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: rgba(0, 93, 153, 0.1); color: #005d99;">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-content">
+                    <h5 class="stat-value">{{ stats.pending_permission_requests }}</h5>
+                    <p class="stat-label">Pending Permission Approvals</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card">
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: rgba(23, 167, 74, 0.1); color: #17a74a;">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-content">
+                    <h5 class="stat-value">{{ stats.total_employees }}</h5>
+                    <p class="stat-label">Total Employees</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card">
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: rgba(114, 57, 234, 0.1); color: #7239ea;">
+                    <i class="fas fa-building"></i>
+                </div>
+                <div class="stat-content">
+                    <h5 class="stat-value">{{ stats.total_departments }}</h5>
+                    <p class="stat-label">Total Departments</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pending Permission Requests -->
+    <div class="col-lg-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Pending Permission Requests</h3>
+                <div class="card-toolbar">
+                    <a href="{{ url_for('permission.index') }}" class="btn btn-sm btn-light">View All</a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Department</th>
+                                <th>Date & Time</th>
+                                <th>Reason</th>
+                                <th>Manager Approved</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if pending_permission_requests %}
+                                {% for permission in pending_permission_requests %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="symbol symbol-35px me-2">
+                                                <span class="symbol-label bg-light-primary text-primary">
+                                                    {{ permission.user.first_name[0] }}{{ permission.user.last_name[0] }}
+                                                </span>
+                                            </div>
+                                            <div>{{ permission.user.first_name }} {{ permission.user.last_name }}</div>
+                                        </div>
+                                    </td>
+                                    <td>{{ permission.user.department.department_name if permission.user.department else 'No Department' }}</td>
+                                    <td>{{ permission.start_time.strftime('%d/%m/%Y %H:%M') }} - {{ permission.end_time.strftime('%H:%M') }}</td>
+                                    <td>{{ permission.reason|truncate(30) }}</td>
+                                    <td>
+                                        {% if permission.manager_approved %}
+                                            <span class="badge badge-light-success">Yes</span>
+                                        {% else %}
+                                            <span class="badge badge-light-warning">Pending</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('permission.view', id=permission.id) }}" class="btn btn-sm btn-primary">Review</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center p-4">No pending permission requests.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activity -->
+    <div class="col-lg-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Recent Permission Activity</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Department</th>
+                                <th>Date & Time</th>
+                                <th>Status</th>
+                                <th>Updated</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if recent_permissions %}
+                                {% for permission in recent_permissions %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="symbol symbol-35px me-2">
+                                                <span class="symbol-label bg-light-primary text-primary">
+                                                    {{ permission.user.first_name[0] }}{{ permission.user.last_name[0] }}
+                                                </span>
+                                            </div>
+                                            <div>{{ permission.user.first_name }} {{ permission.user.last_name }}</div>
+                                        </div>
+                                    </td>
+                                    <td>{{ permission.user.department.department_name if permission.user.department else 'No Department' }}</td>
+                                    <td>{{ permission.start_time.strftime('%d/%m/%Y %H:%M') }} - {{ permission.end_time.strftime('%H:%M') }}</td>
+                                    <td>
+                                        {% if permission.status == 'pending' %}
+                                            <span class="badge badge-light-warning">Pending</span>
+                                        {% elif permission.status == 'approved' %}
+                                            <span class="badge badge-light-success">Approved</span>
+                                        {% else %}
+                                            <span class="badge badge-light-danger">Rejected</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ permission.updated_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                    <td>
+                                        <a href="{{ url_for('permission.view', id=permission.id) }}" class="btn btn-sm btn-icon btn-light" data-bs-toggle="tooltip" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center p-4">No recent permission activity.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

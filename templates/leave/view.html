@@ -1,0 +1,277 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="content-header">
+    <h1 class="page-title">Leave Request Details</h1>
+    <div class="content-header-actions">
+        {% if leave_request.user_id == current_user.id and leave_request.status == 'pending' %}
+            <a href="{{ url_for('leave.edit', id=leave_request.id) }}" class="btn btn-light-primary me-2">
+                <i class="fas fa-edit me-1"></i> Edit
+            </a>
+            <form method="POST" action="{{ url_for('leave.delete', id=leave_request.id) }}" class="d-inline" data-confirm="Are you sure you want to delete this leave request?">
+                {{ csrf_token() }}
+                <button type="submit" class="btn btn-light-danger">
+                    <i class="fas fa-trash me-1"></i> Delete
+                </button>
+            </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Leave Request Details Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title">Request Information</h3>
+                <div class="card-toolbar">
+                    {% if leave_request.status == 'pending' %}
+                        <span class="badge badge-light-warning">Pending</span>
+                    {% elif leave_request.status == 'approved' %}
+                        <span class="badge badge-light-success">Approved</span>
+                    {% else %}
+                        <span class="badge badge-light-danger">Rejected</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <label class="col-sm-3 fw-bold">Employee:</label>
+                    <div class="col-sm-9">
+                        <div class="d-flex align-items-center">
+                            <div class="symbol symbol-35px me-2">
+                                <span class="symbol-label bg-light-primary text-primary">
+                                    {{ requester.first_name[0] }}{{ requester.last_name[0] }}
+                                </span>
+                            </div>
+                            <div>{{ requester.get_full_name() }}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <label class="col-sm-3 fw-bold">Department:</label>
+                    <div class="col-sm-9">{{ requester.department.department_name if requester.department else 'No Department' }}</div>
+                </div>
+                
+                <div class="row mb-3">
+                    <label class="col-sm-3 fw-bold">Period:</label>
+                    <div class="col-sm-9">{{ leave_request.start_date.strftime('%d/%m/%Y') }} - {{ leave_request.end_date.strftime('%d/%m/%Y') }}</div>
+                </div>
+                
+                <div class="row mb-3">
+                    <label class="col-sm-3 fw-bold">Duration:</label>
+                    <div class="col-sm-9">{{ (leave_request.end_date - leave_request.start_date).days + 1 }} days</div>
+                </div>
+                
+                <div class="row mb-3">
+                    <label class="col-sm-3 fw-bold">Reason:</label>
+                    <div class="col-sm-9">{{ leave_request.reason }}</div>
+                </div>
+                
+                <div class="row mb-3">
+                    <label class="col-sm-3 fw-bold">Created On:</label>
+                    <div class="col-sm-9">{{ leave_request.created_at.strftime('%d/%m/%Y %H:%M') }}</div>
+                </div>
+                
+                <div class="row mb-3">
+                    <label class="col-sm-3 fw-bold">Last Updated:</label>
+                    <div class="col-sm-9">{{ leave_request.updated_at.strftime('%d/%m/%Y %H:%M') }}</div>
+                </div>
+                
+                {% if leave_request.comment %}
+                <div class="separator my-4"></div>
+                
+                <div class="row mb-3">
+                    <label class="col-sm-3 fw-bold">Manager Comment:</label>
+                    <div class="col-sm-9">{{ leave_request.comment }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Approval History Card -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Approval Progress</h3>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-column">
+                    <!-- Step 1: Direct Manager -->
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="symbol symbol-40px me-3 position-relative">
+                            <div class="symbol-label bg-light-primary">
+                                <i class="fas fa-user-tie text-primary"></i>
+                            </div>
+                            {% if leave_request.manager_approved %}
+                                <div class="position-absolute bottom-0 end-0 bg-success rounded-circle p-1">
+                                    <i class="fas fa-check text-white" style="font-size: 10px;"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex flex-column flex-grow-1">
+                            <span class="fw-bold mb-1">Direct Manager Approval</span>
+                            <span class="text-muted">
+                                {% if leave_request.manager_approved %}
+                                    <span class="text-success">Approved</span>
+                                {% elif leave_request.status == 'rejected' %}
+                                    <span class="text-danger">Rejected</span>
+                                {% else %}
+                                    <span class="text-warning">Pending</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 2: Admin Approval -->
+                    <div class="d-flex align-items-center">
+                        <div class="symbol symbol-40px me-3 position-relative">
+                            <div class="symbol-label bg-light-primary">
+                                <i class="fas fa-user-shield text-primary"></i>
+                            </div>
+                            {% if leave_request.admin_approved %}
+                                <div class="position-absolute bottom-0 end-0 bg-success rounded-circle p-1">
+                                    <i class="fas fa-check text-white" style="font-size: 10px;"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex flex-column flex-grow-1">
+                            <span class="fw-bold mb-1">Account Manager (Admin) Approval</span>
+                            <span class="text-muted">
+                                {% if leave_request.admin_approved %}
+                                    <span class="text-success">Approved</span>
+                                {% elif leave_request.status == 'rejected' %}
+                                    <span class="text-danger">Rejected</span>
+                                {% elif leave_request.manager_approved %}
+                                    <span class="text-warning">Pending</span>
+                                {% else %}
+                                    <span class="text-muted">Awaiting Manager Approval</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Approval Actions Card (Only for managers/admins who can approve) -->
+        {% if can_approve %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title">Review Decision</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('leave.view', id=leave_request.id) }}">
+                    {{ approval_form.hidden_tag() }}
+                    
+                    <!-- Status Field -->
+                    <div class="mb-3">
+                        <label for="{{ approval_form.status.id }}" class="form-label">Decision</label>
+                        {{ approval_form.status(class="form-select") }}
+                    </div>
+                    
+                    <!-- Comment Field -->
+                    <div class="mb-3">
+                        <label for="{{ approval_form.comment.id }}" class="form-label">Comment (Optional)</label>
+                        {{ approval_form.comment(class="form-control", rows="4", placeholder="Add any comments or feedback") }}
+                    </div>
+                    
+                    <!-- Submit Button -->
+                    <div class="d-grid">
+                        {{ approval_form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- User Info Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title">Employee Information</h3>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-4">
+                    <div class="symbol symbol-50px me-3">
+                        <span class="symbol-label bg-light-primary text-primary">
+                            {{ requester.first_name[0] }}{{ requester.last_name[0] }}
+                        </span>
+                    </div>
+                    <div>
+                        <h4 class="mb-0">{{ requester.get_full_name() }}</h4>
+                        <span class="text-muted">{{ requester.email }}</span>
+                    </div>
+                </div>
+                
+                <div class="mb-2">
+                    <span class="fw-bold me-2">Department:</span>
+                    <span>{{ requester.department.department_name if requester.department else 'No Department' }}</span>
+                </div>
+                
+                <div class="mb-2">
+                    <span class="fw-bold me-2">Role:</span>
+                    <span class="badge badge-light-primary">
+                        {% if requester.role == 'employee' %}
+                            Employee
+                        {% elif requester.role == 'manager' %}
+                            Manager
+                        {% elif requester.role == 'admin' %}
+                            Admin
+                        {% elif requester.role == 'director' %}
+                            Director
+                        {% endif %}
+                    </span>
+                </div>
+                
+                <div>
+                    <span class="fw-bold me-2">Status:</span>
+                    {% if requester.status == 'active' %}
+                        <span class="badge badge-light-success">Active</span>
+                    {% else %}
+                        <span class="badge badge-light-danger">Inactive</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Related Requests Card -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Other Leave Requests</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% set found_other_requests = false %}
+                    {% for leave in requester.leave_requests %}
+                        {% if leave.id != leave_request.id and loop.index <= 5 %}
+                            {% set found_other_requests = true %}
+                            <a href="{{ url_for('leave.view', id=leave.id) }}" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ leave.start_date.strftime('%d/%m/%Y') }} - {{ leave.end_date.strftime('%d/%m/%Y') }}</h6>
+                                    {% if leave.status == 'pending' %}
+                                        <span class="badge badge-light-warning">Pending</span>
+                                    {% elif leave.status == 'approved' %}
+                                        <span class="badge badge-light-success">Approved</span>
+                                    {% else %}
+                                        <span class="badge badge-light-danger">Rejected</span>
+                                    {% endif %}
+                                </div>
+                                <p class="mb-1 text-muted">{{ leave.reason|truncate(50) }}</p>
+                                <small>{{ leave.created_at.strftime('%d/%m/%Y') }}</small>
+                            </a>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if not found_other_requests %}
+                        <div class="list-group-item">
+                            <p class="mb-0 text-center text-muted">No other leave requests found.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

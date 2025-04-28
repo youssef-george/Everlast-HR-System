@@ -1,0 +1,66 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="content-header">
+    <h1 class="page-title">Welcome to Everlast ERP</h1>
+</div>
+
+<div class="row">
+    <div class="col-lg-12 mb-4">
+        <div class="card">
+            <div class="card-body text-center p-5">
+                <h2 class="mb-4">Employee Leave and Permission Management System</h2>
+                <p class="lead mb-4">Access your dashboard to view and manage your requests.</p>
+                <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary btn-lg">Go to Dashboard</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Leave Requests</h3>
+            </div>
+            <div class="card-body">
+                <p>Submit and manage your leave requests. Track approvals and maintain your leave balance.</p>
+                <div class="d-flex justify-content-center mb-3">
+                    <i class="fas fa-umbrella-beach fa-4x text-primary"></i>
+                </div>
+                <a href="{{ url_for('leave.index') }}" class="btn btn-primary w-100">Manage Leave Requests</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Permission Requests</h3>
+            </div>
+            <div class="card-body">
+                <p>Request short-term time off. Track approvals and manage your permissions.</p>
+                <div class="d-flex justify-content-center mb-3">
+                    <i class="fas fa-clock fa-4x text-secondary"></i>
+                </div>
+                <a href="{{ url_for('permission.index') }}" class="btn btn-secondary w-100">Manage Permission Requests</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Calendar Overview</h3>
+            </div>
+            <div class="card-body">
+                <p class="text-center mb-4">View your scheduled leaves and permissions on the integrated calendar.</p>
+                <div class="d-flex justify-content-center mb-3">
+                    <i class="fas fa-calendar-alt fa-4x" style="color: #006e94;"></i>
+                </div>
+                <div class="text-center">
+                    <a href="{{ url_for('calendar.index') }}" class="btn btn-info">Open Calendar</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

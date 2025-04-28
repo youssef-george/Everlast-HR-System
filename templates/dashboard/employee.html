@@ -1,0 +1,235 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="content-header">
+    <h1 class="page-title">Employee Dashboard</h1>
+    <div class="content-header-actions">
+        <a href="{{ url_for('leave.create') }}" class="btn btn-primary me-2">
+            <i class="fas fa-plus-circle me-1"></i> New Leave Request
+        </a>
+        <a href="{{ url_for('permission.create') }}" class="btn btn-secondary">
+            <i class="fas fa-plus-circle me-1"></i> New Permission Request
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Stats Cards -->
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-umbrella-beach"></i>
+                </div>
+                <div class="stat-content">
+                    <h5 class="stat-value">{{ stats.pending_leave_requests }}</h5>
+                    <p class="stat-label">Pending Leaves</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card">
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: rgba(0, 93, 153, 0.1); color: #005d99;">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-content">
+                    <h5 class="stat-value">{{ stats.pending_permission_requests }}</h5>
+                    <p class="stat-label">Pending Permissions</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card">
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: rgba(23, 167, 74, 0.1); color: #17a74a;">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-content">
+                    <h5 class="stat-value">{{ stats.approved_leave_requests }}</h5>
+                    <p class="stat-label">Approved Leaves</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card">
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color: rgba(241, 65, 108, 0.1); color: #f1416c;">
+                    <i class="fas fa-times-circle"></i>
+                </div>
+                <div class="stat-content">
+                    <h5 class="stat-value">{{ stats.rejected_leave_requests }}</h5>
+                    <p class="stat-label">Rejected Leaves</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Request History Graph -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header border-0">
+                <h3 class="card-title">Your Request History</h3>
+            </div>
+            <div class="card-body">
+                <canvas id="employeeRequestHistory" height="300" 
+                        data-leaves="{{ leave_requests|tojson }}" 
+                        data-permissions="{{ permission_requests|tojson }}"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Links -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Quick Actions</h3>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-3">
+                    <a href="{{ url_for('leave.create') }}" class="btn btn-light-primary">
+                        <i class="fas fa-plus-circle me-2"></i> Submit Leave Request
+                    </a>
+                    <a href="{{ url_for('permission.create') }}" class="btn btn-light-secondary">
+                        <i class="fas fa-plus-circle me-2"></i> Submit Permission Request
+                    </a>
+                    <a href="{{ url_for('calendar.index') }}" class="btn btn-light-info">
+                        <i class="fas fa-calendar-alt me-2"></i> View Calendar
+                    </a>
+                    <a href="{{ url_for('profile.index') }}" class="btn btn-light-warning">
+                        <i class="fas fa-user-cog me-2"></i> Update Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Leave Requests -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Recent Leave Requests</h3>
+                <div class="card-toolbar">
+                    <a href="{{ url_for('leave.index') }}" class="btn btn-sm btn-light">View All</a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Dates</th>
+                                <th>Reason</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if leave_requests %}
+                                {% for leave in leave_requests %}
+                                <tr>
+                                    <td>{{ leave.start_date.strftime('%d/%m/%Y') }} - {{ leave.end_date.strftime('%d/%m/%Y') }}</td>
+                                    <td>{{ leave.reason|truncate(30) }}</td>
+                                    <td>
+                                        {% if leave.status == 'pending' %}
+                                            <span class="badge badge-light-warning">Pending</span>
+                                        {% elif leave.status == 'approved' %}
+                                            <span class="badge badge-light-success">Approved</span>
+                                        {% else %}
+                                            <span class="badge badge-light-danger">Rejected</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('leave.view', id=leave.id) }}" class="btn btn-sm btn-icon btn-light" data-bs-toggle="tooltip" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if leave.status == 'pending' %}
+                                            <a href="{{ url_for('leave.edit', id=leave.id) }}" class="btn btn-sm btn-icon btn-light" data-bs-toggle="tooltip" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center p-4">No leave requests found.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Permission Requests -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Recent Permission Requests</h3>
+                <div class="card-toolbar">
+                    <a href="{{ url_for('permission.index') }}" class="btn btn-sm btn-light">View All</a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Reason</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if permission_requests %}
+                                {% for permission in permission_requests %}
+                                <tr>
+                                    <td>{{ permission.start_time.strftime('%d/%m/%Y %H:%M') }} - {{ permission.end_time.strftime('%H:%M') }}</td>
+                                    <td>{{ permission.reason|truncate(30) }}</td>
+                                    <td>
+                                        {% if permission.status == 'pending' %}
+                                            <span class="badge badge-light-warning">Pending</span>
+                                        {% elif permission.status == 'approved' %}
+                                            <span class="badge badge-light-success">Approved</span>
+                                        {% else %}
+                                            <span class="badge badge-light-danger">Rejected</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('permission.view', id=permission.id) }}" class="btn btn-sm btn-icon btn-light" data-bs-toggle="tooltip" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if permission.status == 'pending' %}
+                                            <a href="{{ url_for('permission.edit', id=permission.id) }}" class="btn btn-sm btn-icon btn-light" data-bs-toggle="tooltip" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center p-4">No permission requests found.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

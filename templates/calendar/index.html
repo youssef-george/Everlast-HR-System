@@ -1,0 +1,163 @@
+{% extends "layout.html" %}
+
+{% block extra_css %}
+<style>
+    .calendar-controls {
+        margin-bottom: 1.5rem;
+    }
+    
+    .calendar-filter-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .calendar-filter-group .form-check {
+        margin-bottom: 0;
+    }
+    
+    .calendar-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .calendar-stat-item {
+        background-color: #fff;
+        padding: 0.75rem 1rem;
+        border-radius: 0.475rem;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+        display: flex;
+        align-items: center;
+    }
+    
+    .calendar-stat-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.75rem;
+    }
+    
+    .calendar-loading {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(255, 255, 255, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        display: none;
+    }
+    
+    .fc-event {
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <h1 class="page-title">Calendar</h1>
+    <div class="content-header-actions">
+        {% if current_user.role != 'director' %}
+        <a href="{{ url_for('leave.create') }}" class="btn btn-primary me-2">
+            <i class="fas fa-plus-circle me-1"></i> New Leave
+        </a>
+        {% endif %}
+        <a href="{{ url_for('permission.create') }}" class="btn btn-secondary">
+            <i class="fas fa-plus-circle me-1"></i> New Permission
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Filter Options</h3>
+            </div>
+            <div class="card-body">
+                <div class="calendar-controls">
+                    <div class="calendar-filter-group">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="leave-filter" checked>
+                            <label class="form-check-label" for="leave-filter">Leave Requests</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="permission-filter" checked>
+                            <label class="form-check-label" for="permission-filter">Permission Requests</label>
+                        </div>
+                        
+                        <div class="vr mx-2"></div>
+                        
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="pending-filter" checked>
+                            <label class="form-check-label" for="pending-filter">Pending</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="approved-filter" checked>
+                            <label class="form-check-label" for="approved-filter">Approved</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="rejected-filter" checked>
+                            <label class="form-check-label" for="rejected-filter">Rejected</label>
+                        </div>
+                    </div>
+                    
+                    <div class="calendar-stats">
+                        <div class="calendar-stat-item">
+                            <div class="calendar-stat-icon" style="background-color: rgba(23, 167, 74, 0.1); color: #17a74a;">
+                                <i class="fas fa-umbrella-beach"></i>
+                            </div>
+                            <div>
+                                <span id="total-leaves">0</span> Leave Requests
+                            </div>
+                        </div>
+                        <div class="calendar-stat-item">
+                            <div class="calendar-stat-icon" style="background-color: rgba(0, 93, 153, 0.1); color: #005d99;">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div>
+                                <span id="total-permissions">0</span> Permission Requests
+                            </div>
+                        </div>
+                        <div class="calendar-stat-item">
+                            <div class="calendar-stat-icon" style="background-color: rgba(255, 199, 0, 0.1); color: #ffc107;">
+                                <i class="fas fa-hourglass-half"></i>
+                            </div>
+                            <div>
+                                <span id="pending-leaves">0</span> Pending Leaves, 
+                                <span id="pending-permissions">0</span> Pending Permissions
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-body position-relative">
+                <div id="calendar-loading" class="calendar-loading">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <div id="calendar"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/calendar.js') }}"></script>
+{% endblock %}

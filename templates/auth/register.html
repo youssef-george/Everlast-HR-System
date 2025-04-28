@@ -1,0 +1,125 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="content-header">
+    <h1 class="page-title">Register New User</h1>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">User Registration Form</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('auth.register') }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="row">
+                        <!-- First Name Field -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.first_name.id }}" class="form-label">First Name</label>
+                            {{ form.first_name(class="form-control", placeholder="Enter first name") }}
+                            {% if form.first_name.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.first_name.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Last Name Field -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.last_name.id }}" class="form-label">Last Name</label>
+                            {{ form.last_name(class="form-control", placeholder="Enter last name") }}
+                            {% if form.last_name.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.last_name.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Email Field -->
+                    <div class="mb-3">
+                        <label for="{{ form.email.id }}" class="form-label">Email</label>
+                        {{ form.email(class="form-control", placeholder="Enter email address") }}
+                        {% if form.email.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.email.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Password Field -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.password.id }}" class="form-label">Password</label>
+                            {{ form.password(class="form-control", placeholder="Enter password") }}
+                            {% if form.password.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.password.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Confirm Password Field -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.confirm_password.id }}" class="form-label">Confirm Password</label>
+                            {{ form.confirm_password(class="form-control", placeholder="Confirm password") }}
+                            {% if form.confirm_password.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.confirm_password.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Department Field -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.department_id.id }}" class="form-label">Department</label>
+                            {{ form.department_id(class="form-select") }}
+                            {% if form.department_id.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.department_id.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Role Field -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.role.id }}" class="form-label">User Role</label>
+                            {{ form.role(class="form-select") }}
+                            {% if form.role.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.role.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Submit Button -->
+                    <div class="d-flex justify-content-end mt-4">
+                        <a href="{{ url_for('dashboard.index') }}" class="btn btn-light me-2">Cancel</a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,139 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="content-header">
+    <h1 class="page-title">{{ 'Create Permission Request' if not is_edit else 'Edit Permission Request' }}</h1>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Permission Request Details</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('permission.create') if not is_edit else url_for('permission.edit', id=permission_request.id) }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <!-- Date Field -->
+                    <div class="mb-3">
+                        <label for="{{ form.start_date.id }}" class="form-label">Date</label>
+                        {{ form.start_date(class="form-control", type="date") }}
+                        {% if form.start_date.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.start_date.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Permission requests can only be for present or future dates.</div>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Start Time Field -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.start_time.id }}" class="form-label">Start Time</label>
+                            {{ form.start_time(class="form-control", type="time") }}
+                            {% if form.start_time.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.start_time.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- End Time Field -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.end_time.id }}" class="form-label">End Time</label>
+                            {{ form.end_time(class="form-control", type="time") }}
+                            {% if form.end_time.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.end_time.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Reason Field -->
+                    <div class="mb-4">
+                        <label for="{{ form.reason.id }}" class="form-label">Reason for Permission</label>
+                        {{ form.reason(class="form-control", rows="4", placeholder="Please provide a detailed reason for your permission request") }}
+                        {% if form.reason.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.reason.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text mt-1">
+                            <i class="fas fa-info-circle me-1"></i> Your request will be reviewed by your department manager, then by a company director, and finally by an account manager.
+                        </div>
+                    </div>
+                    
+                    <!-- Submit Buttons -->
+                    <div class="d-flex justify-content-end mt-4">
+                        <a href="{{ url_for('permission.index') }}" class="btn btn-light me-2">Cancel</a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Permission Policy Card -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3 class="card-title">Permission Policy</h3>
+            </div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    <li>Permission requests can only be for <span class="text-primary">present</span> or <span class="text-primary">future</span> dates (past date permissions are not allowed).</li>
+                    <li>Permission requests can only be edited or deleted while they are still in <span class="text-warning">Pending</span> status.</li>
+                    <li>The approval workflow for permission requests: <b>Direct Manager</b> → <b>Company Director</b> → <b>Account Manager (Admin)</b></li>
+                    <li>Please provide a clear and detailed reason for your permission request to help in the approval process.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set minimum date for the date field to today
+        const startDateInput = document.getElementById('start_date');
+        const startTimeInput = document.getElementById('start_time');
+        const endTimeInput = document.getElementById('end_time');
+        
+        if (startDateInput) {
+            const today = new Date().toISOString().split('T')[0];
+            if (!startDateInput.value) {
+                startDateInput.value = today;
+            }
+            startDateInput.min = today;
+        }
+        
+        // Validate that end time is after start time
+        if (startTimeInput && endTimeInput) {
+            function validateTimes() {
+                if (startTimeInput.value && endTimeInput.value) {
+                    if (endTimeInput.value <= startTimeInput.value) {
+                        endTimeInput.setCustomValidity('End time must be after start time');
+                    } else {
+                        endTimeInput.setCustomValidity('');
+                    }
+                }
+            }
+            
+            startTimeInput.addEventListener('change', validateTimes);
+            endTimeInput.addEventListener('change', validateTimes);
+            
+            // Initial validation
+            validateTimes();
+        }
+    });
+</script>
+{% endblock %}

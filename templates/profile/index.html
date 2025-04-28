@@ -1,0 +1,252 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="content-header">
+    <h1 class="page-title">My Profile</h1>
+    <div class="content-header-actions">
+        <a href="{{ url_for('profile.edit') }}" class="btn btn-primary">
+            <i class="fas fa-edit me-1"></i> Edit Profile
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-4">
+        <!-- User Info Card -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex flex-column align-items-center text-center">
+                    <div class="symbol symbol-100px mb-3">
+                        <span class="symbol-label bg-light-primary text-primary fs-1">
+                            {{ current_user.first_name[0] }}{{ current_user.last_name[0] }}
+                        </span>
+                    </div>
+                    <h4 class="mb-1">{{ current_user.get_full_name() }}</h4>
+                    <p class="text-muted mb-2">{{ current_user.email }}</p>
+                    <div class="mb-3">
+                        {% if current_user.role == 'employee' %}
+                            <span class="badge badge-light-primary">Employee</span>
+                        {% elif current_user.role == 'manager' %}
+                            <span class="badge badge-light-success">Manager</span>
+                        {% elif current_user.role == 'admin' %}
+                            <span class="badge badge-light-danger">Admin</span>
+                        {% elif current_user.role == 'director' %}
+                            <span class="badge badge-light-info">Director</span>
+                        {% endif %}
+                        
+                        {% if current_user.status == 'active' %}
+                            <span class="badge badge-light-success">Active</span>
+                        {% else %}
+                            <span class="badge badge-light-danger">Inactive</span>
+                        {% endif %}
+                    </div>
+                    <p class="mb-0">
+                        <i class="fas fa-building me-1 text-muted"></i>
+                        {{ current_user.department.department_name if current_user.department else 'No Department' }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Account Security Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title">Account Security</h3>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="symbol symbol-45px me-3 bg-light-primary">
+                        <i class="fas fa-lock text-primary"></i>
+                    </div>
+                    <div class="d-flex flex-column flex-grow-1">
+                        <span class="fw-bold mb-1">Password</span>
+                        <span class="text-muted">Last updated: Unknown</span>
+                    </div>
+                    <a href="{{ url_for('profile.edit') }}" class="btn btn-sm btn-light">Change</a>
+                </div>
+                
+                <div class="d-flex align-items-center">
+                    <div class="symbol symbol-45px me-3 bg-light-primary">
+                        <i class="fas fa-envelope text-primary"></i>
+                    </div>
+                    <div class="d-flex flex-column flex-grow-1">
+                        <span class="fw-bold mb-1">Email</span>
+                        <span class="text-muted">{{ current_user.email }}</span>
+                    </div>
+                    <a href="{{ url_for('profile.edit') }}" class="btn btn-sm btn-light">Update</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-8">
+        <!-- Leave & Permission Summary Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title">Leave & Permission Summary</h3>
+                <div class="card-toolbar">
+                    <a href="{{ url_for('calendar.index') }}" class="btn btn-sm btn-light">View Calendar</a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h5 class="fw-bold mb-3">Leave Requests</h5>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Pending:</span>
+                            <span class="badge badge-light-warning">{{ current_user.leave_requests|selectattr('status', 'equalto', 'pending')|list|length }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Approved:</span>
+                            <span class="badge badge-light-success">{{ current_user.leave_requests|selectattr('status', 'equalto', 'approved')|list|length }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>Rejected:</span>
+                            <span class="badge badge-light-danger">{{ current_user.leave_requests|selectattr('status', 'equalto', 'rejected')|list|length }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h5 class="fw-bold mb-3">Permission Requests</h5>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Pending:</span>
+                            <span class="badge badge-light-warning">{{ current_user.permission_requests|selectattr('status', 'equalto', 'pending')|list|length }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Approved:</span>
+                            <span class="badge badge-light-success">{{ current_user.permission_requests|selectattr('status', 'equalto', 'approved')|list|length }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>Rejected:</span>
+                            <span class="badge badge-light-danger">{{ current_user.permission_requests|selectattr('status', 'equalto', 'rejected')|list|length }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="separator my-4"></div>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('leave.create') }}" class="btn btn-light-primary">
+                        <i class="fas fa-plus-circle me-1"></i> New Leave Request
+                    </a>
+                    <a href="{{ url_for('permission.create') }}" class="btn btn-light-secondary">
+                        <i class="fas fa-plus-circle me-1"></i> New Permission Request
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Requests Card -->
+        <div class="card">
+            <div class="card-header border-0">
+                <h3 class="card-title">Recent Requests</h3>
+                <div class="card-toolbar">
+                    <ul class="nav nav-tabs nav-line-tabs nav-stretch nav-line-tabs-2x fs-6">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#leaves-tab">Leaves</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#permissions-tab">Permissions</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="leaves-tab">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Period</th>
+                                        <th>Reason</th>
+                                        <th>Status</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% set leave_requests = current_user.leave_requests|sort(attribute='created_at', reverse=true) %}
+                                    {% if leave_requests %}
+                                        {% for leave in leave_requests[:5] %}
+                                        <tr>
+                                            <td>{{ leave.start_date.strftime('%d/%m/%Y') }} - {{ leave.end_date.strftime('%d/%m/%Y') }}</td>
+                                            <td>{{ leave.reason|truncate(30) }}</td>
+                                            <td>
+                                                {% if leave.status == 'pending' %}
+                                                    <span class="badge badge-light-warning">Pending</span>
+                                                {% elif leave.status == 'approved' %}
+                                                    <span class="badge badge-light-success">Approved</span>
+                                                {% else %}
+                                                    <span class="badge badge-light-danger">Rejected</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ leave.created_at.strftime('%d/%m/%Y') }}</td>
+                                            <td>
+                                                <a href="{{ url_for('leave.view', id=leave.id) }}" class="btn btn-sm btn-icon btn-light" data-bs-toggle="tooltip" title="View Details">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="5" class="text-center p-4">No leave requests found.</td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-pane fade" id="permissions-tab">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date & Time</th>
+                                        <th>Reason</th>
+                                        <th>Status</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% set permission_requests = current_user.permission_requests|sort(attribute='created_at', reverse=true) %}
+                                    {% if permission_requests %}
+                                        {% for permission in permission_requests[:5] %}
+                                        <tr>
+                                            <td>{{ permission.start_time.strftime('%d/%m/%Y %H:%M') }} - {{ permission.end_time.strftime('%H:%M') }}</td>
+                                            <td>{{ permission.reason|truncate(30) }}</td>
+                                            <td>
+                                                {% if permission.status == 'pending' %}
+                                                    <span class="badge badge-light-warning">Pending</span>
+                                                {% elif permission.status == 'approved' %}
+                                                    <span class="badge badge-light-success">Approved</span>
+                                                {% else %}
+                                                    <span class="badge badge-light-danger">Rejected</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ permission.created_at.strftime('%d/%m/%Y') }}</td>
+                                            <td>
+                                                <a href="{{ url_for('permission.view', id=permission.id) }}" class="btn btn-sm btn-icon btn-light" data-bs-toggle="tooltip" title="View Details">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="5" class="text-center p-4">No permission requests found.</td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
