@@ -140,7 +140,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% if leave_requests %}
+                            {% if leave_requests_db %}
                                 {% for leave in leave_requests_db %}
                                 <tr>
                                     <td>{{ leave.start_date.strftime('%d/%m/%Y') }} - {{ leave.end_date.strftime('%d/%m/%Y') }}</td>
@@ -199,8 +199,8 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% if permission_requests %}
-                                {% for permission in permission_requests %}
+                            {% if permission_requests_db %}
+                                {% for permission in permission_requests_db %}
                                 <tr>
                                     <td>{{ permission.start_time.strftime('%d/%m/%Y %H:%M') }} - {{ permission.end_time.strftime('%H:%M') }}</td>
                                     <td>{{ permission.reason|truncate(30) }}</td>

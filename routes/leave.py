@@ -106,10 +106,22 @@ def view(id):
                 approval_form = ApprovalForm()
     
     elif user_role == 'admin':
-        # Admins can approve if status is pending and manager has approved
+        # Get the department of the requester
+        requester_department = requester.department
+        
+        # Admins can approve if status is pending, manager has approved, and request is from their department
         if leave_request.status == 'pending' and leave_request.manager_approved and not leave_request.admin_approved:
-            can_approve = True
-            approval_form = ApprovalForm()
+            # If the admin is specifically assigned to handle a department (through managed_department relationship)
+            if current_user.managed_department:
+                # Check if the requester is from a department this admin manages
+                admin_managed_departments = [dept.id for dept in current_user.managed_department]
+                if requester_department and requester_department.id in admin_managed_departments:
+                    can_approve = True
+                    approval_form = ApprovalForm()
+            else:
+                # If admin is not assigned to any specific department, they can approve any department
+                can_approve = True
+                approval_form = ApprovalForm()
     
     # Handle approval/rejection submission
     if approval_form and approval_form.validate_on_submit():
@@ -117,11 +129,25 @@ def view(id):
             if user_role == 'manager':
                 leave_request.manager_approved = True
                 
-                # Notify admins about the request
-                for admin in get_user_managers(requester)['admin_managers']:
+                # Notify relevant admins about the request
+                all_admins = get_user_managers(requester)['admin_managers']
+                department_specific_admins = []
+                
+                # First, try to identify department-specific admins
+                if requester.department:
+                    for admin in all_admins:
+                        if admin.managed_department:
+                            admin_managed_depts = [dept.id for dept in admin.managed_department]
+                            if requester.department.id in admin_managed_depts:
+                                department_specific_admins.append(admin)
+                
+                # If no department-specific admins found, notify all admins
+                admins_to_notify = department_specific_admins if department_specific_admins else all_admins
+                
+                for admin in admins_to_notify:
                     create_notification(
                         user_id=admin.id,
-                        message=f"Leave request from {requester.get_full_name()} approved by manager and needs your review",
+                        message=f"Leave request from {requester.get_full_name()} ({requester.department.department_name if requester.department else 'No Department'}) approved by manager and needs your review",
                         notification_type='approval',
                         reference_id=leave_request.id,
                         reference_type='leave'

@@ -98,19 +98,39 @@ def admin():
     """Admin dashboard showing all company data and analytics"""
     stats = get_dashboard_stats(current_user)
     
-    # Get pending requests that need admin approval
-    pending_leave_requests = LeaveRequest.query.filter_by(
-        status='pending',
-        manager_approved=True,
-        admin_approved=False
-    ).order_by(LeaveRequest.created_at.desc()).limit(5).all()
+    # Get pending requests that need admin approval based on department assignments
+    if current_user.managed_department:  # If admin is assigned to specific departments
+        admin_dept_ids = [dept.id for dept in current_user.managed_department]
+        pending_leave_requests = LeaveRequest.query.join(User).filter(
+            LeaveRequest.status == 'pending',
+            LeaveRequest.manager_approved == True,
+            LeaveRequest.admin_approved == False,
+            User.department_id.in_(admin_dept_ids)
+        ).order_by(LeaveRequest.created_at.desc()).limit(5).all()
+    else:  # If not assigned to specific departments, show all
+        pending_leave_requests = LeaveRequest.query.filter_by(
+            status='pending',
+            manager_approved=True,
+            admin_approved=False
+        ).order_by(LeaveRequest.created_at.desc()).limit(5).all()
     
-    pending_permission_requests = PermissionRequest.query.filter_by(
-        status='pending',
-        manager_approved=True,
-        director_approved=True,
-        admin_approved=False
-    ).order_by(PermissionRequest.created_at.desc()).limit(5).all()
+    # Get pending permission requests that need admin approval based on department assignments
+    if current_user.managed_department:
+        admin_dept_ids = [dept.id for dept in current_user.managed_department]
+        pending_permission_requests = PermissionRequest.query.join(User).filter(
+            PermissionRequest.status == 'pending',
+            PermissionRequest.manager_approved == True,
+            PermissionRequest.director_approved == True,
+            PermissionRequest.admin_approved == False,
+            User.department_id.in_(admin_dept_ids)
+        ).order_by(PermissionRequest.created_at.desc()).limit(5).all()
+    else:
+        pending_permission_requests = PermissionRequest.query.filter_by(
+            status='pending',
+            manager_approved=True,
+            director_approved=True,
+            admin_approved=False
+        ).order_by(PermissionRequest.created_at.desc()).limit(5).all()
     
     # Get recent activity
     recent_leaves = LeaveRequest.query.order_by(LeaveRequest.updated_at.desc()).limit(5).all()
