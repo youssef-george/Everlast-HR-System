@@ -1,7 +1,7 @@
 import os
 import logging
 
-from flask import Flask
+from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -21,7 +21,9 @@ csrf = CSRFProtect()
 
 # Create the app
 app = Flask(__name__)
-app.secret_key = os.environ.get("SESSION_SECRET", "everlast_erp_default_secret")
+app.config['SECRET_KEY'] = os.environ.get("SESSION_SECRET", "everlast_erp_default_secret")
+app.config['WTF_CSRF_ENABLED'] = True
+app.config['WTF_CSRF_SECRET_KEY'] = os.environ.get("CSRF_SECRET", "everlast_erp_csrf_secret")
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)  # needed for url_for to generate with https
 
 # Configure the SQLite database for development, use environment variable for production
@@ -72,13 +74,13 @@ with app.app_context():
     db.create_all()
     
     # Create default admin user if doesn't exist
-    admin_email = 'youssef.george@everlastwellness.com'
+    admin_email = 'erp@everlastwellness.com'
     admin = User.query.filter_by(email=admin_email).first()
     if not admin:
         logging.info("Creating default admin user")
         admin = User(
-            first_name="Youssef",
-            last_name="George",
+            first_name="ERP",
+            last_name="Admin",
             email=admin_email,
             password_hash=generate_password_hash("Everlast@123"),
             role="admin",
@@ -92,6 +94,8 @@ with app.app_context():
 def load_user(user_id):
     from models import User
     return User.query.get(int(user_id))
+
+# Error handler for CSRF errors will be defined after importing the necessary components
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

@@ -1,9 +1,10 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
+from flask_wtf.csrf import CSRFError
 from forms import LoginForm, RegistrationForm
 from models import User, Department
-from app import db
+from app import db, app
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
