@@ -82,15 +82,15 @@
                 </li>
                 {% if current_user.role == 'admin' %}
                 <li class="nav-item">
-                    <a href="{{ url_for('departments.index') }}" class="nav-link {{ 'active' if request.path.startswith('/departments') }}">
-                        <i class="fas fa-building nav-icon"></i>
-                        <span class="nav-text">Departments</span>
+                    <a href="{{ url_for('dashboard.users') }}" class="nav-link {{ 'active' if request.path == '/dashboard/users' }}">
+                        <i class="fas fa-user-cog nav-icon"></i>
+                        <span class="nav-text">User Management</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="{{ url_for('auth.register') }}" class="nav-link {{ 'active' if request.path == '/auth/register' }}">
-                        <i class="fas fa-user-plus nav-icon"></i>
-                        <span class="nav-text">Register User</span>
+                    <a href="{{ url_for('departments.index') }}" class="nav-link {{ 'active' if request.path.startswith('/departments') }}">
+                        <i class="fas fa-building nav-icon"></i>
+                        <span class="nav-text">Departments</span>
                     </a>
                 </li>
                 {% endif %}
@@ -164,6 +164,9 @@
                             <li><a class="dropdown-item" href="{{ url_for('profile.index') }}">My Profile</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('dashboard.members') }}">Company Members</a></li>
+                            {% if current_user.role == 'admin' %}
+                            <li><a class="dropdown-item" href="{{ url_for('dashboard.users') }}">User Management</a></li>
+                            {% endif %}
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Logout</a></li>
                         </ul>

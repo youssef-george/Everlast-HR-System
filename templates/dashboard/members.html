@@ -105,7 +105,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Simple search functionality
-        document.getElementById('memberSearch').addEventListener('keyup', function() {
+        document.getElementById('memberSearch').addEventListener('input', function() {
             filterMembers();
         });
         
@@ -117,23 +117,25 @@
         function filterMembers() {
             const searchText = document.getElementById('memberSearch').value.toLowerCase();
             const departmentFilter = document.getElementById('departmentFilter').value;
-            const rows = document.querySelectorAll('#membersTable tbody tr');
+            const tableRows = document.querySelectorAll('#membersTable tbody tr');
             
-            rows.forEach(row => {
-                const rowText = row.textContent.toLowerCase();
-                const rowDepartment = row.getAttribute('data-department');
-                
-                // Check if row matches both search text and department filter
-                const matchesSearch = rowText.includes(searchText);
-                const matchesDepartment = 
-                    departmentFilter === 'all' || 
-                    (departmentFilter === 'none' && rowDepartment === 'none') || 
-                    rowDepartment === departmentFilter;
-                
-                if (matchesSearch && matchesDepartment) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
+            tableRows.forEach(row => {
+                if (row.hasAttribute('data-department')) {
+                    const rowText = row.textContent.toLowerCase();
+                    const rowDepartment = row.getAttribute('data-department');
+                    
+                    // Check if row matches both search text and department filter
+                    const matchesSearch = searchText === '' || rowText.includes(searchText);
+                    const matchesDepartment = 
+                        departmentFilter === 'all' || 
+                        (departmentFilter === 'none' && rowDepartment === 'none') || 
+                        rowDepartment === departmentFilter;
+                    
+                    if (matchesSearch && matchesDepartment) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
                 }
             });
         }

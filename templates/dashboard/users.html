@@ -126,14 +126,14 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Simple search functionality
-        document.getElementById('userSearch').addEventListener('keyup', function() {
+        document.getElementById('userSearch').addEventListener('input', function() {
             const searchText = this.value.toLowerCase();
             const table = document.getElementById('usersTable');
             const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
             
             for (let i = 0; i < rows.length; i++) {
                 const rowText = rows[i].textContent.toLowerCase();
-                if (rowText.includes(searchText)) {
+                if (searchText === '' || rowText.includes(searchText)) {
                     rows[i].style.display = '';
                 } else {
                     rows[i].style.display = 'none';
