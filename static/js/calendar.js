@@ -14,13 +14,13 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             customButtons: {
                 prev: {
-                    text: '←',
+                    text: '↑',
                     click: function() {
                         calendar.prev();
                     }
                 },
                 next: {
-                    text: '→',
+                    text: '↓',
                     click: function() {
                         calendar.next();
                     }

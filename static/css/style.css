@@ -622,8 +622,8 @@ body {
 /* Table Styles */
 .table th.approval-column,
 .table td.approval-column {
-    min-width: 150px;
-    width: 150px;
+    min-width: 200px;
+    width: 200px;
 }
 
 /* Helper Classes */
