@@ -132,15 +132,38 @@ def admin():
             admin_approved=False
         ).order_by(PermissionRequest.created_at.desc()).limit(5).all()
     
-    # Get recent activity
-    recent_leaves = LeaveRequest.query.order_by(LeaveRequest.updated_at.desc()).limit(5).all()
-    recent_permissions = PermissionRequest.query.order_by(PermissionRequest.updated_at.desc()).limit(5).all()
+    # Get recent activity - filter by department for department-specific admins
+    if current_user.managed_department:
+        admin_dept_ids = [dept.id for dept in current_user.managed_department]
+        recent_leaves = LeaveRequest.query.join(User).filter(
+            User.department_id.in_(admin_dept_ids)
+        ).order_by(LeaveRequest.updated_at.desc()).limit(5).all()
+        
+        recent_permissions = PermissionRequest.query.join(User).filter(
+            User.department_id.in_(admin_dept_ids)
+        ).order_by(PermissionRequest.updated_at.desc()).limit(5).all()
+    else:
+        # For admins without specific department assignments, show all activity
+        recent_leaves = LeaveRequest.query.order_by(LeaveRequest.updated_at.desc()).limit(5).all()
+        recent_permissions = PermissionRequest.query.order_by(PermissionRequest.updated_at.desc()).limit(5).all()
     
     # Get all users for the admin view (including active and inactive)
-    all_users = User.query.order_by(User.created_at.desc()).limit(10).all()
+    # Filter by department if admin has specific department assignments
+    if current_user.managed_department:
+        admin_dept_ids = [dept.id for dept in current_user.managed_department]
+        all_users = User.query.filter(
+            User.department_id.in_(admin_dept_ids)
+        ).order_by(User.created_at.desc()).limit(10).all()
+        
+        # Get only the departments this admin manages
+        departments = Department.query.filter(
+            Department.id.in_(admin_dept_ids)
+        ).all()
+    else:
+        all_users = User.query.order_by(User.created_at.desc()).limit(10).all()
+        departments = Department.query.all()
     
     # Get department data for analytics
-    departments = Department.query.all()
     department_data = []
     
     for dept in departments:
@@ -177,11 +200,23 @@ def admin():
 @role_required('admin')
 def users():
     """Admin page showing all users and allowing user management"""
-    # Get all users, both active and inactive
-    all_users = User.query.order_by(User.last_name).all()
-    
-    # Get all departments for filtering
-    departments = Department.query.all()
+    # Filter by department if admin has specific department assignments
+    if current_user.managed_department:
+        admin_dept_ids = [dept.id for dept in current_user.managed_department]
+        # Get only users belonging to departments this admin manages
+        all_users = User.query.filter(
+            (User.department_id.in_(admin_dept_ids)) | (User.department_id == None)
+        ).order_by(User.last_name).all()
+        
+        # Get only the departments this admin manages
+        departments = Department.query.filter(
+            Department.id.in_(admin_dept_ids)
+        ).all()
+    else:
+        # Get all users, both active and inactive
+        all_users = User.query.order_by(User.last_name).all()
+        # Get all departments for filtering
+        departments = Department.query.all()
     
     return render_template('dashboard/users.html',
                           title='User Management',
@@ -199,6 +234,13 @@ def toggle_user_status(user_id):
     if user.id == current_user.id:
         flash('You cannot deactivate your own account.', 'danger')
         return redirect(url_for('dashboard.users'))
+    
+    # Check if department-specific admin has permission
+    if current_user.managed_department:
+        admin_dept_ids = [dept.id for dept in current_user.managed_department]
+        if user.department_id and user.department_id not in admin_dept_ids:
+            flash('You do not have permission to change this user\'s status.', 'danger')
+            return redirect(url_for('dashboard.users'))
     
     # Toggle status
     user.status = 'inactive' if user.status == 'active' else 'active'
@@ -223,6 +265,13 @@ def delete_member(user_id):
         flash('You cannot delete your own account.', 'danger')
         return redirect(url_for('dashboard.users'))
     
+    # Check if department-specific admin has permission
+    if current_user.managed_department:
+        admin_dept_ids = [dept.id for dept in current_user.managed_department]
+        if user.department_id and user.department_id not in admin_dept_ids:
+            flash('You do not have permission to delete this user.', 'danger')
+            return redirect(url_for('dashboard.users'))
+    
     # Store user info for the flash message
     user_name = f"{user.first_name} {user.last_name}"
     
@@ -244,8 +293,19 @@ def edit_user(user_id):
     """Edit user information"""
     user = User.query.get_or_404(user_id)
     
-    # Get all departments for the department dropdown
-    departments = Department.query.all()
+    # Get departments for the dropdown based on admin permissions
+    if current_user.managed_department:
+        admin_dept_ids = [dept.id for dept in current_user.managed_department]
+        departments = Department.query.filter(
+            Department.id.in_(admin_dept_ids)
+        ).all()
+        
+        # Check if the user belongs to a department this admin can manage
+        if user.department_id and user.department_id not in admin_dept_ids:
+            flash('You do not have permission to edit this user.', 'danger')
+            return redirect(url_for('dashboard.users'))
+    else:
+        departments = Department.query.all()
     
     # Create form and populate with user data
     form = UserEditForm(obj=user)
@@ -293,11 +353,24 @@ def edit_user(user_id):
 @login_required
 def members():
     """Page showing all active members in the system"""
-    # Get all active users ordered by last name
-    active_users = User.query.filter_by(status='active').order_by(User.last_name, User.first_name).all()
-    
-    # Get all departments for filtering
-    departments = Department.query.all()
+    # Filter by department if user is an admin with specific department assignments
+    if current_user.role == 'admin' and current_user.managed_department:
+        admin_dept_ids = [dept.id for dept in current_user.managed_department]
+        # Get only active users belonging to departments this admin manages
+        active_users = User.query.filter(
+            User.status == 'active',
+            User.department_id.in_(admin_dept_ids)
+        ).order_by(User.last_name, User.first_name).all()
+        
+        # Get only the departments this admin manages
+        departments = Department.query.filter(
+            Department.id.in_(admin_dept_ids)
+        ).all()
+    else:
+        # Get all active users ordered by last name
+        active_users = User.query.filter_by(status='active').order_by(User.last_name, User.first_name).all()
+        # Get all departments for filtering
+        departments = Department.query.all()
     
     return render_template('dashboard/members.html',
                           title='Company Members',

@@ -262,11 +262,47 @@ def get_dashboard_stats(user):
                 PermissionRequest.admin_approved == False
             ).count()
         
-        stats['approved_leave_requests'] = LeaveRequest.query.filter_by(status='approved').count()
-        stats['approved_permission_requests'] = PermissionRequest.query.filter_by(status='approved').count()
-        stats['rejected_leave_requests'] = LeaveRequest.query.filter_by(status='rejected').count()
-        stats['rejected_permission_requests'] = PermissionRequest.query.filter_by(status='rejected').count()
-        stats['total_employees'] = User.query.filter(User.status == 'active', User.role != 'admin').count()
-        stats['total_departments'] = db.session.query(db.func.count(db.distinct(User.department_id))).scalar()
+        if user.managed_department:
+            # For admins with department assignments, show only their department stats
+            admin_dept_ids = [dept.id for dept in user.managed_department]
+            
+            # Approved/rejected leave requests for departments
+            stats['approved_leave_requests'] = LeaveRequest.query.join(User).filter(
+                LeaveRequest.status == 'approved',
+                User.department_id.in_(admin_dept_ids)
+            ).count()
+            
+            stats['approved_permission_requests'] = PermissionRequest.query.join(User).filter(
+                PermissionRequest.status == 'approved',
+                User.department_id.in_(admin_dept_ids)
+            ).count()
+            
+            stats['rejected_leave_requests'] = LeaveRequest.query.join(User).filter(
+                LeaveRequest.status == 'rejected',
+                User.department_id.in_(admin_dept_ids)
+            ).count()
+            
+            stats['rejected_permission_requests'] = PermissionRequest.query.join(User).filter(
+                PermissionRequest.status == 'rejected',
+                User.department_id.in_(admin_dept_ids)
+            ).count()
+            
+            # Only count employees in these departments
+            stats['total_employees'] = User.query.filter(
+                User.status == 'active',
+                User.role != 'admin',
+                User.department_id.in_(admin_dept_ids)
+            ).count()
+            
+            # Count only assigned departments
+            stats['total_departments'] = len(admin_dept_ids)
+        else:
+            # For admins without specific departments, show all company stats
+            stats['approved_leave_requests'] = LeaveRequest.query.filter_by(status='approved').count()
+            stats['approved_permission_requests'] = PermissionRequest.query.filter_by(status='approved').count()
+            stats['rejected_leave_requests'] = LeaveRequest.query.filter_by(status='rejected').count()
+            stats['rejected_permission_requests'] = PermissionRequest.query.filter_by(status='rejected').count()
+            stats['total_employees'] = User.query.filter(User.status == 'active', User.role != 'admin').count()
+            stats['total_departments'] = db.session.query(db.func.count(db.distinct(User.department_id))).scalar()
     
     return stats
