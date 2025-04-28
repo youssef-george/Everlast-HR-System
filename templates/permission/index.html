@@ -7,6 +7,12 @@
         <a href="{{ url_for('permission.create') }}" class="btn btn-primary">
             <i class="fas fa-plus-circle me-1"></i> New Permission Request
         </a>
+        
+        {% if current_user.role == 'admin' %}
+        <a href="{{ url_for('permission.admin_create') }}" class="btn btn-info ms-2">
+            <i class="fas fa-user-plus me-1"></i> Create for Employee
+        </a>
+        {% endif %}
     </div>
 </div>
 

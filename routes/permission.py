@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from datetime import datetime, date, time
-from forms import PermissionRequestForm, ApprovalForm
+from forms import PermissionRequestForm, ApprovalForm, AdminPermissionRequestForm
 from models import PermissionRequest, User
 from app import db
 from helpers import role_required, create_notification, get_user_managers, get_employees_for_manager
@@ -367,3 +367,109 @@ def delete(id):
     
     flash('Your permission request has been deleted successfully!', 'success')
     return redirect(url_for('permission.index'))
+
+
+@permission_bp.route('/admin-create', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def admin_create():
+    """Allow admin to create permission requests on behalf of employees"""
+    form = AdminPermissionRequestForm()
+    
+    # Populate employee dropdown with active employees
+    if current_user.managed_department:
+        # If admin is assigned to specific departments, show only employees from those departments
+        admin_dept_ids = [dept.id for dept in current_user.managed_department]
+        employees = User.query.filter(
+            User.status == 'active',
+            User.department_id.in_(admin_dept_ids)
+        ).order_by(User.first_name).all()
+    else:
+        # If admin is not assigned to specific departments, show all active employees
+        employees = User.query.filter_by(status='active').order_by(User.first_name).all()
+    
+    # Create choices list for the dropdown: [(id, "First Last (Department)")]
+    employee_choices = []
+    for employee in employees:
+        dept_name = employee.department.department_name if employee.department else "No Department"
+        display_text = f"{employee.get_full_name()} ({dept_name})"
+        employee_choices.append((employee.id, display_text))
+    
+    form.employee_id.choices = employee_choices
+    
+    if form.validate_on_submit():
+        # Get the selected employee
+        employee = User.query.get(form.employee_id.data)
+        
+        if not employee:
+            flash('Selected employee does not exist.', 'danger')
+            return redirect(url_for('permission.admin_create'))
+        
+        # Combine date and time
+        start_datetime = datetime.combine(form.start_date.data, form.start_time.data)
+        end_datetime = datetime.combine(form.start_date.data, form.end_time.data)
+        
+        # Allow selecting the previous day
+        from datetime import timedelta
+        yesterday = date.today() - timedelta(days=1)
+        
+        if start_datetime.date() < yesterday:
+            flash('Permission requests can only be for yesterday, today, or future dates.', 'danger')
+            return render_template('permission/admin_create.html', title='Create Permission Request for Employee', form=form)
+        
+        # Create the permission request for the employee
+        permission_request = PermissionRequest(
+            user_id=employee.id,
+            start_time=start_datetime,
+            end_time=end_datetime,
+            reason=form.reason.data,
+            status='pending'
+        )
+        
+        # If the employee is a manager, auto-approve manager and director parts
+        if employee.role == 'manager':
+            permission_request.manager_approved = True
+            permission_request.director_approved = True
+        
+        db.session.add(permission_request)
+        db.session.commit()
+        
+        # Notify the employee
+        create_notification(
+            user_id=employee.id,
+            message=f"An admin has created a permission request on your behalf for {form.start_date.data}",
+            notification_type='new_request',
+            reference_id=permission_request.id,
+            reference_type='permission'
+        )
+        
+        # If employee is not a manager, notify their direct manager and director
+        if employee.role != 'manager':
+            managers = get_user_managers(employee)
+            
+            # Notify direct manager
+            if managers['direct_manager']:
+                create_notification(
+                    user_id=managers['direct_manager'].id,
+                    message=f"New permission request for {employee.get_full_name()} (created by admin) for {form.start_date.data}",
+                    notification_type='new_request',
+                    reference_id=permission_request.id,
+                    reference_type='permission'
+                )
+            
+            # Notify directors
+            for director in managers['directors']:
+                create_notification(
+                    user_id=director.id,
+                    message=f"New permission request for {employee.get_full_name()} (created by admin) for {form.start_date.data}",
+                    notification_type='new_request',
+                    reference_id=permission_request.id,
+                    reference_type='permission'
+                )
+        
+        flash(f'Permission request for {employee.get_full_name()} has been submitted successfully!', 'success')
+        return redirect(url_for('permission.index'))
+    
+    return render_template('permission/admin_create.html', 
+                          title='Create Permission Request for Employee', 
+                          form=form)
