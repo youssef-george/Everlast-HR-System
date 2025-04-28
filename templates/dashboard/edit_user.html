@@ -104,6 +104,40 @@
                         {% endif %}
                     </div>
                     
+                    <div class="separator my-4"></div>
+                    
+                    <h4 class="mb-3">Change Password</h4>
+                    <p class="text-muted mb-3">Leave these fields empty if you don't want to change the user's password.</p>
+                    
+                    <!-- New Password Field -->
+                    <div class="mb-3">
+                        {{ form.new_password.label(class="form-label") }}
+                        {{ form.new_password(class="form-control", placeholder="Enter new password") }}
+                        {% if form.new_password.errors %}
+                            <div class="text-danger">
+                                {% for error in form.new_password.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">
+                            Password must be at least 8 characters long.
+                        </div>
+                    </div>
+                    
+                    <!-- Confirm Password Field -->
+                    <div class="mb-3">
+                        {{ form.confirm_password.label(class="form-label") }}
+                        {{ form.confirm_password(class="form-control", placeholder="Confirm new password") }}
+                        {% if form.confirm_password.errors %}
+                            <div class="text-danger">
+                                {% for error in form.confirm_password.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
                     <div class="d-flex justify-content-between mt-4">
                         <a href="{{ url_for('dashboard.users') }}" class="btn btn-secondary">
                             Cancel
@@ -115,4 +149,41 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Password strength validation
+        const newPasswordInput = document.getElementById('new_password');
+        const confirmPasswordInput = document.getElementById('confirm_password');
+        
+        if (newPasswordInput && confirmPasswordInput) {
+            // Check password match
+            function checkPasswordMatch() {
+                if (newPasswordInput.value && confirmPasswordInput.value) {
+                    if (newPasswordInput.value !== confirmPasswordInput.value) {
+                        confirmPasswordInput.setCustomValidity('Passwords must match');
+                    } else {
+                        confirmPasswordInput.setCustomValidity('');
+                    }
+                } else {
+                    confirmPasswordInput.setCustomValidity('');
+                }
+            }
+            
+            newPasswordInput.addEventListener('input', checkPasswordMatch);
+            confirmPasswordInput.addEventListener('input', checkPasswordMatch);
+            
+            // Check password strength
+            newPasswordInput.addEventListener('input', function() {
+                if (this.value.length > 0 && this.value.length < 8) {
+                    this.setCustomValidity('Password must be at least 8 characters long');
+                } else {
+                    this.setCustomValidity('');
+                }
+            });
+        }
+    });
+</script>
 {% endblock %}
