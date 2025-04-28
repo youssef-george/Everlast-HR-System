@@ -33,6 +33,7 @@ def edit():
         current_user.first_name = form.first_name.data
         current_user.last_name = form.last_name.data
         current_user.email = form.email.data
+        current_user.fingerprint_number = form.fingerprint_number.data if form.fingerprint_number.data else None
         
         # Update password if provided
         if form.new_password.data:

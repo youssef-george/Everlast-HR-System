@@ -88,6 +88,7 @@ def register():
                 last_name=form.last_name.data,
                 email=form.email.data,
                 password_hash=hashed_password,
+                fingerprint_number=form.fingerprint_number.data if form.fingerprint_number.data else None,
                 role=form.role.data,
                 department_id=form.department_id.data if form.department_id.data != 0 else None,
                 status='active'

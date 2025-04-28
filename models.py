@@ -10,6 +10,7 @@ class User(UserMixin, db.Model):
     last_name = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
+    fingerprint_number = db.Column(db.String(50), nullable=True, unique=True)
     role = db.Column(db.String(20), nullable=False, default='employee')  # employee, manager, admin, director
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id', ondelete='SET NULL'), nullable=True)
     profile_picture = db.Column(db.String(255), nullable=True)

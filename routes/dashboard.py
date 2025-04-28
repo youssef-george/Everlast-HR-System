@@ -231,6 +231,7 @@ def edit_user(user_id):
         user.first_name = form.first_name.data
         user.last_name = form.last_name.data
         user.email = form.email.data
+        user.fingerprint_number = form.fingerprint_number.data if form.fingerprint_number.data else None
         user.role = form.role.data
         user.status = form.status.data
         

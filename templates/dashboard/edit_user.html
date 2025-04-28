@@ -57,6 +57,18 @@
                     </div>
                     
                     <div class="mb-3">
+                        {{ form.fingerprint_number.label(class="form-label") }}
+                        {{ form.fingerprint_number(class="form-control", placeholder="Enter fingerprint number (optional)") }}
+                        {% if form.fingerprint_number.errors %}
+                            <div class="text-danger">
+                                {% for error in form.fingerprint_number.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
                         {{ form.department_id.label(class="form-label") }}
                         {{ form.department_id(class="form-select") }}
                         {% if form.department_id.errors %}

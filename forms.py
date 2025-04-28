@@ -18,6 +18,7 @@ class RegistrationForm(FlaskForm):
     first_name = StringField('First Name', validators=[DataRequired(), Length(min=2, max=50)])
     last_name = StringField('Last Name', validators=[DataRequired(), Length(min=2, max=50)])
     email = EmailField('Email', validators=[DataRequired(), Email(), validate_everlast_domain])
+    fingerprint_number = StringField('Fingerprint Number', validators=[Optional(), Length(max=50)])
     password = PasswordField('Password', validators=[
         DataRequired(),
         Length(min=8, message='Password must be at least 8 characters')
@@ -39,6 +40,7 @@ class UserEditForm(FlaskForm):
     first_name = StringField('First Name', validators=[DataRequired(), Length(min=2, max=50)])
     last_name = StringField('Last Name', validators=[DataRequired(), Length(min=2, max=50)])
     email = EmailField('Email', validators=[DataRequired(), Email(), validate_everlast_domain])
+    fingerprint_number = StringField('Fingerprint Number', validators=[Optional(), Length(max=50)])
     department_id = SelectField('Department', coerce=int, validators=[Optional()])
     role = SelectField('Role', choices=[
         ('employee', 'Employee'),
@@ -56,6 +58,7 @@ class ProfileEditForm(FlaskForm):
     first_name = StringField('First Name', validators=[DataRequired(), Length(min=2, max=50)])
     last_name = StringField('Last Name', validators=[DataRequired(), Length(min=2, max=50)])
     email = EmailField('Email', validators=[DataRequired(), Email(), validate_everlast_domain])
+    fingerprint_number = StringField('Fingerprint Number', validators=[Optional(), Length(max=50)])
     current_password = PasswordField('Current Password', validators=[Optional()])
     new_password = PasswordField('New Password', validators=[Optional(), Length(min=8, message='Password must be at least 8 characters')])
     confirm_new_password = PasswordField('Confirm New Password', validators=[

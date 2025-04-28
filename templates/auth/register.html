@@ -56,6 +56,19 @@
                         {% endif %}
                     </div>
                     
+                    <!-- Fingerprint Number Field -->
+                    <div class="mb-3">
+                        <label for="{{ form.fingerprint_number.id }}" class="form-label">Fingerprint Number</label>
+                        {{ form.fingerprint_number(class="form-control", placeholder="Enter fingerprint number (optional)") }}
+                        {% if form.fingerprint_number.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.fingerprint_number.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
                     <div class="row">
                         <!-- Password Field -->
                         <div class="col-md-6 mb-3">
