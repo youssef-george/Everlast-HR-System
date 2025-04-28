@@ -1,4 +1,4 @@
-// Everlast ERP - Main JavaScript
+// Everlast ERP - Main JavaScript v1.1
 
 document.addEventListener('DOMContentLoaded', function() {
     // Sidebar toggle functionality

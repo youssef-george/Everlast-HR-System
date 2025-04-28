@@ -67,51 +67,5 @@ def register():
         flash('You do not have permission to register new users.', 'danger')
         return redirect(url_for('dashboard.index'))
     
-    form = RegistrationForm()
-    
-    # Populate department choices
-    departments = Department.query.all()
-    form.department_id.choices = [(0, 'No Department')] + [(d.id, d.department_name) for d in departments]
-    
-    if form.validate_on_submit():
-        # Check if an active user with this email already exists
-        existing_user = User.query.filter_by(email=form.email.data, status='active').first()
-        if existing_user:
-            flash('An active user with this email already exists.', 'danger')
-            return render_template('auth/register.html', form=form, title='Register New User')
-        
-        # Check if an inactive user with this email exists, and update that user instead of creating a new one
-        inactive_user = User.query.filter_by(email=form.email.data, status='inactive').first()
-        if inactive_user:
-            # Update the inactive user's information
-            inactive_user.first_name = form.first_name.data
-            inactive_user.last_name = form.last_name.data
-            inactive_user.password_hash = generate_password_hash(form.password.data)
-            inactive_user.role = form.role.data
-            inactive_user.department_id = form.department_id.data if form.department_id.data != 0 else None
-            inactive_user.status = 'active'
-            inactive_user.updated_at = datetime.utcnow()
-            
-            db.session.commit()
-            
-            flash(f'User {inactive_user.first_name} {inactive_user.last_name} has been reactivated!', 'success')
-            return redirect(url_for('dashboard.index'))
-        
-        # Create new user
-        user = User(
-            first_name=form.first_name.data,
-            last_name=form.last_name.data,
-            email=form.email.data,
-            password_hash=generate_password_hash(form.password.data),
-            role=form.role.data,
-            department_id=form.department_id.data if form.department_id.data != 0 else None,
-            status='active'
-        )
-        
-        db.session.add(user)
-        db.session.commit()
-        
-        flash(f'User {user.first_name} {user.last_name} has been created successfully!', 'success')
-        return redirect(url_for('dashboard.index'))
-    
-    return render_template('auth/register.html', form=form, title='Register New User')
+    # Redirect to the User Management page
+    return redirect(url_for('dashboard.users'))
