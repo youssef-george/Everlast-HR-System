@@ -1,6 +1,50 @@
 // Everlast ERP - Dashboard JavaScript
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Mini Calendar
+    const miniCalendarEl = document.getElementById('mini-calendar');
+    if (miniCalendarEl) {
+        const miniCalendar = new FullCalendar.Calendar(miniCalendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,next',
+                center: 'title',
+                right: ''
+            },
+            height: 350,
+            themeSystem: 'bootstrap5',
+            dayMaxEventRows: 2,
+            moreLinkClick: 'day',
+            eventSources: [
+                {
+                    url: '/calendar/events',
+                    method: 'GET',
+                    failure: function() {
+                        console.error('There was an error while fetching events for mini calendar');
+                    },
+                    color: '#005d99'
+                }
+            ],
+            eventClick: function(info) {
+                if (info.event.url) {
+                    window.location.href = info.event.url;
+                    return false;
+                }
+            },
+            eventDidMount: function(info) {
+                // Add a tooltip showing the event title
+                const tooltip = new bootstrap.Tooltip(info.el, {
+                    title: info.event.title,
+                    placement: 'top',
+                    trigger: 'hover',
+                    container: 'body'
+                });
+            }
+        });
+        
+        miniCalendar.render();
+    }
+    
     // Admin Dashboard - Department Analytics Chart
     const departmentChartCanvas = document.getElementById('departmentChart');
     if (departmentChartCanvas) {

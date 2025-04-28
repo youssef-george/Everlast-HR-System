@@ -85,8 +85,20 @@
         </div>
     </div>
     
-    <!-- Quick Links -->
+    <!-- Mini Calendar and Quick Links -->
     <div class="col-lg-4 mb-4">
+        <!-- Mini Calendar -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="card-title">Calendar</h3>
+                <a href="{{ url_for('calendar.index') }}" class="btn btn-sm btn-light">Full View</a>
+            </div>
+            <div class="card-body">
+                <div id="mini-calendar"></div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
         <div class="card">
             <div class="card-header">
                 <h3 class="card-title">Quick Actions</h3>
@@ -98,9 +110,6 @@
                     </a>
                     <a href="{{ url_for('permission.create') }}" class="btn btn-light-secondary">
                         <i class="fas fa-plus-circle me-2"></i> Submit Permission Request
-                    </a>
-                    <a href="{{ url_for('calendar.index') }}" class="btn btn-light-info">
-                        <i class="fas fa-calendar-alt me-2"></i> View Calendar
                     </a>
                     <a href="{{ url_for('profile.index') }}" class="btn btn-light-warning">
                         <i class="fas fa-user-cog me-2"></i> Update Profile
@@ -231,5 +240,6 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- Make sure FullCalendar is loaded for the mini calendar -->
 <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 {% endblock %}
