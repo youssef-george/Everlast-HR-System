@@ -265,9 +265,12 @@ def edit(id):
         start_datetime = datetime.combine(form.start_date.data, form.start_time.data)
         end_datetime = datetime.combine(form.start_date.data, form.end_time.data)
         
-        # Ensure start date is present or future
-        if start_datetime.date() < date.today():
-            flash('Permission requests can only be for present or future dates.', 'danger')
+        # Allow selecting the previous day
+        from datetime import timedelta
+        yesterday = date.today() - timedelta(days=1)
+        
+        if start_datetime.date() < yesterday:
+            flash('Permission requests can only be for yesterday, today, or future dates.', 'danger')
             return render_template('permission/create.html', title='Edit Permission Request', form=form, is_edit=True)
         
         permission_request.start_time = start_datetime
