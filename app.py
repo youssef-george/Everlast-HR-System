@@ -1,12 +1,16 @@
 import os
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_login import LoginManager
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFProtect, CSRFError
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -95,7 +99,11 @@ def load_user(user_id):
     from models import User
     return User.query.get(int(user_id))
 
-# Error handler for CSRF errors will be defined after importing the necessary components
+# Error handler for CSRF errors
+@app.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    logging.error(f"CSRF error: {e}")
+    return render_template('errors/csrf_error.html', reason=e.description), 400
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
