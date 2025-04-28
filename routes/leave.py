@@ -11,35 +11,52 @@ leave_bp = Blueprint('leave', __name__, url_prefix='/leave')
 @leave_bp.route('/')
 @login_required
 def index():
-    """List leave requests based on user role"""
+    """List leave requests based on user role and view parameter"""
     user_role = current_user.role
     leave_requests = []
+    view_type = request.args.get('view', None)  # Get the view parameter from URL
+    page_title = 'Leave Requests'
     
     if user_role == 'employee':
         # Employees see only their own leave requests
         leave_requests = LeaveRequest.query.filter_by(user_id=current_user.id).order_by(LeaveRequest.created_at.desc()).all()
     
     elif user_role == 'manager':
-        # Managers see leave requests from their department employees
-        employees = get_employees_for_manager(current_user.id)
-        employee_ids = [emp.id for emp in employees]
-        
-        if employee_ids:
-            leave_requests = LeaveRequest.query.filter(
-                LeaveRequest.user_id.in_(employee_ids)
-            ).order_by(LeaveRequest.created_at.desc()).all()
+        if view_type == 'my':
+            # Show only the manager's own requests
+            page_title = 'My Leave Requests'
+            leave_requests = LeaveRequest.query.filter_by(user_id=current_user.id).order_by(LeaveRequest.created_at.desc()).all()
+        else:
+            # Show team requests (default view for managers)
+            page_title = 'Team Leave Requests'
+            employees = get_employees_for_manager(current_user.id)
+            employee_ids = [emp.id for emp in employees]
+            
+            if employee_ids:
+                leave_requests = LeaveRequest.query.filter(
+                    LeaveRequest.user_id.in_(employee_ids)
+                ).order_by(LeaveRequest.created_at.desc()).all()
     
     elif user_role == 'admin':
         # Admins see all leave requests
-        leave_requests = LeaveRequest.query.order_by(LeaveRequest.created_at.desc()).all()
+        if current_user.managed_department:
+            # If admin is assigned to specific departments, show only requests from those departments
+            admin_dept_ids = [dept.id for dept in current_user.managed_department]
+            leave_requests = LeaveRequest.query.join(User).filter(
+                User.department_id.in_(admin_dept_ids)
+            ).order_by(LeaveRequest.created_at.desc()).all()
+        else:
+            # If admin is not assigned to specific departments, show all requests
+            leave_requests = LeaveRequest.query.order_by(LeaveRequest.created_at.desc()).all()
     
     elif user_role == 'director':
         # Directors see all leave requests
         leave_requests = LeaveRequest.query.order_by(LeaveRequest.created_at.desc()).all()
     
     return render_template('leave/index.html', 
-                           title='Leave Requests', 
-                           leave_requests=leave_requests)
+                           title=page_title, 
+                           leave_requests=leave_requests,
+                           view_type=view_type)
 
 @leave_bp.route('/create', methods=['GET', 'POST'])
 @login_required

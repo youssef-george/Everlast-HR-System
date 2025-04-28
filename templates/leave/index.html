@@ -2,8 +2,20 @@
 
 {% block content %}
 <div class="content-header">
-    <h1 class="page-title">Leave Requests</h1>
+    <h1 class="page-title">{{ title }}</h1>
     <div class="content-header-actions">
+        {% if current_user.role == 'manager' %}
+            <!-- Manager-specific view control -->
+            <div class="btn-group me-3">
+                <a href="{{ url_for('leave.index', view='my') }}" class="btn btn-light {{ 'active' if view_type == 'my' else '' }}">
+                    <i class="fas fa-user me-1"></i> My Requests
+                </a>
+                <a href="{{ url_for('leave.index', view='team') }}" class="btn btn-light {{ 'active' if view_type == 'team' or not view_type else '' }}">
+                    <i class="fas fa-users me-1"></i> Team Requests
+                </a>
+            </div>
+        {% endif %}
+        
         {% if current_user.role != 'director' %}
         <a href="{{ url_for('leave.create') }}" class="btn btn-primary">
             <i class="fas fa-plus-circle me-1"></i> New Leave Request

@@ -11,31 +11,52 @@ permission_bp = Blueprint('permission', __name__, url_prefix='/permission')
 @permission_bp.route('/')
 @login_required
 def index():
-    """List permission requests based on user role"""
+    """List permission requests based on user role and view parameter"""
     user_role = current_user.role
     permission_requests = []
+    view_type = request.args.get('view', None)  # Get the view parameter from URL
+    page_title = 'Permission Requests'
     
     if user_role == 'employee':
         # Employees see only their own permission requests
         permission_requests = PermissionRequest.query.filter_by(user_id=current_user.id).order_by(PermissionRequest.created_at.desc()).all()
     
     elif user_role == 'manager':
-        # Managers see permission requests from their department employees
-        employees = get_employees_for_manager(current_user.id)
-        employee_ids = [emp.id for emp in employees]
-        
-        if employee_ids:
-            permission_requests = PermissionRequest.query.filter(
-                PermissionRequest.user_id.in_(employee_ids)
-            ).order_by(PermissionRequest.created_at.desc()).all()
+        if view_type == 'my':
+            # Show only the manager's own requests
+            page_title = 'My Permission Requests'
+            permission_requests = PermissionRequest.query.filter_by(user_id=current_user.id).order_by(PermissionRequest.created_at.desc()).all()
+        else:
+            # Show team requests (default view for managers)
+            page_title = 'Team Permission Requests'
+            employees = get_employees_for_manager(current_user.id)
+            employee_ids = [emp.id for emp in employees]
+            
+            if employee_ids:
+                permission_requests = PermissionRequest.query.filter(
+                    PermissionRequest.user_id.in_(employee_ids)
+                ).order_by(PermissionRequest.created_at.desc()).all()
     
-    elif user_role in ['admin', 'director']:
-        # Admins and directors see all permission requests
+    elif user_role == 'admin':
+        # Admins see all permission requests from their departments, if assigned
+        if current_user.managed_department:
+            # If admin is assigned to specific departments, show only requests from those departments
+            admin_dept_ids = [dept.id for dept in current_user.managed_department]
+            permission_requests = PermissionRequest.query.join(User).filter(
+                User.department_id.in_(admin_dept_ids)
+            ).order_by(PermissionRequest.created_at.desc()).all()
+        else:
+            # If admin is not assigned to specific departments, show all requests
+            permission_requests = PermissionRequest.query.order_by(PermissionRequest.created_at.desc()).all()
+    
+    elif user_role == 'director':
+        # Directors see all permission requests
         permission_requests = PermissionRequest.query.order_by(PermissionRequest.created_at.desc()).all()
     
     return render_template('permission/index.html', 
-                           title='Permission Requests', 
-                           permission_requests=permission_requests)
+                           title=page_title, 
+                           permission_requests=permission_requests,
+                           view_type=view_type)
 
 @permission_bp.route('/create', methods=['GET', 'POST'])
 @login_required

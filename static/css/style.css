@@ -151,8 +151,26 @@ body {
     text-overflow: ellipsis;
 }
 
+.nav-section-header {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.5rem 0.5rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    margin-top: 0.5rem;
+}
+
+.nav-section-title {
+    margin-left: 10px;
+}
+
 .sidebar.collapsed .nav-text, 
-.sidebar.collapsed .logo-text {
+.sidebar.collapsed .logo-text,
+.sidebar.collapsed .nav-section-title {
     display: none;
 }
 
@@ -161,7 +179,8 @@ body {
     padding: 1.5rem 0;
 }
 
-.sidebar.collapsed .nav-link {
+.sidebar.collapsed .nav-link,
+.sidebar.collapsed .nav-section-header {
     padding: 0.75rem;
     justify-content: center;
 }
