@@ -29,8 +29,6 @@ def login():
                         flash('Your account is inactive. Please contact an administrator.', 'danger')
                         return redirect(url_for('auth.login'))
                     
-                    # Make the session permanent
-                    session.permanent = True
                     login_user(user, remember=form.remember.data)
                     next_page = request.args.get('next')
                     
