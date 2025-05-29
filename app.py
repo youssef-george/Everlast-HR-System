@@ -30,8 +30,8 @@ app.config['WTF_CSRF_ENABLED'] = True
 app.config['WTF_CSRF_SECRET_KEY'] = os.environ.get("CSRF_SECRET", "everlast_erp_csrf_secret")
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)  # needed for url_for to generate with https
 
-# Configure the SQLite database for development, use environment variable for production
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///everlast.db")
+# Configure the database - use SQLite for development, PostgreSQL for production
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///everlast.db"
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
     "pool_pre_ping": True,

@@ -1,0 +1,30 @@
+{% extends 'layout.html' %}
+
+{% block title %}CSRF Error{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="card shadow-sm">
+        <div class="card-body p-5">
+            <div class="text-center mb-4">
+                <h1 class="h3 text-danger">Session Expired</h1>
+                <div class="alert alert-danger">
+                    <p>Your session has expired or is invalid. This could be due to one of the following reasons:</p>
+                    <ul class="text-start">
+                        <li>Your session has timed out due to inactivity</li>
+                        <li>The page was open for too long without interaction</li>
+                        <li>You may have logged in from another browser or device</li>
+                    </ul>
+                    <p>Please return to the login page and try again.</p>
+                </div>
+                <p class="text-secondary font-italic">Technical reason: {{ reason }}</p>
+            </div>
+            <div class="text-center">
+                <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-sign-in-alt me-2"></i> Return to Login
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
