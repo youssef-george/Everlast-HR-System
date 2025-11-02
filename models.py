@@ -365,7 +365,7 @@ class AttendanceLog(db.Model):
         Index('idx_attendance_user_timestamp', 'user_id', 'timestamp'),
         Index('idx_attendance_timestamp', 'timestamp'),
         Index('idx_attendance_scan_type', 'scan_type'),
-        Index('idx_attendance_user_date', 'user_id', db.func.date('timestamp')),
+        Index('idx_attendance_user_date', 'user_id', db.text('DATE(timestamp)')),
         Index('idx_attendance_device', 'device_id'),
         Index('idx_attendance_device_ip', 'device_ip'),
     )
