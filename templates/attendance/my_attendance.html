@@ -1,323 +1,395 @@
-{% extends "base.html" %}
+{% extends "layout.html" %}
 
 {% block extra_css %}
 <style>
-    /* Enhanced Card Styles */
-    .attendance-card {
-        border-radius: 0.75rem;
-        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-        transition: transform 0.2s, box-shadow 0.2s;
-        margin-bottom: 1.5rem;
-    }
-    .attendance-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
-    }
-    
-    /* Stats Cards */
-    .stats-card {
-        border: none;
-        border-radius: 1rem;
-        transition: all 0.3s ease;
-    }
-    .stats-card .card-body {
-        padding: 1.5rem;
-    }
-    .stats-card .stat-value {
-        font-size: 2rem;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-    }
-    .stats-card .stat-label {
+    /* Custom styles for My Attendance page */
+    .refresh-indicator {
+        display: inline-flex;
+        align-items: center;
+        color: #6c757d;
         font-size: 0.875rem;
-        color: rgba(255, 255, 255, 0.8);
     }
     
-    /* Table Enhancements */
-    .attendance-table {
-        background: white;
-        border-radius: 0.5rem;
-        overflow: hidden;
-    }
-    .attendance-table th {
-        background-color: #f8f9fa;
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        letter-spacing: 0.5px;
-        padding: 1rem;
-        white-space: nowrap;
-    }
-    .attendance-table td {
-        padding: 1rem;
-        vertical-align: middle;
-    }
-    
-    /* Status Badges */
-    .status-badge {
-        padding: 0.35rem 0.75rem;
-        border-radius: 2rem;
-        font-size: 0.75rem;
-        font-weight: 500;
-    }
-    
-    /* Filter Section */
-    .filter-section {
-        background: white;
-        border-radius: 0.75rem;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-    }
-    .filter-section .form-control {
-        border-radius: 0.5rem;
-    }
-    
-    /* Export Button */
     .export-btn {
         border-radius: 0.5rem;
+        font-weight: 600;
         padding: 0.5rem 1rem;
-        font-weight: 500;
     }
     
-    /* Responsive Adjustments */
+    /* Ensure proper spacing for Metronic layout */
+    .card-flush {
+        border: 0;
+        box-shadow: 0 0.5rem 1.5rem 0.5rem rgba(0, 0, 0, 0.075);
+    }
+    
+    /* Responsive adjustments */
     @media (max-width: 768px) {
-        .stats-card {
-            margin-bottom: 1rem;
-        }
-        .attendance-table {
-            display: block;
-            width: 100%;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-        .filter-section {
+        .card-flush .card-header {
             padding: 1rem;
         }
-        .filter-section .form-group {
-            margin-bottom: 1rem;
+        .card-flush .card-body {
+            padding: 1rem;
         }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid px-4">
-    <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center my-4">
-        <h1 class="h3 mb-0 text-gray-800">My Attendance</h1>
-        <div class="d-flex align-items-center">
-            {% if auto_refresh %}
-            <div class="refresh-indicator me-3">
-                <i class="fas fa-sync-alt"></i>
-                <span class="ms-1">Auto-refreshing</span>
+<div class="d-flex flex-column flex-column-fluid">
+    <div id="kt_app_content" class="app-content flex-column-fluid">
+        <div id="kt_app_content_container" class="container-fluid">
+            <div class="d-flex flex-wrap flex-stack mb-6">
+                <h1 class="d-flex align-items-center text-dark fw-bolder my-1 fs-3">
+                    <i class="fas fa-user-clock me-2"></i>
+                    My Attendance
+                </h1>
+                <div class="d-flex align-items-center gap-2 gap-lg-3">
+                    {% if auto_refresh %}
+                    <span class="badge badge-light-primary">
+                        <i class="fas fa-sync-alt me-1"></i>
+                        Auto-refreshing
+                    </span>
+                    {% endif %}
+                    <button class="btn btn-sm fw-bold btn-primary" onclick="exportAttendance()">
+                        <i class="fas fa-download me-1"></i>
+                        Export
+                    </button>
+                </div>
             </div>
-            {% endif %}
-            <button class="btn btn-primary export-btn" onclick="exportAttendance()">
-                <i class="fas fa-download me-1"></i> Export
-            </button>
-        </div>
-    </div>
 
-    <!-- Filters -->
-    <div class="filter-section shadow-sm">
-        <form method="GET" class="row g-3 align-items-end">
-            <div class="col-md-4">
-                <label class="form-label">View Type</label>
-                <div class="btn-group w-100">
-                    <input type="radio" class="btn-check" name="view" id="daily" value="daily" 
-                           {% if view_type == 'daily' %}checked{% endif %}>
-                    <label class="btn btn-outline-primary" for="daily">
-                        <i class="fas fa-calendar-day me-1"></i> Daily
-                    </label>
-                    
-                    <input type="radio" class="btn-check" name="view" id="weekly" value="weekly"
-                           {% if view_type == 'weekly' %}checked{% endif %}>
-                    <label class="btn btn-outline-primary" for="weekly">
-                        <i class="fas fa-calendar-week me-1"></i> Weekly
-                    </label>
-                    
-                    <input type="radio" class="btn-check" name="view" id="monthly" value="monthly"
-                           {% if view_type == 'monthly' %}checked{% endif %}>
-                    <label class="btn btn-outline-primary" for="monthly">
-                        <i class="fas fa-calendar-alt me-1"></i> Monthly
-                    </label>
+            <!-- Filters -->
+            <div class="card mb-5 mb-xl-8">
+                <div class="card-header border-0 pt-5">
+                    <h3 class="card-title align-items-start flex-column">
+                        <span class="card-label fw-bolder fs-3 mb-1">Filter Options</span>
+                        <span class="text-muted mt-1 fw-bold fs-7">Select view type and date range</span>
+                    </h3>
+                </div>
+                <div class="card-body py-3">
+                    <form method="GET" class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">View Type</label>
+                            <div class="btn-group w-100">
+                                <input type="radio" class="btn-check" name="view" id="daily" value="daily" 
+                                       {% if view_type == 'daily' %}checked{% endif %}>
+                                <label class="btn btn-outline-primary" for="daily">
+                                    <i class="fas fa-calendar-day me-1"></i> Daily
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="view" id="weekly" value="weekly"
+                                       {% if view_type == 'weekly' %}checked{% endif %}>
+                                <label class="btn btn-outline-primary" for="weekly">
+                                    <i class="fas fa-calendar-week me-1"></i> Weekly
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="view" id="monthly" value="monthly"
+                                       {% if view_type == 'monthly' %}checked{% endif %}>
+                                <label class="btn btn-outline-primary" for="monthly">
+                                    <i class="fas fa-calendar-alt me-1"></i> Monthly
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Date Range</label>
+                            <div class="input-group">
+                                <input type="date" class="form-control" name="start_date" value="{{ start_date }}" required>
+                                <span class="input-group-text">to</span>
+                                <input type="date" class="form-control" name="end_date" value="{{ end_date }}" required>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-filter me-1"></i> Apply
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
-            
-            <div class="col-md-6">
-                <label class="form-label">Date Range</label>
-                <div class="input-group">
-                    <input type="date" class="form-control" name="start_date" value="{{ start_date }}" required>
-                    <span class="input-group-text">to</span>
-                    <input type="date" class="form-control" name="end_date" value="{{ end_date }}" required>
-                </div>
-            </div>
-            
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100">
-                    <i class="fas fa-filter me-1"></i> Apply
-                </button>
-            </div>
-        </form>
-    </div>
 
-    <!-- Statistics Cards -->
-    <div class="row g-3 mb-4">
-        <div class="col-xl-3 col-md-6">
-            <div class="stats-card card bg-primary text-white h-100">
-                <div class="card-body">
-                    <div class="stat-value">{{ summary_stats.present_days }}/{{ summary_stats.total_days }}</div>
-                    <div class="stat-label">Present Days</div>
-                    <div class="small">{{ "%.1f"|format(summary_stats.present_days/summary_stats.total_days*100) }}% Attendance</div>
+            <!-- Statistics Cards -->
+            <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
+                {% for user_id, stats in summary_stats.items() %}
+                <div class="col-md-6 col-lg-6 col-xl-2 col-xxl-2">
+                    <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-xl-100" style="background-color: #009EF7; background-image: url('/static/media/patterns/vector-1.png');">
+                        <div class="card-header pt-5">
+                            <div class="card-title d-flex flex-column">
+                                <span class="fs-2hx fw-bolder text-white me-2 lh-1 ls-n2">{{ stats.present_days }}/{{ stats.total_days }}</span>
+                                <span class="text-white opacity-75 pt-1 fw-bold fs-6">Present Days</span>
+                            </div>
+                        </div>
+                        <div class="card-body pt-0">
+                            <div class="d-flex align-items-center">
+                                <span class="fs-4 fw-bolder text-white">{{ "%.1f"|format(stats.present_days/stats.total_days*100) if stats.total_days > 0 else 0.0 }}%</span>
+                                <span class="text-white opacity-75 fs-7 ms-2">Attendance</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-        
-        <div class="col-xl-3 col-md-6">
-            <div class="stats-card card bg-warning text-white h-100">
-                <div class="card-body">
-                    <div class="stat-value">{{ summary_stats.half_days }}</div>
-                    <div class="stat-label">Half Days</div>
-                    <div class="small">{{ "%.1f"|format(summary_stats.half_days/summary_stats.total_days*100) }}% of Total</div>
+                
+             <div class="col-md-6 col-lg-6 col-xl-2 col-xxl-2">
+                 <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-xl-100" style="background-color: #FFC700; background-image: url('/static/media/patterns/vector-1.png');">
+                     <div class="card-header pt-5">
+                         <div class="card-title d-flex flex-column">
+                             <span class="fs-2hx fw-bolder text-white me-2 lh-1 ls-n2">
+                                 {% set hours = stats.total_hours|int %}
+                                 {% set minutes = ((stats.total_hours - hours) * 60)|round|int %}
+                                 {{ hours }}h {{ minutes }}m
+                             </span>
+                             <span class="text-white opacity-75 pt-1 fw-bold fs-6">Total Hours</span>
+                         </div>
+                     </div>
+                     <div class="card-body pt-0">
+                         <div class="d-flex align-items-center">
+                             <span class="fs-4 fw-bolder text-white">
+                                 {% set hours = stats.avg_hours|int %}
+                                 {% set minutes = ((stats.avg_hours - hours) * 60)|round|int %}
+                                 {{ hours }}h {{ minutes }}m
+                             </span>
+                             <span class="text-white opacity-75 fs-7 ms-2">Avg Hours/Day</span>
+                         </div>
+                     </div>
+                 </div>
+             </div>
+                
+                <div class="col-md-6 col-lg-6 col-xl-2 col-xxl-2">
+                    <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-xl-100" style="background-color: #7239EA; background-image: url('/static/media/patterns/vector-1.png');">
+                        <div class="card-header pt-5">
+                            <div class="card-title d-flex flex-column">
+                                <span class="fs-2hx fw-bolder text-white me-2 lh-1 ls-n2">{{ stats.day_offs }}</span>
+                                <span class="text-white opacity-75 pt-1 fw-bold fs-6">Day Offs</span>
+                            </div>
+                        </div>
+                        <div class="card-body pt-0">
+                            <div class="d-flex align-items-center">
+                                <span class="fs-4 fw-bolder text-white">{{ "%.1f"|format(stats.day_offs/stats.total_days*100) if stats.total_days > 0 else 0.0 }}%</span>
+                                <span class="text-white opacity-75 fs-7 ms-2">of Total</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-        
-        <div class="col-xl-3 col-md-6">
-            <div class="stats-card card bg-danger text-white h-100">
-                <div class="card-body">
-                    <div class="stat-value">{{ summary_stats.absent_days }}</div>
-                    <div class="stat-label">Absent Days</div>
-                    <div class="small">{{ "%.1f"|format(summary_stats.absent_days/summary_stats.total_days*100) }}% of Total</div>
+                
+                <div class="col-md-6 col-lg-6 col-xl-2 col-xxl-2">
+                    <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-xl-100" style="background-color: #F1416C; background-image: url('/static/media/patterns/vector-1.png');">
+                        <div class="card-header pt-5">
+                            <div class="card-title d-flex flex-column">
+                                <span class="fs-2hx fw-bolder text-white me-2 lh-1 ls-n2">{{ stats.absent_days }}</span>
+                                <span class="text-white opacity-75 pt-1 fw-bold fs-6">Absent Days</span>
+                            </div>
+                        </div>
+                        <div class="card-body pt-0">
+                            <div class="d-flex align-items-center">
+                                <span class="fs-4 fw-bolder text-white">{{ "%.1f"|format(stats.absent_days/stats.total_days*100) if stats.total_days > 0 else 0.0 }}%</span>
+                                <span class="text-white opacity-75 fs-7 ms-2">of Total</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+                
+             <div class="col-md-6 col-lg-6 col-xl-2 col-xxl-2">
+                 <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-xl-100" style="background-color: #50CD89; background-image: url('/static/media/patterns/vector-1.png');">
+                     <div class="card-header pt-5">
+                         <div class="card-title d-flex flex-column">
+                             <span class="fs-2hx fw-bolder text-white me-2 lh-1 ls-n2">
+                                 {% set hours = stats.avg_hours|int %}
+                                 {% set minutes = ((stats.avg_hours - hours) * 60)|round|int %}
+                                 {{ hours }}h {{ minutes }}m
+                             </span>
+                             <span class="text-white opacity-75 pt-1 fw-bold fs-6">Avg Hours/Day</span>
+                         </div>
+                     </div>
+                     <div class="card-body pt-0">
+                         <div class="d-flex align-items-center">
+                             <span class="fs-4 fw-bolder text-white">{{ "%.1f"|format((stats.present_days/stats.total_days*100) if stats.total_days > 0 else 0.0) }}%</span>
+                             <span class="text-white opacity-75 fs-7 ms-2">Attendance Rate</span>
+                         </div>
+                     </div>
+                 </div>
+             </div>
+                {% endfor %}
             </div>
-        </div>
-        
-        <div class="col-xl-3 col-md-6">
-            <div class="stats-card card bg-success text-white h-100">
-                <div class="card-body">
-                    <div class="stat-value">{{ "%.1f"|format(summary_stats.avg_hours) }}</div>
-                    <div class="stat-label">Average Hours/Day</div>
-                    <div class="small">Total: {{ "%.1f"|format(summary_stats.total_hours) }} hrs</div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Today's Timeline (if viewing today) -->
-    {% if today_logs %}
-    <div class="attendance-card card mb-4">
-        <div class="card-header bg-light">
-            <h5 class="mb-0">
-                <i class="fas fa-clock me-2"></i>
-                Today's Timeline
-            </h5>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table attendance-table mb-0">
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Type</th>
-                            <th>Location</th>
-                            <th>Notes</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for log in today_logs %}
-                        <tr>
-                            <td>{{ log.timestamp.strftime('%I:%M %p') }}</td>
-                            <td>
-                                <span class="status-badge bg-{{ 'success' if log.scan_type == 'check-in' else 'danger' }} text-white">
-                                    {{ log.scan_type|title }}
-                                </span>
-                            </td>
-                            <td>{{ log.device_ip }}</td>
-                            <td>{{ log.manual_entry_reason if log.manual_entry else '' }}</td>
-                        </tr>
+            <!-- Today's Timeline -->
+            <div class="card mb-5 mb-xl-8">
+                <div class="card-header border-0 pt-5">
+                    <h3 class="card-title align-items-start flex-column">
+                        <span class="card-label fw-bolder fs-3 mb-1">Today's Timeline</span>
+                        <span class="text-muted mt-1 fw-bold fs-7">Your check-in and check-out records for today</span>
+                    </h3>
+                </div>
+                <div class="card-body py-3">
+                    {% if today_logs %}
+                        {% for user_id, logs in today_logs.items() %}
+                        <div class="table-responsive">
+                            <table class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4">
+                                <thead>
+                                    <tr class="fw-bolder text-muted">
+                                        <th class="min-w-100px">Time</th>
+                                        <th class="min-w-100px">Type</th>
+                                        <th class="min-w-100px">Location</th>
+                                        <th class="min-w-100px">Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for log in logs %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="d-flex justify-content-start flex-column">
+                                                    <span class="text-dark fw-bolder text-hover-primary fs-6">{{ log.timestamp.strftime('%I:%M %p') }}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-{{ 'success' if log.scan_type == 'check-in' else 'danger' }} fs-7 fw-bolder">
+                                                {{ log.scan_type|title }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="text-dark fw-bolder text-hover-primary fs-6">
+                                                {% if log.device %}
+                                                    {{ log.device.get_display_name() }}
+                                                {% else %}
+                                                    Unknown Device
+                                                {% endif %}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="text-muted fw-bold text-muted d-block fs-7">{{ log.manual_entry_reason if log.manual_entry else 'N/A' }}</span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                         {% endfor %}
-                    </tbody>
-                </table>
+                    {% else %}
+                    <div class="text-center py-10">
+                        <div class="symbol symbol-100px symbol-circle mb-5">
+                            <div class="symbol-label fs-2 fw-semibold text-success bg-light-success">
+                                <i class="fas fa-clock fs-1"></i>
+                            </div>
+                        </div>
+                        <h4 class="text-gray-600 fw-bold mb-3">No attendance records for today</h4>
+                        <p class="text-gray-500 fw-semibold fs-6 mb-0">Your attendance will appear here once you check in or out.</p>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
-        </div>
-    </div>
-    {% endif %}
 
-    <!-- Active Status Alerts -->
-    {% if active_leave %}
-    <div class="alert alert-info d-flex align-items-center mb-4">
-        <i class="fas fa-calendar-alt me-3 fa-2x"></i>
-        <div>
-            <h6 class="alert-heading mb-1">Current Leave Status</h6>
-            <p class="mb-0">
-                {{ active_leave.leave_type }} leave from 
-                {{ active_leave.start_date.strftime('%B %d, %Y') }} to 
-                {{ active_leave.end_date.strftime('%B %d, %Y') }}
-            </p>
-        </div>
-    </div>
-    {% endif %}
+            <!-- Active Status Alerts -->
+            {% for user_id, leave in active_leaves.items() %}
+            <div class="alert alert-dismissible bg-light-info d-flex flex-column flex-sm-row p-5 mb-5">
+                <i class="fas fa-calendar-alt me-4 fs-2x text-info"></i>
+                <div class="d-flex flex-column pe-0 pe-sm-10">
+                    {% set user_obj = users|selectattr('id', 'equalto', user_id)|first %}
+                    <h4 class="fw-semibold text-info">Current Leave Status{% if users %} - {{ user_obj.get_full_name() if user_obj else 'Unknown User' }}{% endif %}</h4>
+                    <span class="text-info">
+                        {{ leave.leave_type }} leave from 
+                        {{ leave.start_date.strftime('%B %d, %Y') }} to 
+                        {{ leave.end_date.strftime('%B %d, %Y') }}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
 
-    {% if active_permission %}
-    <div class="alert alert-info d-flex align-items-center mb-4">
-        <i class="fas fa-clock me-3 fa-2x"></i>
-        <div>
-            <h6 class="alert-heading mb-1">Permission Status</h6>
-            <p class="mb-0">
-                Approved permission for today:
-                {{ active_permission.start_time.strftime('%I:%M %p') }} to 
-                {{ active_permission.end_time.strftime('%I:%M %p') }}
-            </p>
-        </div>
-    </div>
-    {% endif %}
+            {% for user_id, permission in active_permissions.items() %}
+            <div class="alert alert-dismissible bg-light-warning d-flex flex-column flex-sm-row p-5 mb-5">
+                <i class="fas fa-clock me-4 fs-2x text-warning"></i>
+                <div class="d-flex flex-column pe-0 pe-sm-10">
+                    {% set user_obj = users|selectattr('id', 'equalto', user_id)|first %}
+                    <h4 class="fw-semibold text-warning">Permission Status{% if users %} - {{ user_obj.get_full_name() if user_obj else 'Unknown User' }}{% endif %}</h4>
+                    <span class="text-warning">
+                        Approved permission for today:
+                        {{ permission.start_time.strftime('%I:%M %p') }} to 
+                        {{ permission.end_time.strftime('%I:%M %p') }}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
 
-    <!-- Attendance Records -->
-    <div class="attendance-card card">
-        <div class="card-header bg-light">
-            <h5 class="mb-0">
-                <i class="fas fa-calendar-check me-2"></i>
-                Attendance Records
-            </h5>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table attendance-table mb-0">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Status</th>
-                            <th>Check In</th>
-                            <th>Check Out</th>
-                            <th>Hours</th>
-                            <th>Notes</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for record in attendance_records %}
-                        <tr>
-                            <td>{{ record.date.strftime('%B %d, %Y') }}</td>
-                            {% if record.date.strftime('%Y-%m-%d') < user_joining_date.strftime('%Y-%m-%d') %}
-                            <td colspan="5" class="text-center text-muted">N/A - Before Joining Date</td>
-                            {% else %}
-                            <td>
-                                <span class="status-badge bg-{{ 'success' if record.status == 'present' 
-                                    else 'warning' if record.status == 'half-day'
-                                    else 'danger' if record.status == 'absent'
-                                    else 'info' }} text-white">
-                                    {{ record.status|title }}
-                                </span>
-                            </td>
-                            <td>{{ record.first_check_in.strftime('%I:%M %p') if record.first_check_in else '-' }}</td>
-                            <td>{{ record.last_check_out.strftime('%I:%M %p') if record.last_check_out else '-' }}</td>
-                            <td>{{ "%.2f"|format(record.total_working_hours) if record.total_working_hours else '-' }}</td>
-                            <td>{{ record.status_reason or '-' }}</td>
-                            {% endif %}
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <!-- Attendance Records -->
+            <div class="card mb-5 mb-xl-8">
+                <div class="card-header border-0 pt-5">
+                    <h3 class="card-title align-items-start flex-column">
+                        <span class="card-label fw-bolder fs-3 mb-1">Attendance Records</span>
+                        <span class="text-muted mt-1 fw-bold fs-7">Your detailed attendance history</span>
+                    </h3>
+                </div>
+                <div class="card-body py-3">
+                    {% for user_id, records in attendance_records.items() %}
+                    {% if users|length > 1 %}
+                    <div class="d-flex align-items-center mb-5">
+                        {% set user_obj = users|selectattr('id', 'equalto', user_id)|first %}
+                        <div class="symbol symbol-50px me-5">
+                            <div class="symbol-label bg-light-primary">
+                                <i class="fas fa-user fs-2x text-primary"></i>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-start flex-column">
+                            <span class="text-dark fw-bolder text-hover-primary fs-6">{{ user_obj.get_full_name() if user_obj else 'Unknown User' }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="table-responsive">
+                        <table class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4">
+                            <thead>
+                                <tr class="fw-bolder text-muted">
+                                    <th class="min-w-100px">Date</th>
+                                    <th class="min-w-100px">Status</th>
+                                    <th class="min-w-100px">Check In</th>
+                                    <th class="min-w-100px">Check Out</th>
+                                    <th class="min-w-100px">Hours</th>
+                                    <th class="min-w-100px">Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in records %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="d-flex justify-content-start flex-column">
+                                                <span class="text-dark fw-bolder text-hover-primary fs-6">{{ record.date.strftime('%B %d, %Y') }}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    {% if user_joining_date and record.date.strftime('%Y-%m-%d') < user_joining_date.strftime('%Y-%m-%d') %}
+                                    <td colspan="5" class="text-center text-muted">
+                                        <span class="text-muted fw-bold text-muted d-block fs-7">N/A - Before Joining Date</span>
+                                    </td>
+                                    {% else %}
+                                 <td>
+                                     <span class="badge badge-{{ 'success' if record.status in ['present', 'half-day'] 
+                                         else 'warning' if record.status == 'paid_leave'
+                                         else 'danger' if record.status == 'absent'
+                                         else 'info' if record.status == 'day_off'
+                                         else 'secondary' }} fs-7 fw-bolder">
+                                         {{ 'Paid Leave / Present' if record.status == 'paid_leave'
+                                            else 'Present' if record.status in ['present', 'half-day'] 
+                                            else record.status|replace('_', ' ')|title if record.status != 'day_off' else 'Day Off' }}
+                                     </span>
+                                 </td>
+                                    <td>
+                                        <span class="text-dark fw-bolder text-hover-primary fs-6">{{ record.first_check_in.strftime('%I:%M %p') if record.first_check_in else '-' }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-dark fw-bolder text-hover-primary fs-6">{{ record.last_check_out.strftime('%I:%M %p') if record.last_check_out else '-' }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-dark fw-bolder text-hover-primary fs-6">{{ record.format_working_hours() }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted fw-bold text-muted d-block fs-7">{{ record.status_reason or '-' }}</span>
+                                    </td>
+                                    {% endif %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
         </div>
     </div>
@@ -347,7 +419,7 @@ function exportAttendance() {
 }
 
 {% if auto_refresh %}
-// Auto-refresh functionality
+/* Auto-refresh functionality */
 function refreshAttendanceData() {
     const refreshIndicator = document.querySelector('.refresh-indicator');
     if (refreshIndicator) {

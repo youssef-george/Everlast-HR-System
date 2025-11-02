@@ -15,6 +15,19 @@
                 <form method="POST" action="{{ url_for('leave.create') if not is_edit else url_for('leave.edit', id=leave_request.id) }}">
                     {{ form.hidden_tag() }}
                     
+                    <!-- Leave Type Field -->
+                    <div class="mb-3">
+                        <label for="{{ form.leave_type_id.id }}" class="form-label">Leave Type</label>
+                        {{ form.leave_type_id(class="form-select") }}
+                        {% if form.leave_type_id.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.leave_type_id.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
                     <div class="row">
                         <!-- Start Date Field -->
                         <div class="col-md-6 mb-3">
@@ -127,3 +140,4 @@
     });
 </script>
 {% endblock %}
+

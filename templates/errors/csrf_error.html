@@ -27,4 +27,18 @@
         </div>
     </div>
 </div>
+
+<script>
+// Reset sidebar state on CSRF error (session expired)
+// This ensures sidebar returns to default uncollapsed state
+if (typeof window.resetSidebarState === 'function') {
+    window.resetSidebarState();
+} else {
+    // Fallback: directly clear sidebar state
+    localStorage.removeItem('sidebar-collapsed');
+    localStorage.removeItem('sidebar-user-collapsed');
+    sessionStorage.removeItem('everlast_sidebar_state');
+    sessionStorage.removeItem('everlast_user_session');
+}
+</script>
 {% endblock %}

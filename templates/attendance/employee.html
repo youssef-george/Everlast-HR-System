@@ -63,7 +63,11 @@
                 <div class="col-lg-3 col-6">
                     <div class="small-box bg-warning">
                         <div class="inner">
-                            <h3>{{ monthly_stats.total_hours|round(1) }}</h3>
+                            <h3>
+                                {% set hours = monthly_stats.total_hours|int %}
+                                {% set minutes = ((monthly_stats.total_hours - hours) * 60)|round|int %}
+                                {{ hours }}h {{ minutes }}m
+                            </h3>
                             <p>Working Hours</p>
                         </div>
                         <div class="icon">
@@ -74,7 +78,11 @@
                 <div class="col-lg-3 col-6">
                     <div class="small-box bg-success">
                         <div class="inner">
-                            <h3>{{ monthly_stats.avg_hours|round(1) }}</h3>
+                            <h3>
+                                {% set hours = monthly_stats.avg_hours|int %}
+                                {% set minutes = ((monthly_stats.avg_hours - hours) * 60)|round|int %}
+                                {{ hours }}h {{ minutes }}m
+                            </h3>
                             <p>Avg. Hours/Day</p>
                         </div>
                         <div class="icon">
@@ -132,7 +140,7 @@
                                     <td>
                                         {% if record.first_check_in %}
                                             <span class="text-success">
-                                                {{ record.first_check_in.strftime('%H:%M:%S') }}
+                                                {{ record.first_check_in.strftime('%I:%M:%S %p') }}
                                             </span>
                                         {% else %}
                                             <span class="text-muted">-</span>
@@ -141,7 +149,7 @@
                                     <td>
                                         {% if record.last_check_out %}
                                             <span class="text-danger">
-                                                {{ record.last_check_out.strftime('%H:%M:%S') }}
+                                                {{ record.last_check_out.strftime('%I:%M:%S %p') }}
                                             </span>
                                         {% else %}
                                             <span class="text-muted">-</span>
@@ -178,7 +186,11 @@
                                         {% elif record.status == 'in_office' %}
                                             <span class="badge bg-info-light">In Office</span>
                                         {% elif record.status == 'half-day' %}
-                                            <span class="badge bg-warning">Half Day</span>
+                                            <span class="badge bg-success">Present</span>
+                                        {% elif record.status == 'paid_leave' %}
+                                            <span class="badge bg-warning" data-bs-toggle="tooltip" title="{{ record.status_reason }}">
+                                                Paid Leave / Present
+                                            </span>
                                         {% elif record.status == 'leave' %}
                                             <span class="badge bg-info" data-bs-toggle="tooltip" title="{{ record.status_reason }}">
                                                 On Leave
@@ -197,6 +209,35 @@
                                         <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#detailsModal{{ record.id }}">
                                             <i class="fas fa-info-circle"></i>
                                         </button>
+                                        
+                                        <!-- Show leave and permission details -->
+                                        {% if record.date in leave_by_date %}
+                                            <div class="mt-2">
+                                                {% for leave in leave_by_date[record.date] %}
+                                                    <div class="text-warning small">
+                                                        <i class="fas fa-calendar-times me-1"></i>
+                                                        <strong>Leave:</strong> {{ leave.reason }}
+                                                        <br><small class="text-muted">
+                                                            {{ leave.start_date.strftime('%Y-%m-%d') }} to {{ leave.end_date.strftime('%Y-%m-%d') }}
+                                                        </small>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                        
+                                        {% if record.date in permission_by_date %}
+                                            <div class="mt-2">
+                                                {% for permission in permission_by_date[record.date] %}
+                                                    <div class="text-info small">
+                                                        <i class="fas fa-clock me-1"></i>
+                                                        <strong>Permission:</strong> {{ permission.reason }}
+                                                        <br><small class="text-muted">
+                                                            {{ permission.start_time.strftime('%I:%M %p') }} to {{ permission.end_time.strftime('%I:%M %p') }}
+                                                        </small>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
                                     </td>
                                     {% endif %}
                                 </tr>
@@ -217,14 +258,13 @@
                                                             <th>Time</th>
                                                             <th>Type</th>
                                                             <th>Duration</th>
-                                                            <th>Device</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
                                                         {% for log in record.user.attendance_logs %}
                                                             {% if log.timestamp.date() == record.date %}
                                                             <tr>
-                                                                <td>{{ log.timestamp.strftime('%H:%M:%S') }}</td>
+                                                                <td>{{ log.timestamp.strftime('%I:%M:%S %p') }}</td>
                                                                 <td>
                                                                     {% if log.scan_type == 'check-in' %}
                                                                         <span class="text-success">Check In</span>
@@ -239,7 +279,6 @@
                                                                         -
                                                                     {% endif %}
                                                                 </td>
-                                                                <td>{{ log.device_ip }}</td>
                                                             </tr>
                                                             {% endif %}
                                                         {% endfor %}

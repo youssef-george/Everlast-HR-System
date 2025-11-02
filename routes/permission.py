@@ -3,7 +3,8 @@ from flask_login import login_required, current_user
 from datetime import datetime, date, time
 from forms import PermissionRequestForm, ApprovalForm, AdminPermissionRequestForm
 from models import db, PermissionRequest, User
-from helpers import role_required, create_notification, get_user_managers, get_employees_for_manager
+from helpers import role_required, get_user_managers, get_employees_for_manager, send_admin_email_notification
+import logging
 
 permission_bp = Blueprint('permission', __name__, url_prefix='/permission')
 
@@ -36,26 +37,34 @@ def index():
                     PermissionRequest.user_id.in_(employee_ids)
                 ).order_by(PermissionRequest.created_at.desc()).all()
     
-    elif user_role == 'admin':
-        # Admins see all permission requests from their departments, if assigned
+    elif user_role in ['admin', 'product_owner']:
+        # Admins and Product Owners see all permission requests from their departments, if assigned
         if current_user.managed_department:
-            # If admin is assigned to specific departments, show only requests from those departments
+            # If admin/product_owner is assigned to specific departments, show only requests from those departments
             admin_dept_ids = [dept.id for dept in current_user.managed_department]
             permission_requests = PermissionRequest.query.join(User).filter(
                 User.department_id.in_(admin_dept_ids)
             ).order_by(PermissionRequest.created_at.desc()).all()
         else:
-            # If admin is not assigned to specific departments, show all requests
+            # If admin/product_owner is not assigned to specific departments, show all requests
             permission_requests = PermissionRequest.query.order_by(PermissionRequest.created_at.desc()).all()
     
     elif user_role == 'director':
         # Directors see all permission requests
+        page_title = 'All Company Permission Requests'
         permission_requests = PermissionRequest.query.order_by(PermissionRequest.created_at.desc()).all()
+    
+    # Get departments for filtering (for admin and director roles)
+    departments = []
+    if user_role in ['admin', 'director']:
+        from models import Department
+        departments = Department.query.all()
     
     return render_template('permission/index.html', 
                            title=page_title, 
                            permission_requests=permission_requests,
-                           view_type=view_type)
+                           view_type=view_type,
+                           departments=departments)
 
 @permission_bp.route('/create', methods=['GET', 'POST'])
 @login_required
@@ -87,18 +96,28 @@ def create():
         db.session.add(permission_request)
         db.session.commit()
         
-        # Send notifications to managers
-        managers = get_user_managers(current_user)
-        
-        # Notify direct manager if exists
-        if managers['direct_manager']:
-            create_notification(
-                user_id=managers['direct_manager'].id,
-                message=f"New permission request from {current_user.get_full_name()} for {form.start_date.data}",
-                notification_type='new_request',
-                reference_id=permission_request.id,
-                reference_type='permission'
-            )
+        # Send email notification to admins
+        try:
+            employee_name = current_user.get_full_name()
+            start_date = form.start_date.data.strftime('%B %d, %Y')
+            start_time = form.start_time.data.strftime('%I:%M %p')
+            end_time = form.end_time.data.strftime('%I:%M %p')
+            duration_hours = (permission_request.end_time - permission_request.start_time).total_seconds() / 3600
+            
+            subject = f"New Permission Request - {employee_name}"
+            message = f"""
+            A new permission request has been submitted and requires your review:
+            
+            <strong>Employee:</strong> {employee_name}<br>
+            <strong>Date:</strong> {start_date}<br>
+            <strong>Time:</strong> {start_time} - {end_time}<br>
+            <strong>Duration:</strong> {duration_hours:.1f} hour(s)<br>
+            <strong>Reason:</strong> {form.reason.data}<br>
+            """
+            
+            send_admin_email_notification(subject, message, "permission", permission_request.id)
+        except Exception as e:
+            logging.error(f"Failed to send admin email notification: {str(e)}")
         
         flash('Your permission request has been submitted successfully!', 'success')
         return redirect(url_for('permission.index'))
@@ -126,188 +145,43 @@ def view(id):
     can_approve = False
     approval_form = None
     
-    # SPECIAL CASE: If the requester is a manager, they should bypass manager and director approval
-    # and only require admin approval (implementing the new special workflow)
-    requester_is_manager = requester.role == 'manager'
-    
-    if user_role == 'manager':
-        # First, check if current user is the manager of the requester's department
-        if requester.department and requester.department.manager_id == current_user.id:
-            if permission_request.status == 'pending' and not permission_request.manager_approved:
-                can_approve = True
-                approval_form = ApprovalForm()
-        # If not explicitly set as department manager, check if they're in the same dept with manager role
-        elif requester.department_id and requester.department_id == current_user.department_id:
-            if permission_request.status == 'pending' and not permission_request.manager_approved:
-                can_approve = True
-                approval_form = ApprovalForm()
-    
-    elif user_role == 'director':
-        # Regular approval flow: Directors can approve if status is pending and manager has approved
-        # EXCEPT for manager's own requests which don't need director approval
-        if not requester_is_manager:
-            if permission_request.status == 'pending' and permission_request.manager_approved and not permission_request.director_approved:
-                can_approve = True
-                approval_form = ApprovalForm()
-    
-    elif user_role == 'admin':
+    # SIMPLIFIED WORKFLOW: Only admin approval required for all permission requests
+    if user_role == 'admin':
         # Get the department of the requester
         requester_department = requester.department
         
-        # If requester is a manager, admins can approve directly even without manager/director approval
-        if requester_is_manager:
-            if permission_request.status == 'pending' and not permission_request.admin_approved:
-                # If the admin is specifically assigned to handle a department
-                if current_user.managed_department:
-                    # Check if the requester is from a department this admin manages
-                    admin_managed_departments = [dept.id for dept in current_user.managed_department]
-                    if requester_department and requester_department.id in admin_managed_departments:
-                        can_approve = True
-                        approval_form = ApprovalForm()
-                else:
-                    # If admin is not assigned to any specific department, they can approve any department
+        # Admins can approve any pending permission request
+        if permission_request.status == 'pending' and permission_request.admin_status != 'approved':
+            # If the admin is specifically assigned to handle a department
+            if current_user.managed_department:
+                # Check if the requester is from a department this admin manages
+                admin_managed_departments = [dept.id for dept in current_user.managed_department]
+                if requester_department and requester_department.id in admin_managed_departments:
                     can_approve = True
                     approval_form = ApprovalForm()
-        else:
-            # Regular approval flow for non-manager employees
-            # Admins can approve if status is pending, manager and director have approved, and request is from their department
-            if permission_request.status == 'pending' and permission_request.manager_approved and permission_request.director_approved and not permission_request.admin_approved:
-                # If the admin is specifically assigned to handle a department
-                if current_user.managed_department:
-                    # Check if the requester is from a department this admin manages
-                    admin_managed_departments = [dept.id for dept in current_user.managed_department]
-                    if requester_department and requester_department.id in admin_managed_departments:
-                        can_approve = True
-                        approval_form = ApprovalForm()
-                else:
-                    # If admin is not assigned to any specific department, they can approve any department
-                    can_approve = True
-                    approval_form = ApprovalForm()
+            else:
+                # If admin is not assigned to any specific department, they can approve any department
+                can_approve = True
+                approval_form = ApprovalForm()
     
     # Handle approval/rejection submission
     if approval_form and approval_form.validate_on_submit():
-        if approval_form.status.data == 'approved':
-            if user_role == 'manager':
-                permission_request.manager_approved = True
-                
-                # For regular employees, follow the normal flow - notify directors
-                if not requester_is_manager:
-                    # Notify directors about the request
-                    for director in get_user_managers(requester)['directors']:
-                        create_notification(
-                            user_id=director.id,
-                            message=f"Permission request from {requester.get_full_name()} approved by manager and needs your review",
-                            notification_type='approval',
-                            reference_id=permission_request.id,
-                            reference_type='permission'
-                        )
-                    
-                    flash('Permission request has been approved as manager.', 'success')
-                else:
-                    # For manager requests, skip director approval and notify admins directly
-                    all_admins = get_user_managers(requester)['admin_managers']
-                    department_specific_admins = []
-                    
-                    # First, try to identify department-specific admins
-                    if requester.department:
-                        for admin in all_admins:
-                            if admin.managed_department:
-                                admin_managed_depts = [dept.id for dept in admin.managed_department]
-                                if requester.department.id in admin_managed_depts:
-                                    department_specific_admins.append(admin)
-                    
-                    # If no department-specific admins found, notify all admins
-                    admins_to_notify = department_specific_admins if department_specific_admins else all_admins
-                    
-                    for admin in admins_to_notify:
-                        create_notification(
-                            user_id=admin.id,
-                            message=f"Permission request from manager {requester.get_full_name()} needs your review",
-                            notification_type='approval',
-                            reference_id=permission_request.id,
-                            reference_type='permission'
-                        )
-                    
-                    flash('Permission request has been approved and sent to admin for review.', 'success')
-            
-            elif user_role == 'director':
-                permission_request.director_approved = True
-                
-                # Notify relevant admins about the request
-                all_admins = get_user_managers(requester)['admin_managers']
-                department_specific_admins = []
-                
-                # First, try to identify department-specific admins
-                if requester.department:
-                    for admin in all_admins:
-                        if admin.managed_department:
-                            admin_managed_depts = [dept.id for dept in admin.managed_department]
-                            if requester.department.id in admin_managed_depts:
-                                department_specific_admins.append(admin)
-                
-                # If no department-specific admins found, notify all admins
-                admins_to_notify = department_specific_admins if department_specific_admins else all_admins
-                
-                for admin in admins_to_notify:
-                    create_notification(
-                        user_id=admin.id,
-                        message=f"Permission request from {requester.get_full_name()} ({requester.department.department_name if requester.department else 'No Department'}) approved by director and needs your review",
-                        notification_type='approval',
-                        reference_id=permission_request.id,
-                        reference_type='permission'
-                    )
-                
-                flash('Permission request has been approved as director.', 'success')
-            
-            elif user_role == 'admin':
-                permission_request.admin_approved = True
-                permission_request.status = 'approved'
-                
-                # If requester is a manager, auto-approve the manager and director parts for completeness
-                if requester_is_manager:
-                    permission_request.manager_approved = True
-                    permission_request.director_approved = True
-                
-                # Notify the employee
-                create_notification(
-                    user_id=requester.id,
-                    message=f"Your permission request for {permission_request.start_time.strftime('%Y-%m-%d')} has been approved",
-                    notification_type='approval',
-                    reference_id=permission_request.id,
-                    reference_type='permission'
-                )
-                
-                flash('Permission request has been approved.', 'success')
+        approval_status = approval_form.status.data
+        comment = approval_form.comment.data
         
-        elif approval_form.status.data == 'rejected':
-            permission_request.status = 'rejected'
+        if user_role == 'admin':
+            permission_request.admin_status = approval_status
+            permission_request.admin_comment = comment
+            permission_request.admin_updated_at = datetime.utcnow()
             
-            # Notify the employee
-            create_notification(
-                user_id=requester.id,
-                message=f"Your permission request for {permission_request.start_time.strftime('%Y-%m-%d')} has been rejected",
-                notification_type='rejection',
-                reference_id=permission_request.id,
-                reference_type='permission'
-            )
+            # Update overall status
+            permission_request.update_overall_status()
             
-            flash('Permission request has been rejected.', 'warning')
-        
-        # Add comment if provided
-        if approval_form.comment.data:
-            permission_request.comment = approval_form.comment.data
+            # User notification removed - will be replaced with SMTP email notifications
             
-            # Notify the employee about the comment
-            create_notification(
-                user_id=requester.id,
-                message=f"New comment on your permission request: {approval_form.comment.data[:50]}...",
-                notification_type='comment',
-                reference_id=permission_request.id,
-                reference_type='permission'
-            )
-        
-        db.session.commit()
-        return redirect(url_for('permission.index'))
+            db.session.commit()
+            flash(f'Permission request has been {approval_status}.', 'success')
+            return redirect(url_for('permission.index'))
     
     return render_template('permission/view.html',
                            title='View Permission Request',
@@ -391,23 +265,60 @@ def delete(id):
 
 @permission_bp.route('/admin-create', methods=['GET', 'POST'])
 @login_required
-@role_required('admin')
+@role_required(['admin', 'product_owner', 'manager'])
 def admin_create():
     """Allow admin to create permission requests on behalf of employees"""
     form = AdminPermissionRequestForm()
     
-    # Populate employee dropdown with active employees
-    if current_user.managed_department:
-        # If admin is assigned to specific departments, show only employees from those departments
+    # Populate employee dropdown with active employees (excluding test users)
+    if current_user.role == 'manager':
+        # Managers see only employees in their department or who report to them
+        # Get employees in the manager's department
+        department_employees = User.query.filter(
+            User.status == 'active',
+            User.department_id == current_user.department_id,
+            User.id != current_user.id,  # Exclude the manager themselves
+            ~User.first_name.like('User%'),
+            ~User.first_name.like('NN-%'),
+            User.first_name != '',
+            User.last_name != ''
+        )
+
+        # Get employees who report directly to the manager
+        reporting_employees = User.query.filter(
+            User.status == 'active',
+            User.manager_id == current_user.id,
+            User.id != current_user.id,  # Exclude the manager themselves
+            ~User.first_name.like('User%'),
+            ~User.first_name.like('NN-%'),
+            User.first_name != '',
+            User.last_name != ''
+        )
+        
+        # Combine and get unique employees
+        employees = department_employees.union(reporting_employees).order_by(User.first_name).all()
+
+    elif current_user.managed_department:
+        # If admin/product_owner is assigned to specific departments, show only employees from those departments
         admin_dept_ids = [dept.id for dept in current_user.managed_department]
         employees = User.query.filter(
             User.status == 'active',
-            User.department_id.in_(admin_dept_ids)
+            User.department_id.in_(admin_dept_ids),
+            ~User.first_name.like('User%'),  # Exclude generic test users
+            ~User.first_name.like('NN-%'),   # Exclude numbered test users
+            User.first_name != '',           # Exclude empty names
+            User.last_name != ''             # Exclude users without last names
         ).order_by(User.first_name).all()
     else:
-        # If admin is not assigned to specific departments, show all active employees
-        employees = User.query.filter_by(status='active').order_by(User.first_name).all()
-    
+        # If admin/product_owner is not assigned to specific departments, show all active employees
+        employees = User.query.filter(
+            User.status == 'active',
+            ~User.first_name.like('User%'),  # Exclude generic test users
+            ~User.first_name.like('NN-%'),   # Exclude numbered test users
+            User.first_name != '',           # Exclude empty names
+            User.last_name != ''             # Exclude users without last names
+        ).order_by(User.first_name).all()
+
     # Create choices list for the dropdown: [(id, "First Last (Department)")]
     employee_choices = []
     for employee in employees:
@@ -424,6 +335,16 @@ def admin_create():
         if not employee:
             flash('Selected employee does not exist.', 'danger')
             return redirect(url_for('permission.admin_create'))
+        
+        # Validate if the manager is authorized to submit for this employee
+        if current_user.role == 'manager':
+            # Check if the selected employee is in the manager's department or reports to them
+            is_in_department = (employee.department_id == current_user.department_id)
+            is_direct_report = (employee.manager_id == current_user.id)
+
+            if not (is_in_department or is_direct_report):
+                flash('You can only submit requests for your team members.', 'danger')
+                return redirect(url_for('permission.admin_create'))
         
         # Combine date and time
         start_datetime = datetime.combine(form.start_date.data, form.start_time.data)
@@ -446,46 +367,14 @@ def admin_create():
             status='pending'
         )
         
-        # If the employee is a manager, auto-approve manager and director parts
-        if employee.role == 'manager':
-            permission_request.manager_approved = True
-            permission_request.director_approved = True
+        # If the employee is a manager, no special handling needed since only admin approval is required
         
         db.session.add(permission_request)
         db.session.commit()
         
-        # Notify the employee
-        create_notification(
-            user_id=employee.id,
-            message=f"An admin has created a permission request on your behalf for {form.start_date.data}",
-            notification_type='new_request',
-            reference_id=permission_request.id,
-            reference_type='permission'
-        )
+        # Employee notification removed - will be replaced with SMTP email notifications
         
-        # If employee is not a manager, notify their direct manager and director
-        if employee.role != 'manager':
-            managers = get_user_managers(employee)
-            
-            # Notify direct manager
-            if managers['direct_manager']:
-                create_notification(
-                    user_id=managers['direct_manager'].id,
-                    message=f"New permission request for {employee.get_full_name()} (created by admin) for {form.start_date.data}",
-                    notification_type='new_request',
-                    reference_id=permission_request.id,
-                    reference_type='permission'
-                )
-            
-            # Notify directors
-            for director in managers['directors']:
-                create_notification(
-                    user_id=director.id,
-                    message=f"New permission request for {employee.get_full_name()} (created by admin) for {form.start_date.data}",
-                    notification_type='new_request',
-                    reference_id=permission_request.id,
-                    reference_type='permission'
-                )
+        # Manager and director notifications removed - will be replaced with SMTP email notifications
         
         flash(f'Permission request for {employee.get_full_name()} has been submitted successfully!', 'success')
         return redirect(url_for('permission.index'))

@@ -14,7 +14,7 @@ def index():
 
 @departments_bp.route('/create', methods=['GET', 'POST'])
 @login_required
-@role_required('admin')
+@role_required(['admin', 'product_owner'])
 def create():
     """Create a new department"""
     form = DepartmentForm()
@@ -42,7 +42,7 @@ def create():
 
 @departments_bp.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
-@role_required('admin')
+@role_required(['admin', 'product_owner'])
 def edit(id):
     """Edit an existing department"""
     department = Department.query.get_or_404(id)

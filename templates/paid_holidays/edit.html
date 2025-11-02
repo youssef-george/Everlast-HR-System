@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="card-title">
+                            <i class="fas fa-edit me-2"></i>
+                            Edit Paid Holiday
+                        </h3>
+                        <a href="{{ url_for('paid_holidays.index') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to Holidays
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="holidayForm">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.holiday_type.label(class="form-label") }}
+                                    {{ form.holiday_type(class="form-select") }}
+                                    {% if form.holiday_type.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.holiday_type.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.description.label(class="form-label") }}
+                                    {{ form.description(class="form-control", placeholder="e.g., National Day, Christmas, etc.") }}
+                                    {% if form.description.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.description.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.start_date.label(class="form-label") }}
+                                    {{ form.start_date(class="form-control") }}
+                                    {% if form.start_date.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.start_date.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6" id="endDateField">
+                                <div class="mb-3">
+                                    {{ form.end_date.label(class="form-label") }}
+                                    {{ form.end_date(class="form-control") }}
+                                    {% if form.end_date.errors %}
+                                        <div class="text-danger">
+                                            {% for error in form.end_date.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        {{ form.is_recurring(class="form-check-input") }}
+                                        {{ form.is_recurring.label(class="form-check-label") }}
+                                        <small class="form-text text-muted">Check this if this holiday repeats annually</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Warning:</strong> Changing the dates of this holiday will update all related attendance records for all employees.
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('paid_holidays.index') }}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Update Holiday
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const holidayTypeSelect = document.getElementById('holiday_type');
+    const endDateField = document.getElementById('endDateField');
+    const endDateInput = document.getElementById('end_date');
+    
+    function toggleEndDateField() {
+        if (holidayTypeSelect.value === 'range') {
+            endDateField.style.display = 'block';
+            endDateInput.required = true;
+        } else {
+            endDateField.style.display = 'none';
+            endDateInput.required = false;
+            if (holidayTypeSelect.value === 'day') {
+                endDateInput.value = '';
+            }
+        }
+    }
+    
+    holidayTypeSelect.addEventListener('change', toggleEndDateField);
+    toggleEndDateField(); // Initialize on page load
+    
+    // Conflict checking
+    const form = document.getElementById('holidayForm');
+    let isSubmitting = false;
+    
+    form.addEventListener('submit', function(e) {
+        if (isSubmitting) {
+            return; // Allow normal submission
+        }
+        
+        e.preventDefault();
+        
+        const formData = new FormData(form);
+        const data = {
+            start_date: formData.get('start_date'),
+            end_date: formData.get('end_date') || formData.get('start_date'),
+            holiday_type: formData.get('holiday_type'),
+            holiday_id: {{ holiday.id }}
+        };
+        
+        fetch('{{ url_for("paid_holidays.check_conflicts") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.has_conflicts) {
+                let message = 'The following holidays conflict with your selected dates:\n\n';
+                data.conflicts.forEach(conflict => {
+                    message += `• ${conflict.description} (${conflict.start_date} to ${conflict.end_date})\n`;
+                });
+                message += '\nDo you want to proceed anyway?';
+                
+                if (confirm(message)) {
+                    isSubmitting = true;
+                    form.submit();
+                }
+            } else {
+                isSubmitting = true;
+                form.submit();
+            }
+        })
+        .catch(error => {
+            console.error('Error checking conflicts:', error);
+            isSubmitting = true;
+            form.submit(); // Submit anyway if check fails
+        });
+    });
+});
+</script>
+{% endblock %}

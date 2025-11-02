@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+    <h4 class="fw-bold py-3 mb-4">
+    <span class="text-muted fw-light">Dashboard /</span> Leave Balances Management
+</h4>
+
+<div class="card">
+    <h5 class="card-header">Leave Balances for {{ current_year }}
+        <form action="{{ url_for('dashboard.allocate_default_leave') }}" method="post" style="display: inline;">
+            <button type="submit" class="btn btn-primary btn-sm float-end">Allocate Default Leave</button>
+        </form>
+    </h5>
+    <div class="table-responsive text-nowrap">
+        <table class="table card-table">
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Email</th>
+                        {% for leave_type in all_leave_types %}
+                        <th>{{ leave_type.name }} (Days)</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody class="table-border-bottom-0">
+                    {% for user_data in users_with_balances %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar me-2">
+                                    {% if user_data.user.profile_picture %}
+                                    <img src="{{ user_data.user.profile_picture }}" alt="Profile" class="avatar-img rounded-circle">
+                                    {% else %}
+                                    <div class="avatar-initial rounded-circle bg-label-primary">
+                                        {{ user_data.user.first_name[0] }}{{ user_data.user.last_name[0] }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div>{{ user_data.user.first_name }} {{ user_data.user.last_name }}</div>
+                            </div>
+                        </td>
+                        <td>{{ user_data.user.email }}</td>
+                        {% for leave_type in all_leave_types %}
+                        <td>
+                            <span class="badge bg-label-{{ 'success' if user_data.balances[leave_type.name] > 0 else 'danger' }}">
+                                {{ user_data.balances[leave_type.name] if leave_type.name in user_data.balances else 0 }}
+                            </span>
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="{{ 2 + all_leave_types.count() }}" class="text-center">No active users found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

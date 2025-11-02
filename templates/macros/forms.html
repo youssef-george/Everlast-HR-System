@@ -2,14 +2,16 @@
     <div class="form-group">
         {{ field.label(class="form-label") }}
         {% if field.errors %}
-            {{ field(class="form-control is-invalid", **attrs) }}
+            {% set field_class = attrs.get('class', 'form-control') + ' is-invalid' %}
+            {{ field(class=field_class, **attrs) }}
             <div class="invalid-feedback">
                 {% for error in field.errors %}
                     {{ error }}
                 {% endfor %}
             </div>
         {% else %}
-            {{ field(class="form-control", **attrs) }}
+            {% set field_class = attrs.get('class', 'form-control') %}
+            {{ field(class=field_class, **attrs) }}
         {% endif %}
         {% if field.description %}
             <small class="form-text text-muted">{{ field.description }}</small>

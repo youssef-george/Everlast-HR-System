@@ -1,7 +1,7 @@
 import os
 import logging
 from dotenv import load_dotenv
-from flask import Flask, redirect, url_for, flash, request, render_template
+from flask import Flask, redirect, url_for, flash, request, render_template, jsonify
 from flask_login import LoginManager, current_user
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from flask_session import Session
@@ -26,8 +26,6 @@ def create_app(config_name='default'):
     
     # Load config
     app.config.from_object(config[config_name])
-    print(f"DEBUG: SECRET_KEY = {app.config.get('SECRET_KEY')}")
-    print(f"DEBUG: WTF_CSRF_SECRET_KEY = {app.config.get('WTF_CSRF_SECRET_KEY')}")
     
     # Initialize extensions
     db.init_app(app)
@@ -66,6 +64,12 @@ def create_app(config_name='default'):
                 return value
         return value.strftime(format)
     
+    @app.template_filter('hours_minutes')
+    def format_hours_minutes_filter(hours):
+        """Template filter to convert decimal hours to 'Xh Ym' format."""
+        from helpers import format_hours_minutes
+        return format_hours_minutes(hours)
+    
     # Add template context processor for datetime
     @app.context_processor
     def utility_processor():
@@ -89,8 +93,10 @@ def create_app(config_name='default'):
         from routes.permission import permission_bp
         from routes.calendar import calendar_bp
         from routes.profile import profile_bp
-        from routes.notifications import notifications_bp
         from routes.attendance import attendance_bp
+        from routes.paid_holidays import paid_holidays_bp
+        from routes.api import api_bp
+        from routes.final_report import final_report_bp
         
         # Register blueprints
         app.register_blueprint(auth_bp)
@@ -100,46 +106,49 @@ def create_app(config_name='default'):
         app.register_blueprint(permission_bp)
         app.register_blueprint(calendar_bp)
         app.register_blueprint(profile_bp)
-        app.register_blueprint(notifications_bp)
         app.register_blueprint(attendance_bp)
+        app.register_blueprint(paid_holidays_bp, url_prefix='/paid-holidays')
+        app.register_blueprint(api_bp)
+        app.register_blueprint(final_report_bp)
         
         # Initialize database
-        db.create_all()
+        # db.create_all()  # Commented out - using migrations instead
         
         # Create default admin user if doesn't exist
-        from models import User
-        admin_email = 'erp@everlastwellness.com'
-        admin = User.query.filter_by(email=admin_email).first()
-        if not admin:
-            logging.info("Creating default admin user")
-            admin = User(
-                first_name="ERP",
-                last_name="Admin",
-                email=admin_email,
-                password_hash=generate_password_hash("Everlast@123"),
-                role="admin",
-                status="active"
-            )
-            db.session.add(admin)
-            db.session.commit()
+        # from models import User
+        # admin_email = 'erp@everlastwellness.com'
+        # admin = User.query.filter_by(email=admin_email).first()
+        # if not admin:
+        #     logging.info("Creating default admin user")
+        #     admin = User(
+        #         first_name="ERP",
+        #         last_name="Admin",
+        #         email=admin_email,
+        #         password_hash=generate_password_hash("Everlast@123"),
+        #         role="admin",
+        #         status="active"
+        #     )
+        #     db.session.add(admin)
+        #     db.session.commit()
     
     # Configure scheduler
     app.config['SCHEDULER_API_ENABLED'] = True
     app.config['SCHEDULER_TIMEZONE'] = 'UTC'
     
-    @scheduler.task('interval', id='sync_attendance', seconds=60, misfire_grace_time=3600, coalesce=True, max_instances=1)
-    def scheduled_sync():
-        with app.app_context():
-            try:
-                from routes.attendance import sync_attendance_task
-                logging.info('Starting scheduled attendance sync...')
-                sync_stats = sync_attendance_task()
-                if sync_stats:
-                    logging.info(f"Scheduled sync completed. Added {sync_stats['records_added']} records.")
-            except Exception as e:
-                logging.error(f'Scheduled sync failed: {str(e)}')
+    # Auto-sync disabled - manual sync only
+    # @scheduler.task('interval', id='sync_attendance', minutes=1, misfire_grace_time=300, coalesce=True, max_instances=1)
+    # def scheduled_sync():
+    #     with app.app_context():
+    #         try:
+    #             from routes.attendance import sync_attendance_task
+    #             logging.info('Starting scheduled attendance sync...')
+    #             sync_stats = sync_attendance_task(full_sync=True)
+    #             if sync_stats:
+    #                 logging.info(f"Scheduled sync completed. Added {sync_stats['records_added']} records and updated {sync_stats.get('records_updated', 0)} records.")
+    #         except Exception as e:
+    #             logging.error(f'Scheduled sync failed: {str(e)}')
 
-    scheduler.start()
+    # scheduler.start()  # Disabled auto-sync
     
     @app.route('/')
     def root():
@@ -152,6 +161,50 @@ def create_app(config_name='default'):
         logging.error(f"CSRF error: {e}")
         flash('Your session has expired or is invalid. Please log in again.', 'danger')
         return redirect(url_for('auth.login'))
+    
+    @app.route('/health')
+    def health_check():
+        """Health check endpoint to monitor database connection pool status"""
+        try:
+            from extensions import db
+            from connection_manager import is_sync_running
+            
+            # Test database connection
+            from sqlalchemy import text
+            db.session.execute(text('SELECT 1'))
+            
+            # Get connection pool status
+            pool = db.engine.pool
+            pool_status = {
+                'pool_size': pool.size(),
+                'checked_in': pool.checkedin(),
+                'checked_out': pool.checkedout(),
+                'overflow': pool.overflow(),
+                'invalid': pool.invalid(),
+                'sync_running': is_sync_running()
+            }
+            
+            return jsonify({
+                'status': 'healthy',
+                'database': 'connected',
+                'pool_status': pool_status
+            }), 200
+            
+        except Exception as e:
+            logging.error(f"Health check failed: {str(e)}")
+            return jsonify({
+                'status': 'unhealthy',
+                'database': 'disconnected',
+                'error': str(e)
+            }), 500
+    
+    @app.teardown_appcontext
+    def close_db(error):
+        """Ensure database connections are properly closed"""
+        try:
+            db.session.close()
+        except Exception as e:
+            logging.warning(f"Error closing database session: {str(e)}")
     
     return app
 

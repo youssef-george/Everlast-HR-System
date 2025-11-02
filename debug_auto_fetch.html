@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Auto-Fetch</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; }
+        .error { background-color: #f8d7da; }
+        .info { background-color: #d1ecf1; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0; }
+        .stat-card { border: 1px solid #ddd; padding: 15px; border-radius: 5px; text-align: center; }
+        .stat-value { font-size: 24px; font-weight: bold; margin: 10px 0; }
+        .pending-leave-count { color: #dc3545; }
+        .pending-permission-count { color: #ffc107; }
+        .total-employees-count { color: #007bff; }
+        .log { background: #f8f9fa; padding: 10px; border-radius: 5px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; }
+    </style>
+</head>
+<body data-user-role="admin">
+    <h1>🔍 Auto-Fetch Debug Page</h1>
+    
+    <div class="debug-section info">
+        <h3>System Status</h3>
+        <div id="system-status">Initializing...</div>
+    </div>
+    
+    <div class="debug-section">
+        <h3>API Test</h3>
+        <button onclick="testAPI()">Test API Endpoints</button>
+        <div id="api-results" class="log"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h3>Dashboard Statistics</h3>
+        <div class="stats">
+            <div class="stat-card">
+                <h4>Pending Leave</h4>
+                <div class="stat-value pending-leave-count">0</div>
+            </div>
+            <div class="stat-card">
+                <h4>Pending Permission</h4>
+                <div class="stat-value pending-permission-count">0</div>
+            </div>
+            <div class="stat-card">
+                <h4>Total Employees</h4>
+                <div class="stat-value total-employees-count">0</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="debug-section">
+        <h3>Console Logs</h3>
+        <div id="console-logs" class="log"></div>
+    </div>
+    
+    <script>
+        // Override console methods to capture logs
+        const originalLog = console.log;
+        const originalWarn = console.warn;
+        const originalError = console.error;
+        
+        function addLog(message, type = 'log') {
+            const logDiv = document.getElementById('console-logs');
+            const logEntry = document.createElement('div');
+            logEntry.style.marginBottom = '5px';
+            
+            if (type === 'error') {
+                logEntry.style.color = '#dc3545';
+            } else if (type === 'warn') {
+                logEntry.style.color = '#ffc107';
+            } else {
+                logEntry.style.color = '#28a745';
+            }
+            
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addLog(args.join(' '), 'log');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addLog(args.join(' '), 'warn');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addLog(args.join(' '), 'error');
+        };
+        
+        // Test API function
+        async function testAPI() {
+            const resultsDiv = document.getElementById('api-results');
+            resultsDiv.innerHTML = 'Testing API endpoints...<br>';
+            
+            const endpoints = [
+                '/api/dashboard/stats',
+                '/api/leave/requests',
+                '/api/attendance/records'
+            ];
+            
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await fetch(endpoint);
+                    const data = await response.json();
+                    
+                    resultsDiv.innerHTML += `<br><strong>${endpoint}</strong>:<br>`;
+                    resultsDiv.innerHTML += `Status: ${response.status}<br>`;
+                    resultsDiv.innerHTML += `Response: ${JSON.stringify(data, null, 2)}<br>`;
+                    resultsDiv.innerHTML += '---<br>';
+                } catch (error) {
+                    resultsDiv.innerHTML += `<br><strong>${endpoint}</strong>: ERROR - ${error.message}<br>`;
+                }
+            }
+        }
+        
+        // Monitor auto-fetch system
+        let checkCount = 0;
+        const checkInterval = setInterval(() => {
+            const statusDiv = document.getElementById('system-status');
+            
+            if (window.autoFetch) {
+                statusDiv.innerHTML = '✅ Auto-fetch system is running!';
+                statusDiv.parentElement.className = 'debug-section success';
+                clearInterval(checkInterval);
+            } else if (checkCount > 20) {
+                statusDiv.innerHTML = '❌ Auto-fetch system failed to initialize';
+                statusDiv.parentElement.className = 'debug-section error';
+                clearInterval(checkInterval);
+            } else {
+                statusDiv.innerHTML = `⏳ Waiting for auto-fetch system... (${checkCount}/20)`;
+                checkCount++;
+            }
+        }, 500);
+        
+        // Test manual data update
+        function testManualUpdate() {
+            console.log('Testing manual data update...');
+            
+            // Simulate data update
+            const testData = {
+                pending_leave_requests: Math.floor(Math.random() * 10),
+                pending_permission_requests: Math.floor(Math.random() * 5),
+                total_employees: Math.floor(Math.random() * 100) + 50
+            };
+            
+            console.log('Test data:', testData);
+            
+            // Update elements manually
+            document.querySelector('.pending-leave-count').textContent = testData.pending_leave_requests;
+            document.querySelector('.pending-permission-count').textContent = testData.pending_permission_requests;
+            document.querySelector('.total-employees-count').textContent = testData.total_employees;
+            
+            console.log('Manual update completed');
+        }
+        
+        // Add test button
+        setTimeout(() => {
+            const testButton = document.createElement('button');
+            testButton.textContent = 'Test Manual Update';
+            testButton.onclick = testManualUpdate;
+            testButton.style.marginLeft = '10px';
+            document.querySelector('.debug-section h3').appendChild(testButton);
+        }, 1000);
+    </script>
+    
+    <!-- Include the auto-fetch script -->
+    <script src="static/js/auto-fetch.js"></script>
+</body>
+</html>

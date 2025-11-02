@@ -28,7 +28,7 @@
                             <span class="badge badge-light-primary">Employee</span>
                         {% elif current_user.role == 'manager' %}
                             <span class="badge badge-light-success">Manager</span>
-                        {% elif current_user.role == 'admin' %}
+                        {% elif current_user.role in ['admin', 'product_owner'] %}
                             <span class="badge badge-light-danger">Admin</span>
                         {% elif current_user.role == 'director' %}
                             <span class="badge badge-light-info">Director</span>
@@ -142,43 +142,155 @@
             </div>
         </div>
         
-        <!-- Attendance Summary Card -->
+        <!-- Leave Balance Card -->
+        {% if leave_balances %}
         <div class="card mb-4">
             <div class="card-header">
-                <h3 class="card-title">Attendance Summary</h3>
+                <h3 class="card-title">Leave Balance</h3>
                 <div class="card-toolbar">
-                    <a href="{{ url_for('attendance.employee_attendance', user_id=current_user.id) }}" class="btn btn-sm btn-light">View Details</a>
+                    <a href="{{ url_for('dashboard.leave_balances') }}" class="btn btn-sm btn-light">Manage</a>
                 </div>
             </div>
             <div class="card-body">
-                {% set current_month = current_user.get_monthly_working_hours(today.year, today.month) %}
-                {% set previous_month = current_user.get_monthly_working_hours(
-                    (today.replace(day=1) - timedelta(days=1)).year,
-                    (today.replace(day=1) - timedelta(days=1)).month
-                ) %}
-                
+                <div class="row">
+                    {% for balance in leave_balances %}
+                    <div class="col-md-4 mb-3">
+                        <div class="d-flex align-items-center p-3 bg-light rounded">
+                            <div class="me-3">
+                                <div class="symbol symbol-40px">
+                                    <span class="symbol-label" style="background-color: {{ balance.leave_type.color }}; color: white;">
+                                        {{ balance.leave_type.name[0] }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ balance.leave_type.name }}</h6>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted small">Remaining:</span>
+                                    <span class="fw-bold {% if balance.remaining_days < 0 %}text-danger{% else %}text-success{% endif %}">
+                                        {{ balance.remaining_days }}
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted small">Used:</span>
+                                    <span class="text-warning">{{ balance.used_days }}/{{ balance.total_days }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Attendance Statistics Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title">Attendance Statistics</h3>
+                <div class="card-toolbar">
+                    <a href="{{ url_for('attendance.index') }}" class="btn btn-sm btn-light">View Details</a>
+                </div>
+            </div>
+            <div class="card-body">
                 <div class="row">
                     <div class="col-md-6">
                         <h5 class="fw-bold mb-3">Current Month</h5>
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span>Total Hours:</span>
-                            <span class="badge badge-light-primary">{{ "%.2f"|format(current_month) }}</span>
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="symbol symbol-40px me-3 bg-light-success">
+                                        <i class="fas fa-check text-success"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-gray-800">{{ current_month_stats.present_days }}</div>
+                                        <div class="text-muted fs-7">Present Days</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="symbol symbol-40px me-3 bg-light-danger">
+                                        <i class="fas fa-times text-danger"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-gray-800">{{ current_month_stats.absent_days }}</div>
+                                        <div class="text-muted fs-7">Absent Days</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="symbol symbol-40px me-3 bg-light-info">
+                                        <i class="fas fa-calendar-times text-info"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-gray-800">{{ current_month_stats.days_off }}</div>
+                                        <div class="text-muted fs-7">Days Off</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="symbol symbol-40px me-3 bg-light-warning">
+                                        <i class="fas fa-clock text-warning"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-gray-800">{{ current_month_stats.half_days }}</div>
+                                        <div class="text-muted fs-7">Half Days</div>
+                                    </div>
+                                </div>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span>Daily Average:</span>
-                            <span class="badge badge-light-info">{{ "%.2f"|format(current_month / today.day) if today.day > 0 else "0.00" }}</span>
                         </div>
                     </div>
                     
                     <div class="col-md-6">
                         <h5 class="fw-bold mb-3">Previous Month</h5>
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span>Total Hours:</span>
-                            <span class="badge badge-light-primary">{{ "%.2f"|format(previous_month) }}</span>
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="symbol symbol-40px me-3 bg-light-success">
+                                        <i class="fas fa-check text-success"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-gray-800">{{ previous_month_stats.present_days }}</div>
+                                        <div class="text-muted fs-7">Present Days</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="symbol symbol-40px me-3 bg-light-danger">
+                                        <i class="fas fa-times text-danger"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-gray-800">{{ previous_month_stats.absent_days }}</div>
+                                        <div class="text-muted fs-7">Absent Days</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="symbol symbol-40px me-3 bg-light-info">
+                                        <i class="fas fa-calendar-times text-info"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-gray-800">{{ previous_month_stats.days_off }}</div>
+                                        <div class="text-muted fs-7">Days Off</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="symbol symbol-40px me-3 bg-light-warning">
+                                        <i class="fas fa-clock text-warning"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-gray-800">{{ previous_month_stats.half_days }}</div>
+                                        <div class="text-muted fs-7">Half Days</div>
+                                    </div>
+                                </div>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span>Daily Average:</span>
-                            <span class="badge badge-light-info">{{ "%.2f"|format(previous_month / previous_month_days) if previous_month_days > 0 else "0.00" }}</span>
                         </div>
                     </div>
                 </div>
@@ -186,8 +298,8 @@
                 <div class="separator my-4"></div>
                 
                 <div class="d-flex justify-content-center">
-                    <a href="{{ url_for('attendance.employee_attendance', user_id=current_user.id) }}" class="btn btn-light-primary">
-                        <i class="fas fa-clock me-1"></i> View Full Attendance History
+                    <a href="{{ url_for('attendance.index') }}" class="btn btn-light-primary">
+                        <i class="fas fa-chart-bar me-1"></i> View Full Attendance History
                     </a>
                 </div>
             </div>
@@ -273,7 +385,7 @@
                                     {% if permission_requests %}
                                         {% for permission in permission_requests[:5] %}
                                         <tr>
-                                            <td>{{ permission.start_time.strftime('%d/%m/%Y %H:%M') }} - {{ permission.end_time.strftime('%H:%M') }}</td>
+                                            <td>{{ permission.start_time.strftime('%d/%m/%Y %I:%M %p') }} - {{ permission.end_time.strftime('%I:%M %p') }}</td>
                                             <td>{{ permission.reason|truncate(30) }}</td>
                                             <td>
                                                 {% if permission.status == 'pending' %}

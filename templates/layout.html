@@ -12,6 +12,9 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
     
+    <!-- Toastr CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
+    
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     
@@ -21,12 +24,129 @@
     <!-- Custom CSS -->
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/metronic.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/mobile.css') }}" rel="stylesheet">
     
     {% block extra_css %}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     {% endblock %}
+    
+    <!-- Early DOM Safety Script -->
+    <script>
+    // Hide page loader immediately if possible
+    (function() {
+        'use strict';
+        
+        // Hide page loader as soon as possible
+        function hideLoaderNow() {
+            const loader = document.getElementById('page-loader');
+            if (loader) {
+                loader.style.display = 'none';
+                loader.style.visibility = 'hidden';
+            }
+        }
+        
+        // Try to hide immediately
+        if (document.readyState === 'complete') {
+            hideLoaderNow();
+        } else {
+            // Hide when DOM is ready
+            document.addEventListener('DOMContentLoaded', hideLoaderNow);
+            // Fallback after 2 seconds
+            setTimeout(hideLoaderNow, 2000);
+        }
+    })();
+    
+    // Run this immediately to prevent MutationObserver errors
+    (function() {
+        'use strict';
+        
+        try {
+            // Ensure document.body exists
+            if (!document.body) {
+                document.body = document.createElement('body');
+            }
+            
+            // Override MutationObserver before any external scripts load
+            if (window.MutationObserver) {
+                try {
+                    const OriginalMutationObserver = window.MutationObserver;
+                    window.MutationObserver = function(callback) {
+                        const observer = new OriginalMutationObserver(function(mutations, obs) {
+                            try {
+                                callback(mutations, obs);
+                            } catch (error) {
+                                console.warn('MutationObserver callback error handled:', error.message);
+                            }
+                        });
+                        
+                        // Override observe method with enhanced error handling
+                        const originalObserve = observer.observe;
+                        observer.observe = function(target, options) {
+                            try {
+                                // Enhanced validation for target
+                                if (!target) {
+                                    console.warn('MutationObserver.observe called with null/undefined target, skipping');
+                                    return;
+                                }
+                                
+                                if (!(target instanceof Node)) {
+                                    console.warn('MutationObserver.observe called with invalid target type:', typeof target, 'using document.body');
+                                    if (document.body) {
+                                        return originalObserve.call(this, document.body, options);
+                                    }
+                                    return;
+                                }
+                                
+                                // Additional check for disconnected nodes
+                                if (!document.contains(target)) {
+                                    console.warn('MutationObserver.observe called with disconnected node, using document.body');
+                                    if (document.body) {
+                                        return originalObserve.call(this, document.body, options);
+                                    }
+                                    return;
+                                }
+                                
+                                return originalObserve.call(this, target, options);
+                            } catch (error) {
+                                console.warn('MutationObserver.observe error handled:', error.message);
+                                return;
+                            }
+                        };
+                        
+                        // Override disconnect method
+                        const originalDisconnect = observer.disconnect;
+                        observer.disconnect = function() {
+                            try {
+                                return originalDisconnect.call(this);
+                            } catch (error) {
+                                console.warn('MutationObserver.disconnect error handled:', error.message);
+                            }
+                        };
+                        
+                        return observer;
+                    };
+                } catch (error) {
+                    console.warn('Failed to override MutationObserver:', error.message);
+                }
+            }
+            
+            // Additional protection: Override console.error to catch MutationObserver errors
+            const originalConsoleError = console.error;
+            console.error = function(...args) {
+                const message = args.join(' ');
+                if (message.includes('MutationObserver') || message.includes('parameter 1 is not of type')) {
+                    console.warn('MutationObserver error suppressed in console:', message);
+                    return;
+                }
+                originalConsoleError.apply(console, args);
+            };
+        } catch (error) {
+            console.warn('Error in MutationObserver override setup:', error.message);
+        }
+    })();
+    </script>
 </head>
-<body>
+<body data-user-role="{{ current_user.role }}">
     <!-- Page Loader -->
     <div id="page-loader" class="page-loader">
         <div class="d-flex flex-column align-items-center">
@@ -51,7 +171,9 @@
                 </button>
             </div>
             
-            <ul class="nav-menu">
+            <!-- Scrollable navigation container -->
+            <div class="sidebar-nav-container">
+                <ul class="nav-menu">
                 <li class="nav-item">
                     <a href="{{ url_for('dashboard.index') }}" class="nav-link {{ 'active' if request.path.startswith('/dashboard') and request.path != '/dashboard/members' and request.path != '/dashboard/users' }}">
                         <i class="fas fa-tachometer-alt nav-icon"></i>
@@ -120,6 +242,15 @@
                 </li>
                 {% endif %}
                 
+                {% if current_user.role == 'employee' %}
+                <li class="nav-item">
+                    <a href="{{ url_for('leave.my_balance') }}" class="nav-link {{ 'active' if request.path == '/leave/my-balance' }}">
+                        <i class="fas fa-balance-scale nav-icon"></i>
+                        <span class="nav-text">My Leave Balance</span>
+                    </a>
+                </li>
+                {% endif %}
+                
                 <li class="nav-item">
                     <a href="{{ url_for('dashboard.members') }}" class="nav-link {{ 'active' if request.path == '/dashboard/members' }}">
                         <i class="fas fa-users nav-icon"></i>
@@ -127,33 +258,97 @@
                     </a>
                 </li>
                 
-                {% if current_user.role == 'admin' %}
                 <li class="nav-item">
                     <div class="nav-section-header">
                         <i class="fas fa-fingerprint nav-icon"></i>
                         <span class="nav-section-title">Attendance System</span>
                     </div>
                 </li>
-                <li class="nav-item">
-                    <a href="{{ url_for('attendance.index') }}" class="nav-link {{ 'active' if request.path.startswith('/attendance') }}">
-                        <i class="fas fa-clipboard-list nav-icon"></i>
-                        <span class="nav-text">Daily Attendance</span>
-                        <span id="sync-status" class="badge bg-primary ms-2" style="display: none;">Syncing...</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-
-                    <a href="{{ url_for('dashboard.report') }}" class="nav-link {{ 'active' if request.path == '/dashboard/report' }}">
-                        <i class="fas fa-chart-bar nav-icon"></i>
-                        <span class="nav-text">Attendance Report</span>
-                    </a>
-                </li>
+        <li class="nav-item">
+            <a href="{{ url_for('attendance.index') }}" class="nav-link {{ 'active' if request.path.startswith('/attendance') }}">
+                <i class="fas fa-clipboard-list nav-icon"></i>
+                <span class="nav-text">Daily Attendance</span>
+                <span id="sync-status" class="badge bg-primary ms-2" style="display: none;">Syncing...</span>
+            </a>
+        </li>
+        {% if current_user.role in ['admin', 'product_owner', 'director'] %}
+        <li class="nav-item">
+            <a href="{{ url_for('calendar.attendance_report') }}" class="nav-link {{ 'active' if request.path == '/calendar/attendance-report' }}">
+                <i class="fas fa-chart-line nav-icon"></i>
+                <span class="nav-text">Attendance Report</span>
+            </a>
+        </li>
+        {% endif %}
+        {% if current_user.role in ['admin', 'product_owner'] %}
+        <li class="nav-item">
+            <a href="{{ url_for('final_report.final_report') }}" class="nav-link {{ 'active' if request.path.startswith('/final-report') }}">
+                <i class="fas fa-chart-bar nav-icon"></i>
+                <span class="nav-text">Final Report</span>
+            </a>
+        </li>
+        {% endif %}
+        {% if current_user.role in ['admin', 'director', 'support'] %}
+        <li class="nav-item">
+            <a href="{{ url_for('final_report.detailed_attendance_report') }}" class="nav-link {{ 'active' if request.path.startswith('/detailed-attendance-report') }}">
+                <i class="fas fa-list-alt nav-icon"></i>
+                <span class="nav-text">Detailed Attendance Report</span>
+            </a>
+        </li>
+        {% endif %}
+                {% if current_user.role in ['admin', 'product_owner', 'director'] %}
                 <li class="nav-item">
                     <a href="{{ url_for('dashboard.users') }}" class="nav-link {{ 'active' if request.path == '/dashboard/users' }}">
                         <i class="fas fa-user-cog nav-icon"></i>
                         <span class="nav-text">User Management System</span>
                     </a>
                 </li>
+                {% endif %}
+                {% if current_user.role in ['admin', 'product_owner', 'director'] %}
+                <li class="nav-item">
+                    <a href="{{ url_for('dashboard.smtp_configuration') }}" class="nav-link {{ 'active' if request.path.startswith('/dashboard/smtp-configuration') }}">
+                        <i class="fas fa-envelope-open-text nav-icon"></i>
+                        <span class="nav-text">Email Settings</span>
+                        {% if current_user.role != 'product_owner' %}
+                        <span class="badge bg-secondary ms-2" style="font-size: 0.6rem;">View Only</span>
+                        {% endif %}
+                    </a>
+                </li>
+                {% endif %}
+                {% if current_user.role in ['admin', 'product_owner', 'director'] %}
+                <li class="nav-item dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" role="button">
+                        <i class="fas fa-calendar-check nav-icon"></i>
+                        <span class="nav-text">Leave Management</span>
+                    </a>
+                    <ul class="dropdown-menu sidebar-dropdown">
+                        <li><a class="dropdown-item" href="{{ url_for('leave.index') }}">
+                            <i class="fas fa-list nav-icon"></i>
+                            <span class="nav-text">All Leave Requests</span>
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ url_for('dashboard.leave_types') }}">
+                            <i class="fas fa-tags nav-icon"></i>
+                            <span class="nav-text">Leave Types</span>
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('dashboard.paid_holidays') }}">
+                            <i class="fas fa-calendar-check nav-icon"></i>
+                            <span class="nav-text">Paid Holidays</span>
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('dashboard.leave_balances') }}">
+                            <i class="fas fa-balance-scale nav-icon"></i>
+                            <span class="nav-text">Leave Balances</span>
+                        </a></li>
+                    </ul>
+                </li>
+                {% elif current_user.role == 'manager' %}
+                <li class="nav-item">
+                    <a href="{{ url_for('dashboard.leave_balances') }}" class="nav-link {{ 'active' if request.path == '/dashboard/leave-balances' }}">
+                        <i class="fas fa-balance-scale nav-icon"></i>
+                        <span class="nav-text">Leave Balances</span>
+                    </a>
+                </li>
+                {% endif %}
+                {% if current_user.role in ['admin', 'product_owner', 'director'] %}
                 <li class="nav-item">
                     <a href="{{ url_for('departments.index') }}" class="nav-link {{ 'active' if request.path.startswith('/departments') }}">
                         <i class="fas fa-building nav-icon"></i>
@@ -162,34 +357,41 @@
                 </li>
                 {% endif %}
                 
+                {% if current_user.role in ['admin', 'product_owner', 'director'] %}
                 <li class="nav-item">
                     <a href="{{ url_for('attendance.device_settings') }}" class="nav-link {{ 'active' if request.path == '/attendance/device_settings' }}">
                         <i class="fas fa-cogs nav-icon"></i>
                         <span class="nav-text">Device Settings</span>
+                        {% if current_user.role != 'product_owner' %}
+                        <span class="badge bg-secondary ms-2" style="font-size: 0.6rem;">View Only</span>
+                        {% endif %}
                     </a>
                 </li>
+                {% endif %}
                 <li class="nav-item">
                     <a href="{{ url_for('profile.index') }}" class="nav-link {{ 'active' if request.path.startswith('/profile') }}">
                         <i class="fas fa-user-cog nav-icon"></i>
                         <span class="nav-text">Profile Settings</span>
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a href="{{ url_for('notifications.index') }}" class="nav-link {{ 'active' if request.path.startswith('/notifications') }}">
-                        <div class="position-relative d-flex align-items-center">
-                            <i class="fas fa-bell nav-icon"></i>
-                            <span id="notification-badge" class="notifications-badge" style="display: none;">0</span>
-                            <span class="nav-text">Notifications</span>
-                        </div>
+                
+                </ul>
+            </div>
+            
+            
+            
+            <!-- Sidebar Footer -->
+            <div class="sidebar-footer d-flex align-items-center justify-content-between">
+                <div class="user-info">
+                    <div class="small text-muted">Logged in as:</div>
+                    <div class="fw-bold">{% if current_user.is_authenticated %}{{ current_user.get_full_name() }}{% else %}Guest{% endif %}</div>
+                </div>
+                <div class="sidebar-logout d-flex align-items-center ms-3">
+                    <a href="{{ url_for('auth.logout') }}" class="logout-icon-btn" title="Logout" aria-label="Logout">
+                        <i class="fas fa-sign-out-alt"></i>
                     </a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ url_for('auth.logout') }}" class="nav-link">
-                        <i class="fas fa-sign-out-alt nav-icon"></i>
-                        <span class="nav-text">Logout</span>
-                    </a>
-                </li>
-            </ul>
+                </div>
+            </div>
         </aside>
         
         <!-- Mobile Overlay -->
@@ -204,30 +406,7 @@
                 </button>
                 <div class="fw-bold">Everlast ERP</div>
                 <div class="ms-auto d-flex align-items-center">
-                    <!-- Notifications Dropdown -->
-                    <div class="dropdown me-2">
-                        <a href="#" class="text-muted position-relative" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-bell fs-5"></i>
-                            <span id="mobile-notification-badge" class="notifications-badge" style="display: none;">0</span>
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-end notifications-dropdown p-0">
-                            <div class="notification-title d-flex justify-content-between align-items-center">
-                                <span>Notifications</span>
-                                <a href="#" id="mark-all-as-read-mobile" class="text-muted fs-7">Mark all as read</a>
-                            </div>
-                            <div id="mobile-notifications-list" style="max-height: 300px; overflow-y: auto;">
-                                <!-- Notifications will be loaded here -->
-                                <div class="notification-item">
-                                    <div class="notification-content">
-                                        <div class="notification-text">Loading notifications...</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="notification-footer">
-                                <a href="{{ url_for('notifications.index') }}" class="text-muted">View All Notifications</a>
-                            </div>
-                        </div>
-                    </div>
+                    <!-- Notifications removed - replaced with SMTP email notifications for admins -->
                     <!-- User Menu -->
                     <div class="dropdown">
                         <a href="#" class="text-muted" data-bs-toggle="dropdown" aria-expanded="false">
@@ -240,7 +419,7 @@
                             <li><a class="dropdown-item" href="{{ url_for('profile.index') }}">My Profile</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('dashboard.members') }}">Company Members</a></li>
-                            {% if current_user.role == 'admin' %}
+                            {% if current_user.role in ['admin', 'product_owner'] %}
                             <li><a class="dropdown-item" href="{{ url_for('dashboard.users') }}">User Management System</a></li>
                             {% endif %}
                             <li><hr class="dropdown-divider"></li>
@@ -268,6 +447,21 @@
     </div>
     
     <!-- Bootstrap JS -->
+    <!-- jQuery and Toastr -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    
+    <!-- Initialize Toastr -->
+    <script>
+    toastr.options = {
+        "closeButton": true,
+        "progressBar": true,
+        "positionClass": "toast-top-right",
+        "timeOut": "3000",
+        "extendedTimeOut": "1000"
+    };
+    </script>
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
     
     <!-- FullCalendar JS -->
@@ -276,15 +470,533 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     
+    <!-- DOM Element Safety Script -->
+    <script>
+    // Ensure critical DOM elements exist before external scripts run
+    (function() {
+        'use strict';
+        
+        // Create a safe environment for external scripts
+        function ensureDOMReady() {
+            // Ensure body exists
+            if (!document.body) {
+                document.body = document.createElement('body');
+            }
+            
+            // Ensure basic structure exists
+            if (!document.getElementById('sidebar')) {
+                const sidebar = document.createElement('aside');
+                sidebar.id = 'sidebar';
+                sidebar.className = 'sidebar';
+                document.body.appendChild(sidebar);
+            }
+            
+            if (!document.getElementById('content-wrapper')) {
+                const contentWrapper = document.createElement('div');
+                contentWrapper.id = 'content-wrapper';
+                contentWrapper.className = 'content-wrapper';
+                document.body.appendChild(contentWrapper);
+            }
+        }
+        
+        // Run immediately
+        ensureDOMReady();
+        
+        // Also run when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', ensureDOMReady);
+        }
+    })();
+    
+    // Global error handler for MutationObserver errors
+    window.addEventListener('error', function(event) {
+        if (event.message && event.message.includes('MutationObserver')) {
+            console.warn('MutationObserver error caught and handled:', event.message);
+            event.preventDefault();
+            return false;
+        }
+    });
+    
+    // Handle unhandled promise rejections
+    window.addEventListener('unhandledrejection', function(event) {
+        if (event.reason && event.reason.message && event.reason.message.includes('MutationObserver')) {
+            console.warn('MutationObserver promise rejection caught and handled:', event.reason.message);
+            event.preventDefault();
+        }
+    });
+    </script>
+    
     <!-- Custom JS -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/mobile.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/responsive-sidebar.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/auto-fetch.js') }}"></script>
+    {% if current_user.role != 'employee' %}
+    <script src="{{ url_for('static', filename='js/auto-sync.js') }}"></script>
+    {% endif %}
+    
+    <!-- Sidebar Dropdown CSS Fix for Admin, Product Owner and Director Roles -->
+    {% if current_user.role in ['admin', 'product_owner', 'director'] %}
+    <style>
+        /* CSS Reset for dropdown items to prevent conflicts */
+        .sidebar .dropdown-menu.sidebar-dropdown .dropdown-item,
+        .sidebar .dropdown-menu.sidebar-dropdown .dropdown-item:link,
+        .sidebar .dropdown-menu.sidebar-dropdown .dropdown-item:visited,
+        .sidebar .dropdown-menu.sidebar-dropdown .dropdown-item:active {
+            color: #6c757d !important;
+            background-color: transparent !important;
+        }
+        /* Fix for sidebar dropdown visibility */
+        .sidebar .nav-item.dropdown {
+            position: relative !important;
+            overflow: visible !important;
+        }
+        
+        /* Collapsible Submenu Styles */
+        .sidebar .nav-item.dropdown.collapsible-submenu {
+            position: relative;
+            overflow: visible;
+        }
+        
+        .sidebar .dropdown-menu.sidebar-dropdown.submenu-content {
+            position: static;
+            top: auto;
+            left: auto;
+            right: auto;
+            z-index: auto;
+            display: none;
+            width: 100%;
+            padding: 0;
+            margin: 0;
+            background-color: transparent;
+            border: none;
+            border-radius: 0;
+            box-shadow: none;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+            max-height: 0;
+            overflow: hidden;
+        }
+        
+        .sidebar .nav-item.dropdown.collapsible-submenu.show .dropdown-menu.sidebar-dropdown.submenu-content {
+            display: block;
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+            pointer-events: auto;
+            max-height: 500px;
+            overflow: visible;
+        }
+        
+        /* Submenu item styling */
+        .sidebar .submenu-content .dropdown-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem 0.5rem 2.5rem;
+            color: #6c757d;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+            margin: 0.125rem 0;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .sidebar .submenu-content .dropdown-item:hover {
+            background-color: rgba(0, 93, 153, 0.08);
+            color: #005d99;
+            border-left-color: #005d99;
+            transform: translateX(4px);
+        }
+        
+        .sidebar .submenu-content .dropdown-item i {
+            margin-right: 0.75rem;
+            width: 16px;
+            text-align: center;
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+        
+        .sidebar .submenu-content .dropdown-item:hover i {
+            color: #005d99;
+        }
+        
+        .sidebar .submenu-content .dropdown-divider {
+            margin: 0.5rem 1rem;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Dropdown toggle arrow animation */
+        .sidebar .nav-link.dropdown-toggle::after {
+            display: inline-block;
+            margin-left: auto;
+            margin-right: 0;
+            vertical-align: middle;
+            content: "⌄";
+            font-size: 12px;
+            font-weight: normal;
+            color: #6c757d;
+            transition: transform 0.3s ease;
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .sidebar .nav-item.dropdown.collapsible-submenu.show .nav-link.dropdown-toggle::after {
+            transform: translateY(-50%) rotate(180deg);
+        }
+        
+        .sidebar .nav-link.dropdown-toggle:hover::after {
+            color: #005d99;
+        }
+        
+        /* Collapsed sidebar floating submenu */
+        .sidebar.collapsed .submenu-content {
+            position: fixed !important;
+            top: auto !important;
+            left: auto !important;
+            right: auto !important;
+            width: 200px !important;
+            background-color: white !important;
+            border: 1px solid rgba(0, 0, 0, 0.15) !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+            z-index: 9999 !important;
+            max-height: none !important;
+            overflow: visible !important;
+        }
+        
+        /* Smooth transitions for all states */
+        .sidebar .nav-item.dropdown.collapsible-submenu {
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar .nav-item.dropdown.collapsible-submenu .nav-link {
+            transition: all 0.3s ease;
+        }
+        
+        /* Active state styling */
+        .sidebar .nav-item.dropdown.collapsible-submenu.show .nav-link {
+            background-color: rgba(0, 93, 153, 0.1);
+            color: #005d99;
+            border-left-color: #005d99;
+        }
+        
+        .sidebar .nav-link.dropdown-toggle {
+            cursor: pointer !important;
+            user-select: none !important;
+            background-color: transparent !important;
+            border-radius: 0 !important;
+            margin: 0 !important;
+            padding: 0.75rem 1rem !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            transition: all 0.3s ease !important;
+            position: relative !important;
+            color: #6c757d !important;
+            font-weight: 500 !important;
+            font-size: 0.875rem !important;
+            border-left: 3px solid transparent !important;
+            min-height: 48px !important;
+            text-decoration: none !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+        
+        .sidebar .nav-link.dropdown-toggle:hover {
+            background-color: rgba(0, 93, 153, 0.12) !important;
+            color: #005d99 !important;
+            border-left: 3px solid #005d99 !important;
+            transform: none !important;
+            text-decoration: none !important;
+        }
+        
+        .sidebar .nav-link.dropdown-toggle:focus {
+            outline: none !important;
+            box-shadow: none !important;
+        }
+        
+        .sidebar .nav-link.dropdown-toggle .nav-icon {
+            color: #6c757d !important;
+            font-size: 1rem !important;
+            margin-right: 0.75rem !important;
+            width: 20px !important;
+            text-align: center !important;
+            flex-shrink: 0 !important;
+        }
+        
+        .sidebar .nav-link.dropdown-toggle:hover .nav-icon {
+            color: #005d99 !important;
+        }
+        
+        .sidebar .nav-link.dropdown-toggle:after {
+            display: inline-block !important;
+            margin-left: auto !important;
+            margin-right: 0 !important;
+            vertical-align: middle !important;
+            content: "⌄" !important;
+            font-size: 12px !important;
+            font-weight: normal !important;
+            color: #6c757d !important;
+            transition: transform 0.3s ease !important;
+            position: absolute !important;
+            right: 1rem !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+        }
+        
+        .sidebar .nav-link.dropdown-toggle:hover:after {
+            color: #005d99 !important;
+        }
+        
+        .sidebar .nav-link.dropdown-toggle .nav-text {
+            color: #6c757d !important;
+            flex-grow: 1 !important;
+            margin-right: 2rem !important;
+        }
+        
+        .sidebar .nav-link.dropdown-toggle:hover .nav-text {
+            color: #005d99 !important;
+        }
+        
+        .sidebar .nav-item.dropdown.show .nav-link.dropdown-toggle:after {
+            transform: translateY(-50%) rotate(180deg) !important;
+        }
+        
+        /* Sub-menu styling with proper indentation */
+        .sidebar .dropdown-menu.sidebar-dropdown .dropdown-item {
+            padding: 0.5rem 1rem 0.5rem 2rem !important;
+            color: #6c757d !important;
+            text-decoration: none !important;
+            display: flex !important;
+            align-items: center !important;
+            transition: all 0.3s ease !important;
+            border-radius: 0 !important;
+            margin: 0 !important;
+            font-size: 0.8125rem !important;
+            font-weight: 400 !important;
+            background-color: transparent !important;
+            position: relative !important;
+            border-left: 3px solid transparent !important;
+            min-height: 40px !important;
+            line-height: 1.4 !important;
+        }
+        
+        /* Force override any conflicting styles from main CSS files */
+        .sidebar .nav-item.dropdown .dropdown-menu.sidebar-dropdown .dropdown-item {
+            color: #6c757d !important;
+            background-color: transparent !important;
+        }
+        
+        .sidebar .nav-item.dropdown .dropdown-menu.sidebar-dropdown .dropdown-item .nav-text {
+            color: #6c757d !important;
+            font-size: 0.875rem !important;
+            font-weight: 500 !important;
+            line-height: 1.5 !important;
+        }
+        
+        /* Override style.css conflicting rules */
+        .sidebar .dropdown-menu.sidebar-dropdown .dropdown-item {
+            color: #6c757d !important;
+            background-color: transparent !important;
+            font-size: 0.875rem !important;
+            font-weight: 500 !important;
+            line-height: 1.5 !important;
+        }
+        
+        .sidebar .dropdown-menu.sidebar-dropdown .dropdown-item .nav-text {
+            font-size: 0.875rem !important;
+            font-weight: 500 !important;
+            line-height: 1.5 !important;
+        }
+        
+        /* Override metronic.css and employee-ui.css rules */
+        .sidebar .dropdown-menu.sidebar-dropdown .dropdown-item:hover,
+        .sidebar .dropdown-menu.sidebar-dropdown .dropdown-item:focus {
+            background-color: rgba(0, 93, 153, 0.12) !important;
+            color: #005d99 !important;
+        }
+        
+        /* Override dark mode styles */
+        .dark-mode .sidebar .dropdown-menu.sidebar-dropdown .dropdown-item {
+            color: #6c757d !important;
+            background-color: transparent !important;
+        }
+        
+        .dark-mode .sidebar .dropdown-menu.sidebar-dropdown .dropdown-item:hover {
+            background-color: rgba(0, 93, 153, 0.12) !important;
+            color: #005d99 !important;
+        }
+        
+        .sidebar .dropdown-menu.sidebar-dropdown .dropdown-item:hover {
+            background-color: rgba(0, 93, 153, 0.08) !important;
+            color: #005d99 !important;
+            border-left: 3px solid #005d99 !important;
+            transform: translateX(4px) !important;
+            box-shadow: none !important;
+        }
+        
+        .sidebar .dropdown-menu.sidebar-dropdown .dropdown-item:hover .nav-text {
+            color: #005d99 !important;
+            font-size: 0.875rem !important;
+            font-weight: 500 !important;
+        }
+        
+        .sidebar .dropdown-menu.sidebar-dropdown .dropdown-item:active,
+        .sidebar .dropdown-menu.sidebar-dropdown .dropdown-item.active {
+            background-color: #005d99 !important;
+            color: white !important;
+            border-left: 3px solid #005d99 !important;
+        }
+        
+        .sidebar .dropdown-menu.sidebar-dropdown .dropdown-item:active .nav-text,
+        .sidebar .dropdown-menu.sidebar-dropdown .dropdown-item.active .nav-text {
+            color: white !important;
+            font-size: 0.875rem !important;
+            font-weight: 500 !important;
+        }
+        
+        .sidebar .dropdown-menu.sidebar-dropdown .dropdown-item i {
+            margin-right: 0.75rem !important;
+            width: 16px !important;
+            text-align: center !important;
+            font-size: 0.875rem !important;
+            color: #6c757d !important;
+            opacity: 0.8 !important;
+            flex-shrink: 0 !important;
+        }
+        
+        .sidebar .dropdown-menu.sidebar-dropdown .dropdown-item:hover i {
+            color: #005d99 !important;
+        }
+        
+        .sidebar .dropdown-menu.sidebar-dropdown .dropdown-item:active i,
+        .sidebar .dropdown-menu.sidebar-dropdown .dropdown-item.active i {
+            color: white !important;
+        }
+        
+        /* Remove borders to match sidebar style */
+    </style>
+    {% endif %}
     
     <!-- Page-specific JS -->
     {% block extra_js %}{% endblock %}
-</body>
-</html>
-{% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-{% endblock %}
+    
+    {% block scripts %}
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    
+    <!-- Global error handler for external script errors -->
+    <script>
+    // Ultra-early error handler - runs immediately
+    (function() {
+        const originalError = window.onerror;
+        window.onerror = function(message, source, lineno, colno, error) {
+            // Catch all MutationObserver related errors
+            if (message && (
+                message.includes('MutationObserver') ||
+                message.includes('parameter 1 is not of type') ||
+                message.includes('Failed to execute \'observe\'') ||
+                message.includes('index.ts-') ||
+                message.includes('TypeError: Failed to execute')
+            )) {
+                console.warn('External script error caught and suppressed (ultra-early):', message);
+                return true; // Prevent default error handling
+            }
+            // Call original error handler if it exists
+            if (originalError) {
+                return originalError.call(this, message, source, lineno, colno, error);
+            }
+            return false;
+        };
+    })();
+    
+    // Immediate error handler for errors that occur during page load
+    window.addEventListener('error', function(event) {
+        // Catch all MutationObserver and related errors
+        if (event.message && (
+            event.message.includes('MutationObserver') ||
+            event.message.includes('parameter 1 is not of type') ||
+            event.message.includes('Failed to execute \'observe\'') ||
+            event.message.includes('index.ts-') ||
+            event.message.includes('TypeError: Failed to execute')
+        )) {
+            console.warn('External script error caught and suppressed (immediate):', event.message);
+            event.preventDefault();
+            return true;
+        }
+    });
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // Global error handler for external script MutationObserver errors
+        window.addEventListener('error', function(event) {
+            if (event.message && event.message.includes('MutationObserver') && event.message.includes('parameter 1 is not of type')) {
+                console.warn('External script MutationObserver error caught and suppressed:', event.message);
+                event.preventDefault();
+                return true;
+            }
+            // Handle other common external script errors
+            if (event.message && (event.message.includes('index.ts-') || event.message.includes('.js:1:'))) {
+                console.warn('External script error caught and suppressed:', event.message);
+                event.preventDefault();
+                return true;
+            }
+            // Handle MutationObserver errors more broadly
+            if (event.message && event.message.includes('Failed to execute \'observe\' on \'MutationObserver\'')) {
+                console.warn('MutationObserver error caught and suppressed:', event.message);
+                event.preventDefault();
+                return true;
+            }
+            
+            // Handle specific parameter type error
+            if (event.message && event.message.includes('parameter 1 is not of type \'Node\'')) {
+                console.warn('MutationObserver parameter type error caught and suppressed:', event.message);
+                event.preventDefault();
+                return true;
+            }
+            
+            // Handle external script MutationObserver errors
+            if (event.message && event.message.includes('index.ts') && event.message.includes('MutationObserver')) {
+                console.warn('External script MutationObserver error caught and suppressed:', event.message);
+                event.preventDefault();
+                return true;
+            }
+        });
+        
+        // Also handle unhandled promise rejections
+        window.addEventListener('unhandledrejection', function(event) {
+            if (event.reason && event.reason.message && event.reason.message.includes('MutationObserver')) {
+                console.warn('MutationObserver promise rejection caught and suppressed:', event.reason.message);
+                event.preventDefault();
+                return true;
+            }
+        });
+        
+        // Debug: Log when DOM is ready
+        console.log('DOM Content Loaded - Page should be visible now');
+        
+        // Force hide loader after DOM is ready
+        setTimeout(function() {
+            const loader = document.getElementById('page-loader');
+            if (loader) {
+                console.log('Force hiding page loader');
+                loader.style.display = 'none';
+                loader.style.visibility = 'hidden';
+            }
+        }, 1000);
+        
+        // Log dropdown styling for debugging
+        setTimeout(function() {
+            const dropdownItems = document.querySelectorAll('.sidebar .dropdown-menu.sidebar-dropdown .dropdown-item');
+            console.log('Dropdown items found:', dropdownItems.length);
+            console.log('Dropdown styling matches sidebar nav-links');
+        }, 1500);
+    });
+    </script>
+    {% endblock %}
 </body>
 </html>

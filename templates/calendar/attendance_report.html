@@ -1,0 +1,1039 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<style>
+/* Employee selection container styling */
+.employee-selection-container {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+}
+
+/* Mobile responsiveness for employee selection */
+@media (max-width: 768px) {
+    .employee-selection-container {
+        max-height: 150px;
+        padding: 0.5rem;
+    }
+    
+    .form-check {
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-check-label {
+        font-size: 0.9rem;
+        line-height: 1.3;
+    }
+    
+    /* Mobile table improvements */
+    .table-responsive {
+        font-size: 0.85rem;
+    }
+    
+    .table th,
+    .table td {
+        padding: 0.5rem 0.25rem;
+        white-space: nowrap;
+    }
+    
+    /* Mobile card improvements */
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .card-header {
+        padding: 0.75rem 1rem;
+    }
+    
+    /* Mobile button improvements */
+    .btn {
+        font-size: 0.9rem;
+        padding: 0.4rem 0.8rem;
+    }
+    
+    /* Mobile stats cards */
+    .h4 {
+        font-size: 1.25rem;
+    }
+    
+    .fs-2 {
+        font-size: 1.5rem !important;
+    }
+}
+
+/* Extra small devices */
+@media (max-width: 576px) {
+    .container-fluid {
+        padding: 0.5rem;
+    }
+    
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    .d-flex.gap-2 {
+        flex-direction: column;
+    }
+    
+    .d-flex.gap-2 .btn {
+        width: 100%;
+    }
+}
+
+        /* Visual feedback for checkbox interactions */
+        .selected-highlight {
+            background-color: #d4edda !important;
+            border-color: #c3e6cb !important;
+            animation: selectPulse 0.3s ease-in-out;
+        }
+        
+        /* Loading state for Generate Report button */
+        #generateReportBtn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        
+        .fa-spinner {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+.cleared-highlight {
+    background-color: #f8d7da !important;
+    border-color: #f5c6cb !important;
+    animation: clearPulse 0.3s ease-in-out;
+}
+
+@keyframes selectPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+
+@keyframes clearPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.98); }
+    100% { transform: scale(1); }
+}
+
+/* Improve spacing between checkbox and label text */
+.form-check-input {
+    margin-right: 8px !important;
+}
+
+.form-check-label {
+    margin-left: 4px !important;
+    cursor: pointer;
+}
+
+.employee-selection-container .form-check {
+    padding-left: 0 !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.employee-selection-container .form-check-input {
+    margin: 0 !important;
+    flex-shrink: 0;
+}
+
+.employee-selection-container .form-check-label {
+    margin: 0 !important;
+    flex: 1;
+}
+</style>
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mt-4">Calendar Attendance Report</h1>
+        <div class="d-flex align-items-center gap-3">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="{{ url_for('calendar.index') }}">Calendar</a></li>
+                <li class="breadcrumb-item active">Attendance Report</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-filter me-1"></i>
+            Report Filters
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('calendar.attendance_report') }}" id="reportForm">
+                <div class="row mb-3">
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <label for="start_date" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" 
+                               value="{{ start_date.strftime('%Y-%m-%d') if start_date else '' }}" required>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <label for="end_date" class="form-label">End Date</label>
+                        <input type="date" class="form-control" id="end_date" name="end_date" 
+                               value="{{ end_date.strftime('%Y-%m-%d') if end_date else '' }}" required>
+                    </div>
+                    <div class="col-lg-6 col-md-12">
+                        <label class="form-label">Select Employees (Multiple Selection)</label>
+                        <div class="employee-selection-container">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="select_all_employees" onchange="toggleAllEmployees()">
+                                <label class="form-check-label fw-bold" for="select_all_employees">
+                                    Select All Employees
+                                </label>
+                            </div>
+                            <hr class="my-2">
+                            {% for user in users %}
+                            <div class="form-check mb-1">
+                                <input class="form-check-input employee-checkbox" type="checkbox" 
+                                       id="user_{{ user.id }}" name="user_ids" value="{{ user.id }}" 
+                                       {% if user.id|string in request.args.getlist('user_ids') %}checked{% endif %}>
+                                <label class="form-check-label" for="user_{{ user.id }}">
+                                    {{ user.first_name }} {{ user.last_name }} 
+                                    {% if user.department %}({{ user.department.department_name }}){% endif %}
+                                    {% if user.fingerprint_number %}[FP: {{ user.fingerprint_number }}]{% endif %}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <small class="form-text text-muted">Select specific employees or leave all unchecked to select all employees.</small>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="newest_first" name="newest_first" 
+                                   {% if request.args.get('newest_first') %}checked{% endif %}>
+                            <label class="form-check-label" for="newest_first">
+                                Show newest days first
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="submit" class="btn btn-primary" id="generateReportBtn">
+                        <i class="fas fa-search me-1"></i> Generate Report
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="clearFilters()">
+                        <i class="fas fa-times me-1"></i> Clear Filters
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if error_message %}
+    <div class="alert alert-warning" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>{{ error_message }}
+    </div>
+    {% endif %}
+
+    {% if all_user_reports %}
+    
+    <!-- Export Options (Admin Only) -->
+    {% if current_user.role in ['admin', 'product_owner'] %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-download me-1"></i>
+            Export Report
+        </div>
+        <div class="card-body">
+            <p class="card-text">Export the generated attendance report in different formats:</p>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-success" onclick="exportReport('excel')">
+                    <i class="fas fa-file-excel me-1"></i> Export to Excel
+                </button>
+                <button type="button" class="btn btn-danger" onclick="exportReport('pdf')">
+                    <i class="fas fa-file-pdf me-1"></i> Export to PDF
+                </button>
+            </div>
+               <small class="text-muted d-block mt-2">
+                   <strong>Excel format:</strong> Complete detailed reports for all selected users with full data.<br>
+                   <strong>PDF format:</strong> Complete detailed reports for all selected users (optimized formatting for large datasets).
+               </small>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% for user_report in all_user_reports %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-user me-1"></i>
+            Report for {{ user_report.user.first_name }} {{ user_report.user.last_name }}
+            <div class="float-end">
+                <small class="text-muted">
+                    {{ start_date.strftime('%Y-%m-%d') }} to {{ end_date.strftime('%Y-%m-%d') }}
+                </small>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-4">
+                    <div class="card bg-primary text-white h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="h4 mb-1">{{ user_report.summary_metrics.total_days }}</div>
+                                    <div class="small">Total Days</div>
+                                </div>
+                                <div class="fs-2"><i class="fas fa-calendar-alt"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-4">
+                    <div class="card bg-secondary text-white h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="h4 mb-1">{{ user_report.summary_metrics.total_working_days }}</div>
+                                    <div class="small">Working Days</div>
+                                </div>
+                                <div class="fs-2"><i class="fas fa-briefcase"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-4">
+                    <div class="card bg-success text-white h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="h4 mb-1">{{ user_report.summary_metrics.present_days }}</div>
+                                    <div class="small">Present Days</div>
+                                </div>
+                                <div class="fs-2"><i class="fas fa-check-circle"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-4">
+                    <div class="card bg-danger text-white h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="h4 mb-1">{{ user_report.summary_metrics.absent_days }}</div>
+                                    <div class="small">Absent Days</div>
+                                </div>
+                                <div class="fs-2"><i class="fas fa-times-circle"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-4">
+                    <div class="card bg-warning text-white h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="h4 mb-1">{{ user_report.summary_metrics.annual_leave_days }}</div>
+                                    <div class="small">Annual Leave Days</div>
+                                </div>
+                                <div class="fs-2"><i class="fas fa-plane-departure"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-4">
+                    <div class="card bg-success text-white h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="h4 mb-1">{{ user_report.summary_metrics.paid_leave_days }}</div>
+                                    <div class="small">Paid Leave Days</div>
+                                </div>
+                                <div class="fs-2"><i class="fas fa-gift"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-4">
+                    <div class="card bg-info text-white h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="h4 mb-1">{{ user_report.summary_metrics.permission_hours }}</div>
+                                    <div class="small">Permission Hours</div>
+                                </div>
+                                <div class="fs-2"><i class="fas fa-user-check"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-4">
+                    <div class="card bg-warning text-white h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="h4 mb-1">{{ user_report.summary_metrics.incomplete_days }}</div>
+                                    <div class="small">Incomplete Days</div>
+                                </div>
+                                <div class="fs-2"><i class="fas fa-exclamation-triangle"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-4">
+                    <div class="card bg-info text-white h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="h4 mb-1">{{ user_report.summary_metrics.day_off_days }}</div>
+                                    <div class="small">Day Off</div>
+                                </div>
+                                <div class="fs-2"><i class="fas fa-sun"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-4">
+                    <div class="card bg-dark text-white h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="h4 mb-1">{{ user_report.summary_metrics.extra_time_hours|hours_minutes }}</div>
+                                    <div class="small">Extra Time</div>
+                                </div>
+                                <div class="fs-2"><i class="fas fa-hourglass-half"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Leave Type Statistics Cards -->
+                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-4">
+                    <div class="card bg-primary text-white h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="h4 mb-1">{{ user_report.summary_metrics.annual_leave_days }}</div>
+                                    <div class="small">Annual Leave</div>
+                                </div>
+                                <div class="fs-2"><i class="fas fa-calendar-check"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-4">
+                    <div class="card bg-danger text-white h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="h4 mb-1">{{ user_report.summary_metrics.annual_leave_days }}</div> {# Displaying Annual Leave Days for Sick Leave as per backend logic #}
+                                    <div class="small">Sick Leave</div>
+                                </div>
+                                <div class="fs-2"><i class="fas fa-heartbeat"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-4">
+                    <div class="card bg-warning text-white h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="h4 mb-1">{{ user_report.summary_metrics.unpaid_leave_days }}</div>
+                                    <div class="small">Unpaid Leave</div>
+                                </div>
+                                <div class="fs-2"><i class="fas fa-exclamation-triangle"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-4">
+                    <div class="card bg-info text-white h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="h4 mb-1">{{ user_report.summary_metrics.paid_leave_days }}</div>
+                                    <div class="small">Paid Leave</div>
+                                </div>
+                                <div class="fs-2"><i class="fas fa-gift"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-table me-1"></i>
+                    Detailed Attendance Records for {{ user_report.user.first_name }} {{ user_report.user.last_name }}
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" id="attendanceTable-{{ user_report.user.id }}" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Day</th>
+                                    <th>Status</th>
+                                    <th>Check-in</th>
+                                    <th>Check-out</th>
+                                    <th>Hours Worked</th>
+                                    <th>Extra Time</th>
+                                    <th>All Logs</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in user_report.attendance_records %}
+                                <tr {% if record.is_grouped %}class="table-info"{% endif %}>
+                                    <td>
+                                        {% if record.is_grouped %}
+                                            <strong>{{ record.date }}</strong>
+                                            <br><small class="text-muted">({{ record.day_of_week }})</small>
+                                        {% else %}
+                                            {{ record.date.strftime('%Y-%m-%d') }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.is_grouped %}
+                                            <span class="badge bg-info">{{ record.day_of_week }}</span>
+                                        {% else %}
+                                            {{ record.day_of_week }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.status == 'present' or record.status == 'Present' %}
+                                        <span class="badge bg-success">Present</span>
+                                        {% elif record.status == 'absent' or record.status == 'Absent' %}
+                                        <span class="badge bg-danger">Absent</span>
+                                        {% elif record.status == 'Incomplete' or record.status == 'incomplete' %}
+                                        <span class="badge bg-warning">Incomplete</span>
+                                        {% elif record.status in ['Annual Leave', 'Sick Leave', 'Unpaid Leave', 'Personal Leave', 'Emergency Leave', 'Maternity Leave', 'Paternity Leave'] %}
+                                        <span class="badge bg-warning">{{ record.status }}</span>
+                                        {% elif record.status == 'Leave Request' %}
+                                        <span class="badge bg-warning">{{ record.status }}</span>
+                                        {% elif record.status == 'Permission' %}
+                                        <span class="badge bg-primary">{{ record.status }}</span>
+                                        {% elif record.status == 'Day Off' %}
+                                        <span class="badge bg-info">{{ record.status }}</span>
+                                        {% elif record.status == 'Day Off / Present' %}
+                                        <span class="badge bg-info">{{ record.status }}</span>
+                                        {% elif 'Present /' in record.status %}
+                                        <span class="badge bg-success">{{ record.status }}</span>
+                                        {% elif record.status == 'Not Yet Joined' %}
+                                        <span class="badge bg-secondary">{{ record.status }}</span>
+                                        {% elif record.status == 'Future Date' %}
+                                        <span class="badge bg-light text-dark">{{ record.status }}</span>
+                                        {% else %}
+                                        <span class="badge bg-info">{{ record.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.check_in %}
+                                        <span class="badge bg-success">{{ record.check_in.strftime('%I:%M:%S %p') }}</span>
+                                        {% else %}
+                                        N/A
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.check_out %}
+                                        <span class="badge bg-danger">{{ record.check_out.strftime('%I:%M:%S %p') }}</span>
+                                        {% else %}
+                                        N/A
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.formatted_hours_worked and record.formatted_hours_worked != '-' %}
+                                        <span class="badge bg-primary">{{ record.formatted_hours_worked }}</span>
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.extra_time is not none and record.extra_time != 0 %}
+                                        {% set extra_minutes = (record.extra_time * 60)|round|int %}
+                                        {% if extra_minutes > 0 %}
+                                        <span class="badge bg-success">+{{ extra_minutes|abs // 60 }}h {{ extra_minutes|abs % 60 }}m</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">-{{ extra_minutes|abs // 60 }}h {{ extra_minutes|abs % 60 }}m</span>
+                                        {% endif %}
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.all_logs %}
+                                        <button class="btn btn-sm btn-light-primary" data-bs-toggle="modal" data-bs-target="#logsModal"
+                                            data-logs='{{ record.all_logs|tojson }}' data-date="{{ record.date.strftime('%Y-%m-%d') }}">
+                                            {{ record.all_logs|length }} Logs
+                                        </button>
+                                        {% else %}
+                                        0 Logs
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.leave_request %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-calendar-times me-1"></i>
+                                                {{ record.leave_request.leave_type.name if record.leave_request.leave_type else 'Leave' }}
+                                            </span>
+                                        {% elif record.permission_request %}
+                                            <span class="badge bg-info">
+                                                <i class="fas fa-clock me-1"></i>
+                                                {{ record.permission_request.reason }}
+                                            </span>
+                                        {% elif 'Present /' in record.status %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-calendar-check me-1"></i>
+                                                {{ record.status.split('Present / ')[1] }}
+                                            </span>
+                                        {% elif record.status in ['Annual Leave', 'Sick Leave', 'Unpaid Leave', 'Personal Leave', 'Emergency Leave', 'Maternity Leave', 'Paternity Leave'] %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-calendar-times me-1"></i>
+                                                {{ record.status }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% elif not start_date and not end_date %}
+    <div class="alert alert-warning" role="alert">
+        <i class="fas fa-calendar-alt me-1"></i>
+        <strong>No Report Generated</strong><br>
+        Please select a start date and end date to generate the attendance report. Use the filters above to specify the date range and optionally select specific employees.
+    </div>
+    {% elif request.method == 'GET' and not all_user_reports %}
+    <div class="alert alert-info" role="alert">
+        <i class="fas fa-info-circle me-1"></i>
+        No attendance data found for the selected date range and employee filters. Try adjusting your selection criteria.
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- Logs Modal -->
+<div class="modal fade" id="logsModal" tabindex="-1" aria-labelledby="logsModalLabel">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="logsModalLabel">Attendance Logs for <span id="modalLogDate"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="modalLogsContent">
+                    <!-- Logs will be loaded here by JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<!-- DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<script>
+    // Check if jQuery is available
+    if (typeof $ === 'undefined') {
+        console.warn('jQuery is not loaded. Some features may not work properly.');
+        // Load jQuery dynamically
+        const jqueryScript = document.createElement('script');
+        jqueryScript.src = 'https://code.jquery.com/jquery-3.6.0.min.js';
+        jqueryScript.onload = function() {
+            console.log('jQuery loaded dynamically');
+            loadDataTables();
+        };
+        document.head.appendChild(jqueryScript);
+    } else {
+        loadDataTables();
+    }
+    
+    function loadDataTables() {
+        // Set a timeout to avoid hanging if DataTables fails to load
+        const loadTimeout = setTimeout(() => {
+            console.warn('DataTables loading timed out. Proceeding without advanced table features.');
+            window.dataTablesLoadFailed = true;
+            initializeWithJQuery();
+        }, 5000); // 5 second timeout
+        
+        // Load DataTables after jQuery is available
+        const dataTablesScript = document.createElement('script');
+        dataTablesScript.src = 'https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js';
+        dataTablesScript.onload = function() {
+            // Load Bootstrap DataTables extension
+            const bootstrapScript = document.createElement('script');
+            bootstrapScript.src = 'https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js';
+            bootstrapScript.onload = function() {
+                clearTimeout(loadTimeout);
+                console.log('DataTables loaded successfully');
+                initializeWithJQuery();
+            };
+            bootstrapScript.onerror = function() {
+                clearTimeout(loadTimeout);
+                console.warn('Failed to load DataTables Bootstrap extension. Tables will work without advanced features.');
+                window.dataTablesLoadFailed = true;
+                initializeWithJQuery();
+            };
+            document.head.appendChild(bootstrapScript);
+        };
+        dataTablesScript.onerror = function() {
+            clearTimeout(loadTimeout);
+            console.warn('Failed to load DataTables. Tables will display without advanced features.');
+            window.dataTablesLoadFailed = true;
+            initializeWithJQuery();
+        };
+        document.head.appendChild(dataTablesScript);
+    }
+    
+    function initializeWithJQuery() {
+        $(document).ready(function() {
+        // Initialize DataTables for each attendance table with proper sorting
+        {% if all_user_reports %}
+        {% for user_report in all_user_reports %}
+        // Initialize DataTables if available (only log once)
+        if (typeof window.dataTablesAvailable === 'undefined') {
+            window.dataTablesAvailable = ($.fn.DataTable && !window.dataTablesLoadFailed) ? true : false;
+            if (!window.dataTablesAvailable) {
+                console.warn('DataTables plugin not available. Tables will display as basic HTML tables.');
+            }
+        }
+        
+        if (window.dataTablesAvailable && !window.dataTablesLoadFailed) {
+            try {
+                $('#attendanceTable-{{ user_report.user.id }}').DataTable({
+                    "order": [[ 0, "desc" ]],
+                    "paging": false,
+                    "info": false,
+                    "columnDefs": [
+                        { "type": "date", "targets": 0 },
+                        { "type": "string", "targets": 2 },
+                        { "type": "string", "targets": 3 },
+                        { "type": "string", "targets": 4 },
+                        { "type": "num", "targets": 5 },
+                        { "type": "num", "targets": 6 }
+                    ],
+                    "language": {
+                        "search": "Search records:",
+                        "infoEmpty": "No records available"
+                    }
+                });
+            } catch (error) {
+                console.warn('DataTables initialization failed for table {{ user_report.user.id }}:', error);
+                window.dataTablesAvailable = false; // Disable further attempts
+            }
+        }
+        {% endfor %}
+        {% endif %}
+        
+        // Auto-submit form when employee selection changes
+        $('.employee-checkbox').on('change', function() {
+            updateSelectAllCheckbox();
+            submitFormWithLoading();
+        });
+        
+        // Handle form submission with loading state
+        $('#reportForm').on('submit', function(e) {
+            e.preventDefault();
+            submitFormWithLoading();
+        });
+        
+        // Initialize select all checkbox state
+        updateSelectAllCheckbox();
+        
+        // Reset button state on page load (in case of page refresh or back button)
+        resetGenerateButton();
+        });
+    }
+    
+    // Function to reset the generate button state
+    function resetGenerateButton() {
+        const generateBtn = $('#generateReportBtn');
+        const originalText = generateBtn.data('original-text') || '<i class="fas fa-search me-1"></i> Generate Report';
+        
+        // Clear any pending timeouts
+        const timeoutId = generateBtn.data('timeout-id');
+        if (timeoutId) {
+            clearTimeout(timeoutId);
+            generateBtn.removeData('timeout-id');
+        }
+        
+        const progressTimeoutId = generateBtn.data('progress-timeout-id');
+        if (progressTimeoutId) {
+            clearTimeout(progressTimeoutId);
+            generateBtn.removeData('progress-timeout-id');
+        }
+        
+        generateBtn.prop('disabled', false).html(originalText);
+    }
+    
+    function submitFormWithLoading() {
+        const generateBtn = $('#generateReportBtn');
+        const originalText = generateBtn.html();
+        
+        // Validate form data
+        const startDate = $('#start_date').val();
+        const endDate = $('#end_date').val();
+        
+        if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+            alert('Start date cannot be after end date. Please correct the dates.');
+            return;
+        }
+        
+        // Check date range to warn about potentially long processing
+        if (startDate && endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const daysDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+            
+            if (daysDiff > 90) {
+                if (!confirm(`You are requesting a report for ${daysDiff} days. This may take a while to process. Continue?`)) {
+                    return;
+                }
+            }
+        }
+        
+        // Show loading state
+        generateBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Generating...');
+        
+        // Store original text for potential reset
+        generateBtn.data('original-text', originalText);
+        
+        // Add a timeout to reset button if page doesn't reload
+        const timeoutId = setTimeout(() => {
+            console.log('Report generation timeout - resetting button');
+            resetGenerateButton();
+        }, 30000); // 30 second timeout
+        
+        // Show progress indicator after 5 seconds
+        const progressTimeoutId = setTimeout(() => {
+            generateBtn.html('<i class="fas fa-spinner fa-spin me-1"></i> Processing large dataset...');
+        }, 5000);
+        
+        generateBtn.data('progress-timeout-id', progressTimeoutId);
+        
+        // Store timeout ID for potential clearing
+        generateBtn.data('timeout-id', timeoutId);
+        
+        // Submit the form immediately without delay
+        document.getElementById('reportForm').submit();
+    }
+    
+    function clearFilters() {
+        $('#start_date').val('');
+        $('#end_date').val('');
+        $('.employee-checkbox').prop('checked', false);
+        $('#select_all_employees').prop('checked', false).prop('indeterminate', false);
+        $('#newest_first').prop('checked', false);
+        submitFormWithLoading();
+    }
+    
+    
+    function toggleAllEmployees() {
+        // Use vanilla JavaScript with jQuery fallback
+        let isChecked, selectAllElement, employeeCheckboxes;
+        
+        if (typeof $ !== 'undefined') {
+            // jQuery is available
+            isChecked = $('#select_all_employees').is(':checked');
+            selectAllElement = $('#select_all_employees')[0];
+            employeeCheckboxes = $('.employee-checkbox');
+            employeeCheckboxes.prop('checked', isChecked);
+            
+            // Add visual feedback
+            if (isChecked) {
+                employeeCheckboxes.addClass('selected-highlight');
+                setTimeout(() => {
+                    employeeCheckboxes.removeClass('selected-highlight');
+                }, 300);
+            } else {
+                employeeCheckboxes.addClass('cleared-highlight');
+                setTimeout(() => {
+                    employeeCheckboxes.removeClass('cleared-highlight');
+                }, 300);
+            }
+        } else {
+            // Vanilla JavaScript fallback
+            selectAllElement = document.getElementById('select_all_employees');
+            isChecked = selectAllElement.checked;
+            employeeCheckboxes = document.querySelectorAll('.employee-checkbox');
+            
+            employeeCheckboxes.forEach(checkbox => {
+                checkbox.checked = isChecked;
+                
+                // Add visual feedback
+                if (isChecked) {
+                    checkbox.classList.add('selected-highlight');
+                    setTimeout(() => {
+                        checkbox.classList.remove('selected-highlight');
+                    }, 300);
+                } else {
+                    checkbox.classList.add('cleared-highlight');
+                    setTimeout(() => {
+                        checkbox.classList.remove('cleared-highlight');
+                    }, 300);
+                }
+            });
+        }
+        
+        submitFormWithLoading();
+    }
+    
+    function updateSelectAllCheckbox() {
+        // Use vanilla JavaScript with jQuery fallback
+        let totalCheckboxes, checkedCheckboxes, selectAllElement;
+        
+        if (typeof $ !== 'undefined') {
+            // jQuery is available
+            totalCheckboxes = $('.employee-checkbox').length;
+            checkedCheckboxes = $('.employee-checkbox:checked').length;
+            selectAllElement = $('#select_all_employees')[0];
+        } else {
+            // Vanilla JavaScript fallback
+            const allCheckboxes = document.querySelectorAll('.employee-checkbox');
+            const checkedBoxes = document.querySelectorAll('.employee-checkbox:checked');
+            totalCheckboxes = allCheckboxes.length;
+            checkedCheckboxes = checkedBoxes.length;
+            selectAllElement = document.getElementById('select_all_employees');
+        }
+        
+        if (checkedCheckboxes === 0) {
+            selectAllElement.indeterminate = false;
+            selectAllElement.checked = false;
+        } else if (checkedCheckboxes === totalCheckboxes) {
+            selectAllElement.indeterminate = false;
+            selectAllElement.checked = true;
+        } else {
+            selectAllElement.indeterminate = true;
+            selectAllElement.checked = false;
+        }
+    }
+    
+    // Export functionality
+    function exportReport(format) {
+        // Get current form parameters using vanilla JavaScript
+        const startDate = document.getElementById('start_date').value;
+        const endDate = document.getElementById('end_date').value;
+        const userIds = [];
+        
+        // Get all checked employee checkboxes
+        const checkedBoxes = document.querySelectorAll('.employee-checkbox:checked');
+        checkedBoxes.forEach(function(checkbox) {
+            userIds.push(checkbox.value);
+        });
+        
+        if (!startDate || !endDate) {
+            alert('Please generate a report first by selecting dates and clicking "Generate Report".');
+            return;
+        }
+        
+        // Build export URL
+        let exportUrl = '{{ url_for("calendar.export_attendance_report") }}';
+        exportUrl += `?start_date=${startDate}&end_date=${endDate}&format=${format}`;
+        
+        // Add user IDs to URL
+        userIds.forEach(function(userId) {
+            exportUrl += `&user_ids=${userId}`;
+        });
+        
+        // Show loading state
+        const button = event.target.closest('button');
+        const originalHtml = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Exporting...';
+        
+        // Create a temporary link to trigger download
+        const link = document.createElement('a');
+        link.href = exportUrl;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Reset button state after a delay
+        setTimeout(() => {
+            button.disabled = false;
+            button.innerHTML = originalHtml;
+        }, 2000);
+    }
+
+    // JavaScript for Logs Modal
+    document.addEventListener('DOMContentLoaded', function () {
+        const logsModal = document.getElementById('logsModal');
+        if (logsModal) {
+            logsModal.addEventListener('show.bs.modal', function (event) {
+                // Button that triggered the modal
+                const button = event.relatedTarget;
+                // Extract info from data-bs-* attributes
+                const logsJson = button.getAttribute('data-logs');
+                const date = button.getAttribute('data-date');
+
+                const modalTitle = logsModal.querySelector('#modalLogDate');
+                const modalBody = logsModal.querySelector('#modalLogsContent');
+
+                modalTitle.textContent = date;
+                modalBody.innerHTML = ''; // Clear previous content
+
+                if (logsJson) {
+                    try {
+                        const logs = JSON.parse(logsJson);
+                        if (logs.length > 0) {
+                            let logsHtml = '<ul class="list-group">';
+                            logs.forEach((log, index) => {
+                                const logDateTime = new Date(log.timestamp);
+                                const formattedTime = logDateTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+                                
+                                let scanTypeLabel = '';
+                                let badgeClass = 'bg-primary'; // Default badge color
+
+                                if (index === 0) {
+                                    scanTypeLabel = 'check-in';
+                                    badgeClass = 'bg-success';
+                                } else if (index === logs.length - 1) {
+                                    scanTypeLabel = 'check-out';
+                                    badgeClass = 'bg-danger';
+                                } else {
+                                    scanTypeLabel = 'additional';
+                                    badgeClass = 'bg-secondary';
+                                }
+
+                                logsHtml += `
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span><i class="fas fa-clock me-2"></i>${formattedTime}</span>
+                                        <span class="badge ${badgeClass}">${scanTypeLabel}</span>
+                                    </li>
+                                `;
+                            });
+                            logsHtml += '</ul>';
+                            modalBody.innerHTML = logsHtml;
+                        } else {
+                            modalBody.innerHTML = '<p class="text-muted">No logs available for this day.</p>';
+                        }
+                    } catch (e) {
+                        console.error('Error parsing logs JSON:', e);
+                        modalBody.innerHTML = '<p class="text-danger">Error loading logs.</p>';
+                    }
+                } else {
+                    modalBody.innerHTML = '<p class="text-muted">No logs data found.</p>';
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

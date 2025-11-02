@@ -4,9 +4,11 @@
 <div class="content-header">
     <h1 class="page-title">Departments</h1>
     <div class="content-header-actions">
+        {% if current_user.role != 'director' %}
         <a href="{{ url_for('departments.create') }}" class="btn btn-primary">
             <i class="fas fa-plus-circle me-1"></i> New Department
         </a>
+        {% endif %}
     </div>
 </div>
 
@@ -44,6 +46,7 @@
                                     <td>{% if dept.manager %}{{ dept.manager.get_full_name() }}{% else %}None{% endif %}</td>
                                     <td>{{ dept.employees|length }}</td>
                                     <td>
+                                        {% if current_user.role != 'director' %}
                                         <a href="{{ url_for('departments.edit', id=dept.id) }}" class="btn btn-sm btn-icon btn-light me-1" data-bs-toggle="tooltip" title="Edit Department">
                                             <i class="fas fa-edit"></i>
                                         </a>
@@ -53,12 +56,15 @@
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </form>
+                                        {% else %}
+                                        <span class="text-muted">View Only</span>
+                                        {% endif %}
                                     </td>
                                 </tr>
                                 {% endfor %}
                             {% else %}
                                 <tr>
-                                    <td colspan="4" class="text-center p-4">No departments found. <a href="{{ url_for('departments.create') }}">Create one</a>.</td>
+                                    <td colspan="4" class="text-center p-4">No departments found.{% if current_user.role != 'director' %} <a href="{{ url_for('departments.create') }}">Create one</a>.{% endif %}</td>
                                 </tr>
                             {% endif %}
                         </tbody>

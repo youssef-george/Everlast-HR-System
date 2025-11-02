@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto-Fetch Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0; }
+        .stat-card { border: 1px solid #ddd; padding: 15px; border-radius: 5px; text-align: center; }
+        .stat-value { font-size: 24px; font-weight: bold; margin: 10px 0; }
+        .pending-leave-count { color: #dc3545; }
+        .pending-permission-count { color: #ffc107; }
+        .total-employees-count { color: #007bff; }
+    </style>
+</head>
+<body data-user-role="admin">
+    <h1>Auto-Fetch System Test</h1>
+    
+    <div id="status" class="status info">
+        Initializing auto-fetch system...
+    </div>
+    
+    <div class="stats">
+        <div class="stat-card">
+            <h3>Pending Leave Requests</h3>
+            <div class="stat-value pending-leave-count">0</div>
+        </div>
+        <div class="stat-card">
+            <h3>Pending Permission Requests</h3>
+            <div class="stat-value pending-permission-count">0</div>
+        </div>
+        <div class="stat-card">
+            <h3>Total Employees</h3>
+            <div class="stat-value total-employees-count">0</div>
+        </div>
+    </div>
+    
+    <div id="logs" style="background: #f8f9fa; padding: 15px; border-radius: 5px; max-height: 300px; overflow-y: auto;">
+        <h4>Console Logs:</h4>
+        <div id="log-content"></div>
+    </div>
+    
+    <!-- Include the auto-fetch script -->
+    <script src="static/js/auto-fetch.js"></script>
+    
+    <script>
+        // Override console.log to show logs on page
+        const originalLog = console.log;
+        const originalWarn = console.warn;
+        const originalError = console.error;
+        
+        const logContent = document.getElementById('log-content');
+        const statusDiv = document.getElementById('status');
+        
+        function addLog(message, type = 'log') {
+            const logEntry = document.createElement('div');
+            logEntry.style.marginBottom = '5px';
+            logEntry.style.fontSize = '12px';
+            logEntry.style.fontFamily = 'monospace';
+            
+            if (type === 'error') {
+                logEntry.style.color = '#dc3545';
+            } else if (type === 'warn') {
+                logEntry.style.color = '#ffc107';
+            } else {
+                logEntry.style.color = '#28a745';
+            }
+            
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContent.appendChild(logEntry);
+            logContent.scrollTop = logContent.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addLog(args.join(' '), 'log');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addLog(args.join(' '), 'warn');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addLog(args.join(' '), 'error');
+        };
+        
+        // Update status
+        setTimeout(() => {
+            statusDiv.textContent = 'Auto-fetch system initialized! Check logs below.';
+            statusDiv.className = 'status success';
+        }, 3000);
+        
+        // Monitor for auto-fetch system
+        let checkCount = 0;
+        const checkInterval = setInterval(() => {
+            if (window.autoFetch) {
+                statusDiv.textContent = 'Auto-fetch system is running! Data should update automatically.';
+                statusDiv.className = 'status success';
+                clearInterval(checkInterval);
+            } else if (checkCount > 20) {
+                statusDiv.textContent = 'Auto-fetch system failed to initialize. Check console for errors.';
+                statusDiv.className = 'status error';
+                clearInterval(checkInterval);
+            }
+            checkCount++;
+        }, 500);
+    </script>
+</body>
+</html>

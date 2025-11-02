@@ -3,38 +3,73 @@
 document.addEventListener('DOMContentLoaded', function() {
     const calendarEl = document.getElementById('calendar');
     let currentUserId = null; // Variable to store the currently selected user ID
+    let retryCount = 0;
+    const maxRetries = 3;
+    let isRetrying = false;
+
+    // Retry function for calendar events with exponential backoff
+    function retryCalendarEvents() {
+        if (retryCount < maxRetries && !isRetrying) {
+            isRetrying = true;
+            retryCount++;
+            const delay = Math.min(2000 * Math.pow(2, retryCount - 1), 30000); // Max 30 seconds
+            console.log(`Retrying calendar events fetch (attempt ${retryCount}/${maxRetries}) in ${delay/1000} seconds`);
+            
+            setTimeout(() => {
+                if (calendar) {
+                    calendar.refetchEvents();
+                }
+                isRetrying = false;
+            }, delay);
+        } else if (retryCount >= maxRetries) {
+            console.error('Max retry attempts reached for calendar events');
+        }
+    }
 
     if (calendarEl) {
-        // Initialize the calendar
-        const calendar = new FullCalendar.Calendar(calendarEl, {
+        // Show global loading indicator
+        if (window.showGlobalLoader) {
+            window.showGlobalLoader();
+        }
+        
+        // Initialize the calendar (make it global for auto-fetch access)
+        window.calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',
-                right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+                right: 'dayGridMonth'
+            },
+            // Ensure calendar shows all past days and future dates
+            validRange: {
+                start: '2015-01-01',  // Show from 2015
+                end: '2035-12-31'    // Show until 2035
             },
             customButtons: {
                 prev: {
-                    text: '↑',
+                    text: '‹',
                     click: function() {
                         calendar.prev();
                     }
                 },
                 next: {
-                    text: '↓',
+                    text: '›',
                     click: function() {
                         calendar.next();
-                    }
-                },
-                today: {
-                    text: 'Today',
-                    click: function() {
-                        calendar.today();
                     }
                 }
             },
             themeSystem: 'bootstrap5',
             height: 'auto',
+            // Ensure all dates are clickable and visible
+            dayMaxEvents: true,
+            moreLinkClick: 'popover',
+            // Better date handling
+            nowIndicator: true,
+            // Ensure past days are fully functional
+            selectable: true,
+            selectMirror: true,
+            unselectAuto: false,
             eventTimeFormat: {
                 hour: '2-digit',
                 minute: '2-digit',
@@ -55,43 +90,144 @@ document.addEventListener('DOMContentLoaded', function() {
                         const params = {};
                         if (currentUserId) {
                             params.user_id = currentUserId;
+                            console.log('Sending user_id parameter:', currentUserId);
+                        } else {
+                            console.log('No user filter applied - showing all users');
                         }
                         return params;
                     },
                     method: 'GET',
-                    failure: function() {
-                        alert('There was an error while fetching events!');
+                    withCredentials: true,
+                    success: function(response) {
+                        console.log('Calendar events loaded successfully:', response);
+                        // Reset retry count and retry flag on successful load
+                        retryCount = 0;
+                        isRetrying = false;
+                        // Hide global loading indicator
+                        if (window.hideGlobalLoader) {
+                            window.hideGlobalLoader();
+                        }
+                    },
+                    failure: function(xhr, status, error) {
+                        console.error('Calendar events fetch error:', {
+                            status: status,
+                            error: error,
+                            responseText: xhr.responseText,
+                            statusCode: xhr.status,
+                            readyState: xhr.readyState
+                        });
+                        
+                        // Hide global loading indicator
+                        if (window.hideGlobalLoader) {
+                            window.hideGlobalLoader();
+                        }
+                        
+                        // Handle specific error types
+                        if (status === 'timeout') {
+                            console.warn('Calendar events request timed out - server may be restarting');
+                            retryCalendarEvents();
+                            return;
+                        } else if (status === 'error' && (error === 'Failed to fetch' || error.includes('ERR_CONNECTION_RESET'))) {
+                            console.warn('Connection lost - server may be restarting');
+                            retryCalendarEvents();
+                            return;
+                        } else if (xhr.responseText && xhr.responseText.includes('<!DOCTYPE html>')) {
+                            alert('Please log in to view calendar events. You will be redirected to the login page.');
+                            window.location.href = '/auth/login';
+                        } else if (xhr.status === 0) {
+                            console.warn('Network error - server may be restarting');
+                            retryCalendarEvents();
+                            return;
+                        } else {
+                            console.error('Calendar events error:', error);
+                            // Only show alert for actual errors, not connection issues
+                            if (xhr.status >= 400) {
+                                alert('There was an error while fetching events! Check console for details.');
+                            } else {
+                                retryCalendarEvents();
+                            }
+                        }
                     },
                     eventDataTransform: function(event) {
-                        // Color-coding based on request type and status
-                        let color;
+                        // Enhanced color-coding with modern color palette
+                        let backgroundColor, borderColor, textColor;
                         
-                        // Base colors for status
-                        if (event.status === 'approved') {
-                            color = '#17a74a';  // Success green
-                        } else if (event.status === 'rejected') {
-                            color = '#dc3545';  // Danger red
-                        } else { // pending
-                            color = '#ffc107';  // Warning yellow
+                        // Modern color scheme based on status and type
+                        if (event.type === 'leave') {
+                            // Leave requests - Blue theme
+                            if (event.status === 'approved') {
+                                backgroundColor = '#10b981';  // Emerald green
+                                borderColor = '#059669';
+                                textColor = '#ffffff';
+                            } else if (event.status === 'rejected') {
+                                backgroundColor = '#ef4444';  // Red
+                                borderColor = '#dc2626';
+                                textColor = '#ffffff';
+                            } else { // pending
+                                backgroundColor = '#f59e0b';  // Amber
+                                borderColor = '#d97706';
+                                textColor = '#ffffff';
+                            }
+                        } else if (event.type === 'permission') {
+                            // Permission requests - Purple theme
+                            if (event.status === 'approved') {
+                                backgroundColor = '#8b5cf6';  // Violet
+                                borderColor = '#7c3aed';
+                                textColor = '#ffffff';
+                            } else if (event.status === 'rejected') {
+                                backgroundColor = '#ef4444';  // Red
+                                borderColor = '#dc2626';
+                                textColor = '#ffffff';
+                            } else { // pending
+                                backgroundColor = '#f59e0b';  // Amber
+                                borderColor = '#d97706';
+                                textColor = '#ffffff';
+                            }
+                        } else if (event.type === 'attendance') {
+                            // Attendance events - Teal theme
+                            if (event.status === 'Present') {
+                                backgroundColor = '#06b6d4';  // Cyan
+                                borderColor = '#0891b2';
+                                textColor = '#ffffff';
+                            } else if (event.status === 'Absent') {
+                                backgroundColor = '#ef4444';  // Red
+                                borderColor = '#dc2626';
+                                textColor = '#ffffff';
+                            } else if (event.status === 'Leave Request') {
+                                backgroundColor = '#f59e0b';  // Amber
+                                borderColor = '#d97706';
+                                textColor = '#ffffff';
+                            } else if (event.status === 'Permission') {
+                                backgroundColor = '#8b5cf6';  // Violet
+                                borderColor = '#7c3aed';
+                                textColor = '#ffffff';
+                            } else if (event.status === 'Day Off') {
+                                backgroundColor = '#6b7280';  // Gray
+                                borderColor = '#4b5563';
+                                textColor = '#ffffff';
+                            } else if (event.status === 'Day Off / Present') {
+                                backgroundColor = '#10b981';  // Emerald green
+                                borderColor = '#059669';
+                                textColor = '#ffffff';
+                            } else {
+                                backgroundColor = '#6366f1';  // Indigo
+                                borderColor = '#4f46e5';
+                                textColor = '#ffffff';
+                            }
+                        } else {
+                            // Default colors
+                            backgroundColor = '#6366f1';
+                            borderColor = '#4f46e5';
+                            textColor = '#ffffff';
                         }
                         
-                        // Add opacity/variation based on type and if it's a personal request
-                        if (event.title.startsWith('My')) {
-                            // Highlight personal requests with a stronger color
-                            event.backgroundColor = color;
-                            event.borderColor = '#005d99';
-                            event.textColor = '#ffffff';
-                        } else if (event.type === 'leave') {
-                            // Leave requests (team members)
-                            event.backgroundColor = color;
-                            event.borderColor = color;
-                            event.textColor = '#ffffff';
-                        } else { // permission
-                            // Permission requests (team members)
-                            event.backgroundColor = color;
-                            event.borderColor = '#006e94'; // Tertiary color
-                            event.textColor = '#ffffff';
-                        }
+                        // Apply colors
+                        event.backgroundColor = backgroundColor;
+                        event.borderColor = borderColor;
+                        event.textColor = textColor;
+                        
+                        // Add subtle shadow and rounded corners
+                        event.classNames = ['modern-event'];
                         
                         return event;
                     }
@@ -112,9 +248,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     container: 'body'
                 });
             },
-            datesSet: function(dateInfo) {
-                // Update calendar stats when date range changes
-                updateCalendarStats(dateInfo.start, dateInfo.end);
+            viewDidMount: function(info) {
+                // Debug: Log when view changes
+                console.log('Calendar view changed to:', info.view.type, 'Date range:', info.view.activeStart, 'to', info.view.activeEnd);
             },
             loading: function(isLoading) {
                 // Show/hide loading indicator
@@ -125,142 +261,62 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        calendar.render();
+        try {
+            calendar.render();
+            // After render, ensure toolbar buttons work even with custom CSS
+            setTimeout(() => {
+                // Prev/Next/Today
+                const prevBtn = document.querySelector('.fc-prev-button');
+                const nextBtn = document.querySelector('.fc-next-button');
+                const todayBtn = document.querySelector('.fc-today-button');
+                if (prevBtn) { prevBtn.addEventListener('click', () => calendar.prev(), { once: false }); }
+                if (nextBtn) { nextBtn.addEventListener('click', () => calendar.next(), { once: false }); }
+                if (todayBtn) { todayBtn.addEventListener('click', () => calendar.today(), { once: false }); }
+                // Month view (only)
+                const monthBtn = document.querySelector('.fc-dayGridMonth-button');
+                if (monthBtn) monthBtn.addEventListener('click', () => calendar.changeView('dayGridMonth'));
+            }, 0);
+        } catch (error) {
+            console.error('Error rendering calendar:', error);
+            // Hide loading indicator if there's an error
+            const loadingDiv = document.getElementById('calendar-loading');
+            if (loadingDiv) {
+                loadingDiv.style.display = 'none';
+            }
+        }
 
         // Set initial currentUserId from URL or default
         const urlParams = new URLSearchParams(window.location.search);
         currentUserId = urlParams.get('user_id');
+        console.log('Initial currentUserId:', currentUserId);
 
-        // Handle user filter change
-        document.getElementById('userFilter').addEventListener('change', function() {
-            currentUserId = this.value; // Update the global variable
-            calendar.refetchEvents(); // Refetch events with the new user ID
-            // Optionally, update the URL without reloading the page
-            const newUrl = new URL(window.location.href);
-            if (currentUserId) {
-                newUrl.searchParams.set('user_id', currentUserId);
-            } else {
-                newUrl.searchParams.delete('user_id');
-            }
-            window.history.pushState({ path: newUrl.href }, '', newUrl.href);
-        });
+        // Handle user filter change (if element exists)
+        const userFilter = document.getElementById('userFilter');
         
-        // Filter events by type
-        const leaveFilterCheckbox = document.getElementById('leave-filter');
-        const permissionFilterCheckbox = document.getElementById('permission-filter');
-        const pendingFilterCheckbox = document.getElementById('pending-filter');
-        const approvedFilterCheckbox = document.getElementById('approved-filter');
-        const rejectedFilterCheckbox = document.getElementById('rejected-filter');
+        // Update the user filter dropdown to match the current selection
+        if (currentUserId && userFilter) {
+            userFilter.value = currentUserId;
+            console.log('Set user filter dropdown to:', currentUserId);
+        }
         
-        function updateFilters() {
-            const showLeave = leaveFilterCheckbox?.checked ?? true;
-            const showPermission = permissionFilterCheckbox?.checked ?? true;
-            const showPending = pendingFilterCheckbox?.checked ?? true;
-            const showApproved = approvedFilterCheckbox?.checked ?? true;
-            const showRejected = rejectedFilterCheckbox?.checked ?? true;
-            
-            const events = calendar.getEvents();
-            
-            events.forEach(event => {
-                const eventData = event.extendedProps;
-                let visible = true;
-                
-                // Filter by type
-                if ((!showLeave && eventData.type === 'leave') || 
-                    (!showPermission && eventData.type === 'permission')) {
-                    visible = false;
-                }
-                
-                // Filter by status
-                if ((!showPending && eventData.status === 'pending') || 
-                    (!showApproved && eventData.status === 'approved') ||
-                    (!showRejected && eventData.status === 'rejected')) {
-                    visible = false;
-                }
-                
-                event.setProp('display', visible ? 'auto' : 'none');
+        if (userFilter) {
+            console.log('User filter element found:', userFilter);
+            userFilter.addEventListener('change', function() {
+                const userId = this.value;
+                console.log('User filter changed to:', userId);
+                currentUserId = userId || null;
+                // Update URL without full reload
+                const url = new URL(window.location.href);
+                if (userId) { url.searchParams.set('user_id', userId); } else { url.searchParams.delete('user_id'); }
+                window.history.replaceState({}, '', url);
+                // Refetch events with new params
+                calendar.refetchEvents();
             });
-            
-            // Update counters
-            updateCalendarStats(calendar.view.currentStart, calendar.view.currentEnd);
+        } else {
+            console.log('User filter element not found - user role may not have access to filter');
         }
         
-        // Add event listeners to filters
-        if (leaveFilterCheckbox) leaveFilterCheckbox.addEventListener('change', updateFilters);
-        if (permissionFilterCheckbox) permissionFilterCheckbox.addEventListener('change', updateFilters);
-        if (pendingFilterCheckbox) pendingFilterCheckbox.addEventListener('change', updateFilters);
-        if (approvedFilterCheckbox) approvedFilterCheckbox.addEventListener('change', updateFilters);
-        if (rejectedFilterCheckbox) rejectedFilterCheckbox.addEventListener('change', updateFilters);
         
-        // Function to update calendar statistics
-        function updateCalendarStats(start, end) {
-            // Get all visible events
-            const events = calendar.getEvents().filter(event => event.display !== 'none');
-            
-            // Count leave requests
-            const leaveRequests = events.filter(event => event.extendedProps.type === 'leave');
-            const pendingLeaves = leaveRequests.filter(event => event.extendedProps.status === 'pending');
-            const approvedLeaves = leaveRequests.filter(event => event.extendedProps.status === 'approved');
-            const rejectedLeaves = leaveRequests.filter(event => event.extendedProps.status === 'rejected');
-            
-            // Count permission requests
-            const permissionRequests = events.filter(event => event.extendedProps.type === 'permission');
-            const pendingPermissions = permissionRequests.filter(event => event.extendedProps.status === 'pending');
-            const approvedPermissions = permissionRequests.filter(event => event.extendedProps.status === 'approved');
-            const rejectedPermissions = permissionRequests.filter(event => event.extendedProps.status === 'rejected');
-            
-            // Update counters
-            const totalLeaveCounter = document.getElementById('total-leaves');
-            const pendingLeaveCounter = document.getElementById('pending-leaves');
-            const approvedLeaveCounter = document.getElementById('approved-leaves');
-            const rejectedLeaveCounter = document.getElementById('rejected-leaves');
-            
-            const totalPermissionCounter = document.getElementById('total-permissions');
-            const pendingPermissionCounter = document.getElementById('pending-permissions');
-            const approvedPermissionCounter = document.getElementById('approved-permissions');
-            const rejectedPermissionCounter = document.getElementById('rejected-permissions');
-            
-            if (totalLeaveCounter) totalLeaveCounter.textContent = leaveRequests.length;
-            if (pendingLeaveCounter) pendingLeaveCounter.textContent = pendingLeaves.length;
-            if (approvedLeaveCounter) approvedLeaveCounter.textContent = approvedLeaves.length;
-            if (rejectedLeaveCounter) rejectedLeaveCounter.textContent = rejectedLeaves.length;
-            
-            if (totalPermissionCounter) totalPermissionCounter.textContent = permissionRequests.length;
-            if (pendingPermissionCounter) pendingPermissionCounter.textContent = pendingPermissions.length;
-            if (approvedPermissionCounter) approvedPermissionCounter.textContent = approvedPermissions.length;
-            if (rejectedPermissionCounter) rejectedPermissionCounter.textContent = rejectedPermissions.length;
-
-            // Calculate total days in range
-            const totalDaysInRange = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-            document.getElementById('total-days-in-range').textContent = totalDaysInRange;
-
-            // Fetch detailed attendance summary for the selected range
-            const startDate = start.toISOString().split('T')[0];
-            const endDate = end.toISOString().split('T')[0];
-            const selectedUserId = document.getElementById('user-filter')?.value || ''; // Assuming a user filter exists
-
-            console.log('Fetching summary data for:', startDate, endDate, selectedUserId);
-            fetch(`/calendar/summary?start_date=${startDate}&end_date=${endDate}&user_id=${selectedUserId}`)
-                .then(response => {
-                    console.log('Summary fetch response:', response);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    console.log('Summary data received:', data);
-                    document.getElementById('present-days').textContent = data.present_days;
-                    document.getElementById('absent-days').textContent = data.absent_days;
-                    document.getElementById('day-offs').textContent = data.day_offs;
-                    document.getElementById('leave-days').textContent = data.leave_days;
-                    document.getElementById('effective-days').textContent = data.effective_days;
-                    document.getElementById('extra-hours').textContent = data.extra_hours;
-                })
-                .catch(error => console.error('Error fetching summary data:', error));
-        }
         
-        // Initial update of stats
-        updateCalendarStats(calendar.view.currentStart, calendar.view.currentEnd);
     }
 });

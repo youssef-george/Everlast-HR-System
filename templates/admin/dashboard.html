@@ -31,7 +31,22 @@ function triggerSync() {
     .then(response => response.json())
     .then(data => {
         if (data.status === 'success') {
-            status.innerHTML = '<div class="alert alert-success">✅ ' + data.message + '</div>';
+            let message = '✅ ' + data.message;
+            if (data.records_added !== undefined || data.records_updated !== undefined) {
+                message += '<br><small>';
+                if (data.records_added > 0) {
+                    message += `📥 <strong>${data.records_added}</strong> new records added`;
+                }
+                if (data.records_updated > 0) {
+                    if (data.records_added > 0) message += ' | ';
+                    message += `🔄 <strong>${data.records_updated}</strong> records updated`;
+                }
+                if (data.records_added === 0 && data.records_updated === 0) {
+                    message += 'No new data found';
+                }
+                message += '</small>';
+            }
+            status.innerHTML = '<div class="alert alert-success">' + message + '</div>';
         } else {
             status.innerHTML = '<div class="alert alert-danger">❌ ' + data.message + '</div>';
         }
@@ -43,6 +58,11 @@ function triggerSync() {
         // Reset button state
         button.disabled = false;
         button.innerHTML = '<i class="fas fa-sync-alt"></i> Sync Attendance Now';
+        
+        // Refresh the page after 2 seconds to show updated data
+        setTimeout(() => {
+            location.reload();
+        }, 2000);
     });
 }
 </script>

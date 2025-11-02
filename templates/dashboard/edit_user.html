@@ -17,7 +17,33 @@
                 <h3 class="card-title">Edit {{ user.first_name }} {{ user.last_name }}</h3>
             </div>
             <div class="card-body">
-                <form method="POST" action="{{ url_for('dashboard.edit_user', user_id=user.id) }}">
+                <!-- Display flash messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                
+                <!-- Display form validation errors -->
+                {% if form.errors %}
+                    <div class="alert alert-danger" role="alert">
+                        <h6 class="alert-heading">Please correct the following errors:</h6>
+                        <ul class="mb-0">
+                            {% for field, errors in form.errors.items() %}
+                                {% for error in errors %}
+                                    <li><strong>{{ field }}:</strong> {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+                
+                <form method="POST" action="{{ url_for('dashboard.edit_user', user_id=user.id) }}" id="edit-user-form">
                     {{ form.hidden_tag() }}
                     
                     <div class="mb-3">
@@ -56,7 +82,7 @@
                         {% endif %}
                     </div>
                     
-                    {% if current_user.role == 'admin' %}
+                    {% if current_user.role in ['admin', 'product_owner'] %}
                     <div class="mb-3">
                         {{ form.fingerprint_number.label(class="form-label") }}
                         {{ form.fingerprint_number(class="form-control", placeholder="Enter fingerprint number (optional)") }}
@@ -95,8 +121,50 @@
                     </div>
                     
                     <div class="mb-3">
+                        {{ form.position.label(class="form-label") }}
+                        {{ form.position(class="form-control", placeholder="e.g., Software Developer, Manager, etc.") }}
+                        {% if form.position.errors %}
+                            <div class="text-danger">
+                                {% for error in form.position.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.salary.label(class="form-label") }}
+                        <div class="input-group">
+                            {{ form.currency(class="form-select", style="max-width: 120px;") }}
+                            {{ form.salary(class="form-control", placeholder="0.00", step="0.01") }}
+                        </div>
+                        {% if form.salary.errors %}
+                            <div class="text-danger">
+                                {% for error in form.salary.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        {% if form.currency.errors %}
+                            <div class="text-danger">
+                                {% for error in form.currency.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
                         {{ form.role.label(class="form-label") }}
-                        {{ form.role(class="form-select") }}
+                        {% if is_editing_product_owner %}
+                            {{ form.role(class="form-select", disabled=true) }}
+                            <div class="alert alert-warning mt-2">
+                                <i class="fas fa-shield-alt me-2"></i>
+                                <strong>Protected Account:</strong> Product Owner role cannot be changed. This account is protected from role modifications.
+                            </div>
+                        {% else %}
+                            {{ form.role(class="form-select") }}
+                        {% endif %}
                         {% if form.role.errors %}
                             <div class="text-danger">
                                 {% for error in form.role.errors %}
@@ -132,6 +200,48 @@
                     
                     <div class="separator my-4"></div>
                     
+                    <h4 class="mb-3">Additional Information</h4>
+                    <p class="text-muted mb-3">This information is only visible to administrators.</p>
+                    
+                    <div class="mb-3">
+                        {{ form.date_of_birth.label(class="form-label") }}
+                        {{ form.date_of_birth(class="form-control") }}
+                        {% if form.date_of_birth.errors %}
+                            <div class="text-danger">
+                                {% for error in form.date_of_birth.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.phone_number.label(class="form-label") }}
+                        {{ form.phone_number(class="form-control", placeholder="e.g., +1-555-123-4567") }}
+                        {% if form.phone_number.errors %}
+                            <div class="text-danger">
+                                {% for error in form.phone_number.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.alternate_phone_number.label(class="form-label") }}
+                        {{ form.alternate_phone_number(class="form-control", placeholder="e.g., +1-555-987-6543") }}
+                        {% if form.alternate_phone_number.errors %}
+                            <div class="text-danger">
+                                {% for error in form.alternate_phone_number.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    
+                    <div class="separator my-4"></div>
+                    
                     <h4 class="mb-3">Change Password</h4>
                     <p class="text-muted mb-3">Leave these fields empty if you don't want to change the user's password.</p>
                     
@@ -164,6 +274,76 @@
                         {% endif %}
                     </div>
                     
+                    <div class="separator my-4"></div>
+                    
+                    <h4 class="mb-3">Employee Attachments</h4>
+                    <p class="text-muted mb-3">Upload and manage employee documents and files.</p>
+                    
+                    <!-- Upload New Attachment Form -->
+                    
+                    <!-- Existing Attachments -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Existing Attachments</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if user.attachments %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Display Name</th>
+                                                <th>File Name</th>
+                                                <th>Size</th>
+                                                <th>Uploaded</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for attachment in user.attachments %}
+                                            <tr>
+                                                <td>
+                                                    <strong>{{ attachment.display_name }}</strong>
+                                                    {% if attachment.description %}
+                                                        <br><small class="text-muted">{{ attachment.description }}</small>
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ attachment.file_name }}</td>
+                                                <td>
+                                                    {% if attachment.file_size %}
+                                                        {{ "%.1f"|format(attachment.file_size / 1024) }} KB
+                                                    {% else %}
+                                                        -
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ attachment.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                                <td>
+                                                    <div class="btn-group btn-group-sm">
+                                                        <a href="{{ url_for('dashboard.download_attachment', attachment_id=attachment.id) }}" 
+                                                           class="btn btn-outline-primary btn-sm">
+                                                            <i class="fas fa-download"></i> Download
+                                                        </a>
+                                                        <a href="{{ url_for('dashboard.delete_attachment', attachment_id=attachment.id) }}" 
+                                                           class="btn btn-outline-danger btn-sm"
+                                                           onclick="return confirm('Are you sure you want to delete this attachment?')">
+                                                            <i class="fas fa-trash"></i> Delete
+                                                        </a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="text-center text-muted py-4">
+                                    <i class="fas fa-file-upload fa-3x mb-3"></i>
+                                    <p>No attachments uploaded yet.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
                     <div class="d-flex justify-content-between mt-4">
                         <a href="{{ url_for('dashboard.users') }}" class="btn btn-secondary">
                             Cancel
@@ -171,6 +351,58 @@
                         {{ form.submit(class="btn btn-primary") }}
                     </div>
                 </form>
+                
+                <!-- ATTACHMENT FORM (separate from main edit form) -->
+                <div class="card mb-4 mt-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Upload New Attachment</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('dashboard.upload_attachment', user_id=user.id) }}" enctype="multipart/form-data" id="upload-attachment-form">
+                            {{ attachment_form.hidden_tag() }}
+                            
+                            <div class="mb-3">
+                                {{ attachment_form.file.label(class="form-label") }}
+                                {{ attachment_form.file(class="form-control") }}
+                                {% if attachment_form.file.errors %}
+                                    <div class="text-danger">
+                                        {% for error in attachment_form.file.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                {{ attachment_form.display_name.label(class="form-label") }}
+                                {{ attachment_form.display_name(class="form-control", placeholder="e.g., Passport Copy, Contract, etc.") }}
+                                {% if attachment_form.display_name.errors %}
+                                    <div class="text-danger">
+                                        {% for error in attachment_form.display_name.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                {{ attachment_form.description.label(class="form-label") }}
+                                {{ attachment_form.description(class="form-control", rows="3", placeholder="Optional description...") }}
+                                {% if attachment_form.description.errors %}
+                                    <div class="text-danger">
+                                        {% for error in attachment_form.description.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="d-flex justify-content-end">
+                                {{ attachment_form.submit(class="btn btn-success") }}
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -178,6 +410,10 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- Load Flatpickr CSS and JS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Password strength validation
@@ -213,10 +449,34 @@
 
         // Initialize date picker for joining_date
         const joiningDateInput = document.getElementById('joining_date');
-        if (joiningDateInput) {
+        if (joiningDateInput && typeof flatpickr !== 'undefined') {
             flatpickr(joiningDateInput, {
                 dateFormat: "Y-m-d",
                 allowInput: true
+            });
+        }
+
+        // Initialize date picker for date_of_birth
+        const dateOfBirthInput = document.getElementById('date_of_birth');
+        if (dateOfBirthInput && typeof flatpickr !== 'undefined') {
+            flatpickr(dateOfBirthInput, {
+                dateFormat: "Y-m-d",
+                allowInput: true
+            });
+        }
+
+        // Handle form submission
+        const editForm = document.getElementById('edit-user-form');
+        if (editForm) {
+            editForm.addEventListener('submit', function(e) {
+                // Show loading state
+                const submitBtn = this.querySelector('input[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.value = 'Updating...';
+                    submitBtn.disabled = true;
+                }
+                
+                // Let the form submit naturally
             });
         }
     });

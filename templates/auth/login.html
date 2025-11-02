@@ -194,6 +194,18 @@
                 dismiss.close();
             }, 5000);
         });
+        
+        // Reset sidebar state on login page (logout/session timeout)
+        // This ensures sidebar returns to default uncollapsed state
+        if (typeof window.resetSidebarState === 'function') {
+            window.resetSidebarState();
+        } else {
+            // Fallback: directly clear sidebar state
+            localStorage.removeItem('sidebar-collapsed');
+            localStorage.removeItem('sidebar-user-collapsed');
+            sessionStorage.removeItem('everlast_sidebar_state');
+            sessionStorage.removeItem('everlast_user_session');
+        }
     </script>
 </body>
 </html>

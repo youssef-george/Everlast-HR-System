@@ -48,16 +48,29 @@ document.addEventListener('DOMContentLoaded', function() {
     // Admin Dashboard - Department Analytics Chart
     const departmentChartCanvas = document.getElementById('departmentChart');
     if (departmentChartCanvas) {
-        // Get department data from the element's dataset
-        const departmentData = JSON.parse(departmentChartCanvas.dataset.departments || '[]');
+        // Get department data from global variable with error handling
+        let departmentData = [];
+        try {
+            departmentData = window.departmentData || [];
+            if (!Array.isArray(departmentData)) {
+                console.warn('Department data is not an array, using empty array');
+                departmentData = [];
+            }
+        } catch (error) {
+            console.error('Error accessing department data:', error);
+            departmentData = [];
+        }
         
         if (departmentData.length > 0) {
+            if (window.departmentChartInstance) {
+                try { window.departmentChartInstance.destroy(); } catch (e) {}
+            }
             const labels = departmentData.map(dept => dept.name);
             const employeesData = departmentData.map(dept => dept.employees);
             const leavesData = departmentData.map(dept => dept.leaves);
             const permissionsData = departmentData.map(dept => dept.permissions);
             
-            const departmentChart = new Chart(departmentChartCanvas, {
+            window.departmentChartInstance = new Chart(departmentChartCanvas, {
                 type: 'bar',
                 data: {
                     labels: labels,
@@ -121,7 +134,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const approvedPermissions = parseInt(requestStatusChartCanvas.dataset.approvedPermissions || 0);
         const rejectedPermissions = parseInt(requestStatusChartCanvas.dataset.rejectedPermissions || 0);
         
-        const requestStatusChart = new Chart(requestStatusChartCanvas, {
+        if (window.requestStatusChartInstance) {
+            try { window.requestStatusChartInstance.destroy(); } catch (e) {}
+        }
+        window.requestStatusChartInstance = new Chart(requestStatusChartCanvas, {
             type: 'doughnut',
             data: {
                 labels: ['Pending Leaves', 'Approved Leaves', 'Rejected Leaves', 'Pending Permissions', 'Approved Permissions', 'Rejected Permissions'],
@@ -150,8 +166,30 @@ document.addEventListener('DOMContentLoaded', function() {
     // Employee Dashboard - Request History Chart
     const employeeRequestHistoryCanvas = document.getElementById('employeeRequestHistory');
     if (employeeRequestHistoryCanvas) {
-        const leaveData = JSON.parse(employeeRequestHistoryCanvas.dataset.leaves || '[]');
-        const permissionData = JSON.parse(employeeRequestHistoryCanvas.dataset.permissions || '[]');
+        let leaveData = [];
+        let permissionData = [];
+        
+        try {
+            leaveData = window.leaveRequestsData || [];
+            if (!Array.isArray(leaveData)) {
+                console.warn('Leave data is not an array, using empty array');
+                leaveData = [];
+            }
+        } catch (error) {
+            console.error('Error accessing leave data:', error);
+            leaveData = [];
+        }
+        
+        try {
+            permissionData = window.permissionRequestsData || [];
+            if (!Array.isArray(permissionData)) {
+                console.warn('Permission data is not an array, using empty array');
+                permissionData = [];
+            }
+        } catch (error) {
+            console.error('Error accessing permission data:', error);
+            permissionData = [];
+        }
         
         // Group by month
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -175,7 +213,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        const employeeRequestHistoryChart = new Chart(employeeRequestHistoryCanvas, {
+        if (window.employeeRequestHistoryChartInstance) {
+            try { window.employeeRequestHistoryChartInstance.destroy(); } catch (e) {}
+        }
+        window.employeeRequestHistoryChartInstance = new Chart(employeeRequestHistoryCanvas, {
             type: 'line',
             data: {
                 labels: months,
@@ -227,14 +268,28 @@ document.addEventListener('DOMContentLoaded', function() {
     // Manager Dashboard - Employee Attendance Chart
     const employeeAttendanceChartCanvas = document.getElementById('employeeAttendanceChart');
     if (employeeAttendanceChartCanvas) {
-        const employeeData = JSON.parse(employeeAttendanceChartCanvas.dataset.employees || '[]');
+        let employeeData = [];
+        try {
+            // Try to get data from global variable first, then fallback to dataset
+            employeeData = window.employeeAttendanceData || JSON.parse(employeeAttendanceChartCanvas.dataset.employees || '[]');
+            if (!Array.isArray(employeeData)) {
+                console.warn('Employee attendance data is not an array, using empty array');
+                employeeData = [];
+            }
+        } catch (error) {
+            console.error('Error accessing employee attendance data:', error);
+            employeeData = [];
+        }
         
         if (employeeData.length > 0) {
             const labels = employeeData.map(emp => emp.name);
             const presentDays = employeeData.map(emp => emp.present_days);
             const absentDays = employeeData.map(emp => emp.absent_days);
             
-            const employeeAttendanceChart = new Chart(employeeAttendanceChartCanvas, {
+            if (window.employeeAttendanceChartInstance) {
+                try { window.employeeAttendanceChartInstance.destroy(); } catch (e) {}
+            }
+            window.employeeAttendanceChartInstance = new Chart(employeeAttendanceChartCanvas, {
                 type: 'bar',
                 data: {
                     labels: labels,

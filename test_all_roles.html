@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test All Roles - Auto-Fetch</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .role-test { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .employee { background-color: #e3f2fd; }
+        .manager { background-color: #f3e5f5; }
+        .admin { background-color: #e8f5e8; }
+        .director { background-color: #fff3e0; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0; }
+        .stat-card { border: 1px solid #ddd; padding: 15px; border-radius: 5px; text-align: center; }
+        .stat-value { font-size: 24px; font-weight: bold; margin: 10px 0; }
+        .pending-leave-count { color: #dc3545; }
+        .pending-permission-count { color: #ffc107; }
+        .total-employees-count { color: #007bff; }
+        .log { background: #f8f9fa; padding: 10px; border-radius: 5px; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Auto-Fetch for All Roles</h1>
+    
+    <div class="role-test employee">
+        <h3>👤 Employee Role Test</h3>
+        <button onclick="testRole('employee')">Test Employee Auto-Fetch</button>
+        <div id="employee-stats" class="stats">
+            <div class="stat-card">
+                <h4>Pending Leave</h4>
+                <div class="stat-value pending-leave-count">0</div>
+            </div>
+            <div class="stat-card">
+                <h4>Pending Permission</h4>
+                <div class="stat-value pending-permission-count">0</div>
+            </div>
+        </div>
+        <div id="employee-logs" class="log"></div>
+    </div>
+    
+    <div class="role-test manager">
+        <h3>👨‍💼 Manager Role Test</h3>
+        <button onclick="testRole('manager')">Test Manager Auto-Fetch</button>
+        <div id="manager-stats" class="stats">
+            <div class="stat-card">
+                <h4>Pending Leave</h4>
+                <div class="stat-value pending-leave-count">0</div>
+            </div>
+            <div class="stat-card">
+                <h4>Total Employees</h4>
+                <div class="stat-value total-employees-count">0</div>
+            </div>
+        </div>
+        <div id="manager-logs" class="log"></div>
+    </div>
+    
+    <div class="role-test admin">
+        <h3>⚙️ Admin Role Test</h3>
+        <button onclick="testRole('admin')">Test Admin Auto-Fetch</button>
+        <div id="admin-stats" class="stats">
+            <div class="stat-card">
+                <h4>Pending Leave</h4>
+                <div class="stat-value pending-leave-count">0</div>
+            </div>
+            <div class="stat-card">
+                <h4>Total Employees</h4>
+                <div class="stat-value total-employees-count">0</div>
+            </div>
+        </div>
+        <div id="admin-logs" class="log"></div>
+    </div>
+    
+    <div class="role-test director">
+        <h3>👑 Director Role Test</h3>
+        <button onclick="testRole('director')">Test Director Auto-Fetch</button>
+        <div id="director-stats" class="stats">
+            <div class="stat-card">
+                <h4>Pending Leave</h4>
+                <div class="stat-value pending-leave-count">0</div>
+            </div>
+            <div class="stat-card">
+                <h4>Total Employees</h4>
+                <div class="stat-value total-employees-count">0</div>
+            </div>
+        </div>
+        <div id="director-logs" class="log"></div>
+    </div>
+    
+    <script>
+        function testRole(role) {
+            console.log(`Testing ${role} role...`);
+            
+            // Set the role attribute
+            document.body.setAttribute('data-user-role', role);
+            
+            // Clear previous logs
+            document.getElementById(`${role}-logs`).innerHTML = '';
+            
+            // Create a new auto-fetch instance for this role
+            if (window.autoFetch) {
+                window.autoFetch.destroy();
+            }
+            
+            // Override console.log to capture logs for this role
+            const originalLog = console.log;
+            const originalWarn = console.warn;
+            const originalError = console.error;
+            
+            const logDiv = document.getElementById(`${role}-logs`);
+            
+            function addLog(message, type = 'log') {
+                const logEntry = document.createElement('div');
+                logEntry.style.marginBottom = '5px';
+                
+                if (type === 'error') {
+                    logEntry.style.color = '#dc3545';
+                } else if (type === 'warn') {
+                    logEntry.style.color = '#ffc107';
+                } else {
+                    logEntry.style.color = '#28a745';
+                }
+                
+                logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                logDiv.appendChild(logEntry);
+                logDiv.scrollTop = logDiv.scrollHeight;
+            }
+            
+            console.log = function(...args) {
+                originalLog.apply(console, args);
+                addLog(args.join(' '), 'log');
+            };
+            
+            console.warn = function(...args) {
+                originalWarn.apply(console, args);
+                addLog(args.join(' '), 'warn');
+            };
+            
+            console.error = function(...args) {
+                originalError.apply(console, args);
+                addLog(args.join(' '), 'error');
+            };
+            
+            // Initialize auto-fetch for this role
+            window.autoFetch = new AutoFetchSystem({
+                fetchInterval: 5000, // 5 seconds for testing
+                refreshInterval: 30000, // 30 seconds for testing
+                enabled: true,
+                userRole: role,
+                debug: true
+            });
+            
+            console.log(`Auto-fetch initialized for ${role} role`);
+            
+            // Test API call directly
+            testAPICall(role);
+        }
+        
+        async function testAPICall(role) {
+            try {
+                console.log(`Testing API call for ${role}...`);
+                
+                const response = await fetch('/api/dashboard/stats');
+                const data = await response.json();
+                
+                console.log(`API Response for ${role}:`, data);
+                
+                if (data.status === 'success' && data.data) {
+                    // Update the stats for this role
+                    const stats = data.data;
+                    
+                    if (stats.pending_leave_requests !== undefined) {
+                        document.querySelector(`#${role}-stats .pending-leave-count`).textContent = stats.pending_leave_requests;
+                    }
+                    
+                    if (stats.total_employees !== undefined) {
+                        document.querySelector(`#${role}-stats .total-employees-count`).textContent = stats.total_employees;
+                    }
+                    
+                    console.log(`Stats updated for ${role}:`, stats);
+                } else {
+                    console.error(`API call failed for ${role}:`, data);
+                }
+                
+            } catch (error) {
+                console.error(`Error testing API for ${role}:`, error);
+            }
+        }
+        
+        // Test all roles on page load
+        window.addEventListener('load', () => {
+            console.log('Page loaded, ready to test roles');
+        });
+    </script>
+    
+    <!-- Include the auto-fetch script -->
+    <script src="static/js/auto-fetch.js"></script>
+</body>
+</html>

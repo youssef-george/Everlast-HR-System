@@ -1,71 +1,1922 @@
 {% extends "layout.html" %}
 
+{% block extra_css %}
+<style>
+    /* Enhanced Admin Dashboard Styles - Matching Manager Theme */
+    .dashboard-header {
+        background-color: #667eea;
+        color: white;
+        border-radius: 20px;
+        padding: 2.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .dashboard-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, transparent 50%);
+        pointer-events: none;
+    }
+    
+    .dashboard-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+    }
+    
+    .welcome-text {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin-bottom: 0;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    
+    .action-btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .action-btn-primary {
+        background: rgba(255,255,255,0.2);
+        color: white;
+        border: 2px solid rgba(255,255,255,0.3);
+    }
+    
+    .action-btn-primary:hover {
+        background: rgba(255,255,255,0.3);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    .action-btn-secondary {
+        background: rgba(255,255,255,0.1);
+        color: white;
+        border: 2px solid rgba(255,255,255,0.2);
+    }
+    
+    .action-btn-secondary:hover {
+        background: rgba(255,255,255,0.2);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.06);
+        transition: all 0.3s ease;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        min-height: 120px;
+        align-items: center;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+    }
+    
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        margin-bottom: 1rem;
+        flex-shrink: 0;
+    }
+    
+    .stat-card .stat-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+    }
+    
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+        line-height: 1.1;
+        color: #1f2937;
+        text-align: center;
+        display: block;
+        width: 100%;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-weight: 500;
+        font-size: 0.8rem;
+        line-height: 1.3;
+        text-align: center;
+        display: block;
+        width: 100%;
+    }
+    
+    .quick-action-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.06);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .quick-action-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+    }
+    
+    .quick-action-card-header {
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+    }
+    
+    .quick-action-card-header h3 {
+        color: #2d3748;
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin: 0;
+        display: flex;
+        align-items: center;
+    }
+    
+    .quick-action-card-header i {
+        color: #667eea;
+        margin-right: 0.5rem;
+        font-size: 1.2rem;
+    }
+    
+    .quick-action-card-body {
+        padding: 0;
+    }
+    
+    /* Enhanced Quick Actions - Modern Design */
+    .quick-action-item {
+        background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%) !important;
+        border: 1px solid #e2e8f0 !important;
+        padding: 2rem 1rem !important;
+        height: 180px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
+        text-decoration: none !important;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+        border-radius: 16px !important;
+        position: relative !important;
+        overflow: hidden !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+    }
+
+    .quick-action-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+        transform-origin: left;
+    }
+
+    .quick-action-item:hover::before {
+        transform: scaleX(1);
+    }
+
+    .quick-action-item:hover {
+        transform: translateY(-8px) scale(1.02) !important;
+        box-shadow: 0 20px 40px rgba(102, 126, 234, 0.15) !important;
+        border-color: #667eea !important;
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+    }
+
+    .quick-action-item i {
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+        text-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+        margin-bottom: 1.25rem !important;
+        font-size: 3rem !important;
+    }
+
+    .quick-action-item:hover i {
+        transform: scale(1.2) rotate(5deg) !important;
+        text-shadow: 0 6px 16px rgba(0,0,0,0.2) !important;
+    }
+
+    .quick-action-item small {
+        font-size: 0.8rem !important;
+        margin-top: 0.75rem !important;
+        opacity: 0.7 !important;
+        color: #64748b !important;
+        text-align: center !important;
+        line-height: 1.4 !important;
+    }
+
+    .quick-action-item:hover small {
+        opacity: 0.9 !important;
+        color: #475569 !important;
+    }
+
+    .quick-action-item span {
+        font-weight: 700 !important;
+        font-size: 1rem !important;
+        color: #1e293b !important;
+        text-align: center !important;
+        line-height: 1.3 !important;
+    }
+
+    .quick-action-item:hover span {
+        color: #667eea !important;
+    }
+    
+    .recent-requests-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        border: none;
+        overflow: hidden;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #6c757d;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+    
+    .welcome-text {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin-bottom: 0;
+    }
+    
+    .dashboard-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    
+    .action-btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .action-btn-primary {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .action-btn-primary:hover {
+        background: rgba(255, 255, 255, 0.3);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+    }
+    
+    .action-btn-secondary {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .action-btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .chart-container {
+        position: relative;
+        min-height: 300px;
+    }
+    
+    .chart-loading {
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 10px;
+        padding: 2rem;
+    }
+    
+    .mini-calendar {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        border: none;
+    }
+    
+    /* Enhanced Interactive Elements */
+    .chart-toggle-btn {
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    .chart-toggle-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transition: left 0.5s ease;
+    }
+    
+    .chart-toggle-btn:hover::before {
+        left: 100%;
+    }
+    
+    .chart-toggle-btn.active {
+        background: rgba(255, 255, 255, 0.3);
+        transform: scale(1.05);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    /* Enhanced Table Styling */
+    .enhanced-table {
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        border: none;
+    }
+    
+    .enhanced-table thead {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white !important;
+    }
+    
+    .enhanced-table thead th {
+        border: none;
+        padding: 1.25rem 1rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 0.85rem;
+        position: relative;
+        color: white !important;
+        background: transparent !important;
+    }
+    
+    .enhanced-table thead th::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: rgba(255,255,255,0.3);
+    }
+    
+    .enhanced-table tbody tr {
+        transition: all 0.3s ease;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    
+    .enhanced-table tbody tr:hover {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        transform: translateX(5px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .enhanced-table tbody td {
+        padding: 1.25rem 1rem;
+        border: none;
+        vertical-align: middle;
+        color: #374151;
+    }
+    
+    /* Enhanced Empty States */
+    .enhanced-empty-state {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        border-radius: 20px;
+        padding: 4rem 2rem;
+        text-align: center;
+        border: 2px dashed #cbd5e1;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .enhanced-empty-state::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 70%);
+        animation: float 6s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-20px) rotate(180deg); }
+    }
+    
+    .enhanced-empty-state i {
+        font-size: 5rem;
+        color: #94a3b8;
+        margin-bottom: 1.5rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .enhanced-empty-state h5 {
+        color: #475569;
+        margin-bottom: 0.5rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .enhanced-empty-state p {
+        color: #64748b;
+        position: relative;
+        z-index: 1;
+    }
+    
+    /* Real-time Indicators */
+    .realtime-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.25rem 0.75rem;
+        background: rgba(34, 197, 94, 0.1);
+        color: #059669;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+    
+    .realtime-indicator::before {
+        content: '';
+        width: 8px;
+        height: 8px;
+        background: #059669;
+        border-radius: 50%;
+        animation: blink 1s infinite;
+    }
+    
+    @keyframes blink {
+        0%, 50% { opacity: 1; }
+        51%, 100% { opacity: 0; }
+    }
+    
+    /* Enhanced Stats Cards with Progress Bars */
+    .stat-card-with-progress {
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .stat-card-with-progress::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        transition: width 0.3s ease;
+        width: 0%;
+    }
+    
+    .stat-card-with-progress:hover::after {
+        width: 100%;
+    }
+    
+    /* Enhanced Loading States */
+    .skeleton-loader {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+        border-radius: 8px;
+    }
+    
+    @keyframes loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+    
+    /* Enhanced Chart Containers */
+    .chart-container-enhanced {
+        position: relative;
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        border: 1px solid #e2e8f0;
+    }
+    
+    .chart-container-enhanced::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        border-radius: 15px 15px 0 0;
+    }
+    
+    /* Universal table header white text */
+    .table thead th,
+    table thead th,
+    .employee-table thead th,
+    .enhanced-table thead th {
+        color: white !important;
+    }
+    
+    .table thead th *,
+    table thead th *,
+    .employee-table thead th *,
+    .enhanced-table thead th * {
+        color: white !important;
+    }
+    
+    thead th,
+    thead th span,
+    thead th i,
+    thead th strong,
+    thead th b {
+        color: white !important;
+    }
+    
+    /* Request Status Overview Enhancements */
+    .request-status-card {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+    }
+    
+    .request-summary-stats {
+        background: white;
+        padding: 1rem;
+        margin: 0 -1.5rem 1rem -1.5rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .summary-stat-item {
+        display: flex;
+        align-items: center;
+        background: #f8fafc;
+        border-radius: 8px;
+        padding: 0.75rem;
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s ease;
+    }
+    
+    .summary-stat-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        border-color: #667eea;
+    }
+    
+    .stat-icon-small {
+        width: 35px;
+        height: 35px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+        color: white;
+        margin-right: 0.75rem;
+        flex-shrink: 0;
+    }
+    
+    .stat-details {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .stat-value-small {
+        font-size: 1.25rem;
+        font-weight: 700;
+        line-height: 1;
+        color: #1f2937;
+    }
+    
+    .stat-label-small {
+        font-size: 0.75rem;
+        color: #6b7280;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 0.125rem;
+    }
+    
+    .realtime-indicator {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: flex;
+        align-items: center;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.8; }
+    }
+    
+    .chart-wrapper {
+        background: white;
+        border-radius: 10px;
+        padding: 1rem;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    /* Enhanced dropdown styling */
+    .request-status-card .dropdown-menu {
+        border: none;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        border-radius: 10px;
+        padding: 0.5rem;
+    }
+    
+    .request-status-card .dropdown-item {
+        border-radius: 6px;
+        padding: 0.5rem 0.75rem;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+    }
+    
+    .request-status-card .dropdown-item:hover {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        transform: translateX(2px);
+    }
+    
+    /* Responsive Improvements */
+    @media (max-width: 768px) {
+        .stat-card {
+            min-height: 120px;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+        }
+        
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            font-size: 1.2rem;
+        }
+        
+        .request-summary-stats {
+            padding: 0.75rem;
+            margin: 0 -1rem 0.75rem -1rem;
+        }
+        
+        .summary-stat-item {
+            padding: 0.5rem;
+        }
+        
+        .stat-icon-small {
+            width: 30px;
+            height: 30px;
+            font-size: 0.8rem;
+            margin-right: 0.5rem;
+        }
+        
+        .stat-value-small {
+            font-size: 1rem;
+        }
+        
+        .stat-label-small {
+            font-size: 0.7rem;
+        }
+    }
+    
+    /* View All Button Styling */
+    .view-all-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+        border: none !important;
+        padding: 0.5rem 1rem !important;
+        border-radius: 8px !important;
+        font-size: 0.85rem !important;
+        font-weight: 500 !important;
+        text-decoration: none !important;
+        transition: all 0.3s ease !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.25rem !important;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2) !important;
+    }
+    
+    .view-all-btn:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3) !important;
+        color: white !important;
+        text-decoration: none !important;
+    }
+    
+    .view-all-btn:active {
+        transform: translateY(0) !important;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2) !important;
+    }
+    
+    .view-all-btn i {
+        font-size: 0.8rem !important;
+    }
+    
+    /* Ensure View All buttons are aligned to the right */
+    .employee-card-header,
+    .card-header {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        width: 100% !important;
+    }
+    
+    .employee-card-header .card-title,
+    .card-header .card-title,
+    .employee-card-header h3,
+    .card-header h3 {
+        flex: 1 !important;
+        margin: 0 !important;
+        margin-right: 1rem !important;
+    }
+    
+    .card-toolbar {
+        display: flex !important;
+        justify-content: flex-end !important;
+        align-items: center !important;
+        margin-left: auto !important;
+        flex-shrink: 0 !important;
+    }
+    
+    /* Chart Toggle Buttons Styling */
+    .chart-toggle-btn {
+        background: #f8f9fa !important;
+        border: 1px solid #dee2e6 !important;
+        color: #6c757d !important;
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.85rem !important;
+        font-weight: 500 !important;
+        border-radius: 6px !important;
+        transition: all 0.3s ease !important;
+        margin: 0 2px !important;
+    }
+    
+    .chart-toggle-btn:hover {
+        background: #e9ecef !important;
+        border-color: #adb5bd !important;
+        color: #495057 !important;
+        transform: translateY(-1px) !important;
+    }
+    
+    .chart-toggle-btn.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        border-color: #667eea !important;
+        color: white !important;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3) !important;
+    }
+    
+    .chart-toggle-btn i {
+        margin-right: 0.25rem !important;
+        font-size: 0.8rem !important;
+    }
+    
+    .btn-group .chart-toggle-btn:first-child {
+        border-top-right-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
+        margin-right: 0 !important;
+    }
+    
+    .btn-group .chart-toggle-btn:not(:first-child):not(:last-child) {
+        border-radius: 0 !important;
+        border-left: none !important;
+        margin: 0 !important;
+    }
+    
+    .btn-group .chart-toggle-btn:last-child {
+        border-top-left-radius: 0 !important;
+        border-bottom-left-radius: 0 !important;
+        border-left: none !important;
+        margin-left: 0 !important;
+    }
+    
+    /* Leave Type Statistics Cards */
+    .leave-type-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        border: 1px solid #f1f5f9;
+        transition: all 0.3s ease;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .leave-type-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+    }
+    
+    .leave-type-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+        position: relative;
+    }
+    
+    .icon-letter {
+        font-size: 20px;
+        font-weight: 700;
+        color: white;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+    
+    /* Individual Leave Type Colors */
+    .annual-leave .leave-type-icon {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    }
+    
+    .sick-leave .leave-type-icon {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+    
+    .unpaid-leave .leave-type-icon {
+        background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+    }
+    
+    .paid-leave .leave-type-icon {
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+    }
+    
+    .personal-leave .leave-type-icon {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+    
+    .emergency-leave .leave-type-icon {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    }
+    
+    .leave-type-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 1rem;
+        line-height: 1.3;
+    }
+    
+    .leave-type-stats {
+        space-y: 0.5rem;
+    }
+    
+    .stat-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-item:last-child {
+        margin-bottom: 0;
+    }
+    
+    .stat-label {
+        font-size: 0.85rem;
+        color: #6b7280;
+        font-weight: 500;
+    }
+    
+    .stat-value {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #1f2937;
+    }
+    
+    .stat-value.used {
+        color: #f59e0b;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 1200px) {
+        .leave-type-card {
+            padding: 1.25rem;
+        }
+        
+        .leave-type-icon {
+            width: 42px;
+            height: 42px;
+        }
+        
+        .icon-letter {
+            font-size: 18px;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .leave-type-card {
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .leave-type-title {
+            font-size: 0.9rem;
+        }
+        
+        .stat-label, .stat-value {
+            font-size: 0.8rem;
+        }
+    }
+    
+    /* Recent Activity Tabs Styling */
+    .recent-activity-tabs {
+        background: white;
+        border-radius: 8px;
+        padding: 0.25rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .recent-activity-tabs .action-btn {
+        border-radius: 6px !important;
+        border: none !important;
+        padding: 0.5rem 1rem !important;
+        font-size: 0.85rem !important;
+        font-weight: 500 !important;
+        transition: all 0.3s ease !important;
+        margin: 0 !important;
+    }
+    
+    .recent-activity-tabs .action-btn:not(.active) {
+        background: transparent !important;
+        color: #6b7280 !important;
+    }
+    
+    .recent-activity-tabs .action-btn:not(.active):hover {
+        background: #f3f4f6 !important;
+        color: #374151 !important;
+    }
+    
+    .recent-activity-tabs .action-btn.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3) !important;
+    }
+    
+    .recent-activity-tabs .action-btn i {
+        font-size: 0.8rem !important;
+    }
+    
+    /* Enhanced Recent Activity Card */
+    .employee-card .employee-card-header .card-title i {
+        color: #667eea;
+    }
+    
+    /* Empty state styling */
+    .recent-activity-empty {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: #6b7280;
+    }
+    
+    .recent-activity-empty i {
+        font-size: 3rem;
+        color: #d1d5db;
+        margin-bottom: 1rem;
+    }
+    
+    .recent-activity-empty h4 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #374151;
+    }
+    
+    .recent-activity-empty p {
+        font-size: 0.9rem;
+        margin: 0;
+    }
+    
+    
+    /* Enhanced Cards and Tables */
+    .employee-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.06);
+        transition: all 0.3s ease;
+    }
+    
+    .employee-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    }
+    
+    .employee-card-header {
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+    }
+    
+    .employee-card-body {
+        padding: 0;
+    }
+    
+    .view-all-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .view-all-btn:hover {
+        background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    /* Responsive Design Improvements */
+    @media (max-width: 768px) {
+        .stat-card {
+            min-height: 100px;
+            padding: 1rem;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+        }
+        
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            font-size: 1rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .dashboard-header {
+            padding: 1.5rem;
+        }
+        
+        .dashboard-title {
+            font-size: 2rem;
+        }
+        
+        .quick-action-item {
+            height: 120px !important;
+            padding: 1.5rem 1rem !important;
+        }
+        
+        .action-buttons {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.75rem;
+        }
+        
+        .action-btn {
+            justify-content: center;
+        }
+        
+        /* Mobile 2-column grid improvements */
+        .row .col-sm-6 {
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+        }
+        
+        .stat-card {
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1rem;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            font-weight: 500;
+            line-height: 1.2;
+        }
+        
+        /* Quick action cards mobile optimization */
+        .quick-action-item {
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .quick-action-item i {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .quick-action-item span {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .quick-action-item small {
+            font-size: 0.75rem;
+            opacity: 0.8;
+        }
+    }
+    
+    /* Extra small mobile devices */
+    @media (max-width: 576px) {
+        .stat-card {
+            min-height: 90px;
+            padding: 0.75rem;
+        }
+        
+        .stat-value {
+            font-size: 1.25rem;
+        }
+        
+        .stat-icon {
+            width: 35px;
+            height: 35px;
+            font-size: 1rem;
+        }
+        
+        .stat-label {
+            font-size: 0.75rem;
+        }
+        
+        .dashboard-header {
+            padding: 1rem;
+        }
+        
+        .dashboard-title {
+            font-size: 1.5rem;
+        }
+        
+        .quick-action-item {
+            padding: 0.75rem 0.5rem;
+            min-height: 70px;
+        }
+        
+        .quick-action-item i {
+            font-size: 1.25rem;
+        }
+        
+        .quick-action-item span {
+            font-size: 0.8rem;
+        }
+        
+        .quick-action-item small {
+            font-size: 0.7rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Request Status Overview Chart
+    const requestStatusCanvas = document.getElementById('requestStatusChart');
+    if (requestStatusCanvas) {
+        const ctx = requestStatusCanvas.getContext('2d');
+        
+        // Get data from canvas attributes
+        const pendingLeaves = parseInt(requestStatusCanvas.dataset.pendingLeaves) || 0;
+        const approvedLeaves = parseInt(requestStatusCanvas.dataset.approvedLeaves) || 0;
+        const rejectedLeaves = parseInt(requestStatusCanvas.dataset.rejectedLeaves) || 0;
+        const pendingPermissions = parseInt(requestStatusCanvas.dataset.pendingPermissions) || 0;
+        const approvedPermissions = parseInt(requestStatusCanvas.dataset.approvedPermissions) || 0;
+        const rejectedPermissions = parseInt(requestStatusCanvas.dataset.rejectedPermissions) || 0;
+        
+        // If all values are zero, show sample data for demonstration
+        const totalRequests = pendingLeaves + approvedLeaves + rejectedLeaves + pendingPermissions + approvedPermissions + rejectedPermissions;
+        const showSampleData = totalRequests === 0;
+        
+        // Prepare chart data
+        const chartData = {
+            labels: [
+                'Pending Leaves',
+                'Approved Leaves', 
+                'Rejected Leaves',
+                'Pending Permissions',
+                'Approved Permissions',
+                'Rejected Permissions'
+            ],
+            datasets: [{
+                data: showSampleData ? [
+                    5,  // Pending Leaves
+                    12, // Approved Leaves
+                    2,  // Rejected Leaves
+                    3,  // Pending Permissions
+                    8,  // Approved Permissions
+                    1   // Rejected Permissions
+                ] : [
+                    pendingLeaves,
+                    approvedLeaves,
+                    rejectedLeaves,
+                    pendingPermissions,
+                    approvedPermissions,
+                    rejectedPermissions
+                ],
+                backgroundColor: [
+                    '#fbbf24', // Pending Leaves - Yellow
+                    '#10b981', // Approved Leaves - Green
+                    '#ef4444', // Rejected Leaves - Red
+                    '#f97316', // Pending Permissions - Orange
+                    '#06b6d4', // Approved Permissions - Cyan
+                    '#ec4899'  // Rejected Permissions - Pink
+                ],
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        };
+        
+        // Chart configuration
+        const config = {
+            type: 'doughnut',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20,
+                            font: {
+                                size: 12,
+                                weight: '500'
+                            },
+                            color: '#374151'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#ffffff',
+                        bodyColor: '#ffffff',
+                        borderColor: '#667eea',
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        displayColors: true
+                    }
+                },
+                cutout: '60%',
+                animation: {
+                    animateRotate: true,
+                    animateScale: true,
+                    duration: 1000
+                }
+            }
+        };
+        
+        // Destroy existing chart if it exists to prevent canvas reuse error
+        if (window.requestStatusChartInstance) {
+            window.requestStatusChartInstance.destroy();
+        }
+        
+        // Create the chart
+        window.requestStatusChartInstance = new Chart(ctx, config);
+        
+        // Update indicator if showing sample data
+        if (showSampleData) {
+            const indicator = document.getElementById('requestStatusIndicator');
+            if (indicator) {
+                indicator.innerHTML = '<i class="fas fa-circle text-warning me-1" style="font-size: 0.5rem;"></i>Sample Data';
+                indicator.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+                indicator.style.color = 'white';
+            }
+        }
+        
+        // Update summary statistics
+        updateRequestSummaryStats({
+            pendingLeaves: pendingLeaves,
+            approvedLeaves: approvedLeaves,
+            rejectedLeaves: rejectedLeaves,
+            pendingPermissions: pendingPermissions,
+            approvedPermissions: approvedPermissions,
+            rejectedPermissions: rejectedPermissions
+        });
+    }
+    
+    // Department Analytics Chart
+    const departmentCanvas = document.getElementById('departmentChart');
+    if (departmentCanvas) {
+        const ctx = departmentCanvas.getContext('2d');
+        
+        // Destroy existing chart if it exists to prevent canvas reuse error
+        if (window.departmentChartInstance) {
+            window.departmentChartInstance.destroy();
+        }
+        
+        // Sample department data - replace with actual data from backend
+        const departmentData = {
+            labels: ['Web Development', 'Marketing', 'Finance', 'Call Center', 'HR', 'Housekeeping', 'Project Management'],
+            datasets: [{
+                label: 'Employees',
+                data: [6, 14, 5, 10, 1, 3, 1],
+                backgroundColor: [
+                    'rgba(102, 126, 234, 0.8)',
+                    'rgba(118, 75, 162, 0.8)',
+                    'rgba(16, 185, 129, 0.8)',
+                    'rgba(245, 101, 101, 0.8)',
+                    'rgba(251, 191, 36, 0.8)',
+                    'rgba(139, 92, 246, 0.8)',
+                    'rgba(6, 182, 212, 0.8)'
+                ],
+                borderColor: [
+                    'rgba(102, 126, 234, 1)',
+                    'rgba(118, 75, 162, 1)',
+                    'rgba(16, 185, 129, 1)',
+                    'rgba(245, 101, 101, 1)',
+                    'rgba(251, 191, 36, 1)',
+                    'rgba(139, 92, 246, 1)',
+                    'rgba(6, 182, 212, 1)'
+                ],
+                borderWidth: 2
+            }]
+        };
+        
+        const config = {
+            type: 'bar',
+            data: departmentData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#ffffff',
+                        bodyColor: '#ffffff',
+                        borderColor: '#667eea',
+                        borderWidth: 1,
+                        cornerRadius: 8
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        },
+                        ticks: {
+                            color: '#6b7280'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: '#6b7280',
+                            maxRotation: 45
+                        }
+                    }
+                },
+                animation: {
+                    duration: 1000
+                }
+            }
+        };
+        
+        window.departmentChartInstance = new Chart(ctx, config);
+    }
+    
+    // Chart toggle functionality
+    const chartButtons = document.querySelectorAll('[data-chart]');
+    chartButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const chartType = this.getAttribute('data-chart');
+            
+            // Update active state
+            chartButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Update chart data based on the selected type
+            if (window.departmentChartInstance) {
+                let newData = [];
+                let newLabel = '';
+                let newColors = [];
+                
+                switch(chartType) {
+                    case 'employees':
+                        newData = [6, 14, 5, 10, 1, 3, 1];
+                        newLabel = 'Employees';
+                        newColors = [
+                            'rgba(102, 126, 234, 0.8)',
+                            'rgba(118, 75, 162, 0.8)',
+                            'rgba(16, 185, 129, 0.8)',
+                            'rgba(245, 101, 101, 0.8)',
+                            'rgba(251, 191, 36, 0.8)',
+                            'rgba(139, 92, 246, 0.8)',
+                            'rgba(6, 182, 212, 0.8)'
+                        ];
+                        break;
+                    case 'attendance':
+                        newData = [95, 88, 92, 87, 98, 85, 90];
+                        newLabel = 'Attendance Rate (%)';
+                        newColors = [
+                            'rgba(16, 185, 129, 0.8)',
+                            'rgba(34, 197, 94, 0.8)',
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(139, 92, 246, 0.8)',
+                            'rgba(6, 182, 212, 0.8)',
+                            'rgba(245, 158, 11, 0.8)',
+                            'rgba(239, 68, 68, 0.8)'
+                        ];
+                        break;
+                    case 'leaves':
+                        newData = [3, 8, 2, 5, 0, 1, 2];
+                        newLabel = 'Leave Requests';
+                        newColors = [
+                            'rgba(245, 101, 101, 0.8)',
+                            'rgba(251, 146, 60, 0.8)',
+                            'rgba(251, 191, 36, 0.8)',
+                            'rgba(163, 163, 163, 0.8)',
+                            'rgba(34, 197, 94, 0.8)',
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(139, 92, 246, 0.8)'
+                        ];
+                        break;
+                }
+                
+                // Update chart data
+                window.departmentChartInstance.data.datasets[0].data = newData;
+                window.departmentChartInstance.data.datasets[0].label = newLabel;
+                window.departmentChartInstance.data.datasets[0].backgroundColor = newColors;
+                window.departmentChartInstance.update('active');
+                
+                console.log(`Chart switched to ${chartType} view`);
+            }
+        });
+    });
+    
+    // Filter functionality
+    const filterItems = document.querySelectorAll('[data-filter]');
+    filterItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            const filterType = this.getAttribute('data-filter');
+            
+            // Update active filter
+            filterItems.forEach(filter => filter.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Here you would filter the chart data based on the selected filter
+            console.log(`Filtered by ${filterType}`);
+        });
+    });
+    
+    // Update summary statistics
+    function updateRequestSummaryStats(data) {
+        const totalPending = data.pendingLeaves + data.pendingPermissions;
+        const totalApproved = data.approvedLeaves + data.approvedPermissions;
+        const totalRejected = data.rejectedLeaves + data.rejectedPermissions;
+        const totalAll = totalPending + totalApproved + totalRejected;
+        
+        // Update the summary stat values
+        const pendingElement = document.getElementById('totalPendingRequests');
+        const approvedElement = document.getElementById('totalApprovedRequests');
+        const rejectedElement = document.getElementById('totalRejectedRequests');
+        const totalElement = document.getElementById('totalAllRequests');
+        
+        if (pendingElement) {
+            pendingElement.textContent = totalPending;
+            animateValue(pendingElement, 0, totalPending, 1000);
+        }
+        if (approvedElement) {
+            approvedElement.textContent = totalApproved;
+            animateValue(approvedElement, 0, totalApproved, 1000);
+        }
+        if (rejectedElement) {
+            rejectedElement.textContent = totalRejected;
+            animateValue(rejectedElement, 0, totalRejected, 1000);
+        }
+        if (totalElement) {
+            totalElement.textContent = totalAll;
+            animateValue(totalElement, 0, totalAll, 1000);
+        }
+    }
+    
+    // Animate number values
+    function animateValue(element, start, end, duration) {
+        const range = end - start;
+        const startTime = performance.now();
+        
+        function updateValue(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const current = Math.floor(start + (range * progress));
+            element.textContent = current;
+            
+            if (progress < 1) {
+                requestAnimationFrame(updateValue);
+            }
+        }
+        
+        requestAnimationFrame(updateValue);
+    }
+    
+    // Update last update time
+    function updateLastUpdateTime() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString();
+        const timeElements = document.querySelectorAll('#lastUpdateTime, #teamLastUpdateTime, #requestStatusLastUpdate');
+        timeElements.forEach(element => {
+            if (element) {
+                element.textContent = timeString;
+            }
+        });
+    }
+    
+    // Update time every 30 seconds
+    setInterval(updateLastUpdateTime, 30000);
+    updateLastUpdateTime();
+    
+    // Tab switching for Recent Activity
+    const leavesTab = document.getElementById('recent-leaves-tab');
+    const permissionsTab = document.getElementById('recent-permissions-tab');
+    const leavesTable = document.getElementById('recent-leaves-table');
+    const permissionsTable = document.getElementById('recent-permissions-table');
+    
+    if (leavesTab && permissionsTab) {
+        leavesTab.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Update tab states
+            leavesTab.classList.add('active');
+            leavesTab.classList.remove('action-btn-secondary');
+            leavesTab.classList.add('action-btn-primary');
+            
+            permissionsTab.classList.remove('active');
+            permissionsTab.classList.remove('action-btn-primary');
+            permissionsTab.classList.add('action-btn-secondary');
+            
+            // Show/hide tables
+            leavesTable.style.display = 'block';
+            permissionsTable.style.display = 'none';
+        });
+        
+        permissionsTab.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Update tab states
+            permissionsTab.classList.add('active');
+            permissionsTab.classList.remove('action-btn-secondary');
+            permissionsTab.classList.add('action-btn-primary');
+            
+            leavesTab.classList.remove('active');
+            leavesTab.classList.remove('action-btn-primary');
+            leavesTab.classList.add('action-btn-secondary');
+            
+            // Show/hide tables
+            permissionsTable.style.display = 'block';
+            leavesTable.style.display = 'none';
+        });
+    }
+});
+</script>
+
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+
+<!-- Department Data Script -->
+<script>
+    // Pass department data to JavaScript safely
+    window.departmentData = {{ department_data|tojson|safe if department_data else '{}' }};
+    
+    // Fetch all devices data from dashboard
+    function fetchAllDevicesDataFromDashboard() {
+        // Show loading toast
+        toastr.info('Starting comprehensive data fetch from all devices...', 'Data Fetch Started', {
+            timeOut: 3000
+        });
+        
+        // Make the fetch request
+        fetch('/attendance/fetch-all-devices-data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            credentials: 'include'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Show success message with summary
+                const summary = data.summary;
+                toastr.success(
+                    `Successfully fetched data from ${summary.successful_data_fetch}/${summary.total_devices} devices. ` +
+                    `Attendance: ${summary.total_attendance_records} records, Users: ${summary.total_users_synced} synced.`,
+                    'Data Fetch Complete',
+                    { timeOut: 8000 }
+                );
+                
+                // Optionally refresh dashboard data
+                setTimeout(() => {
+                    if (confirm('Data fetch completed successfully. Would you like to refresh the dashboard to see updated statistics?')) {
+                        location.reload();
+                    }
+                }, 2000);
+                
+            } else if (data.status === 'partial_success') {
+                // Show partial success
+                const summary = data.summary;
+                toastr.warning(
+                    `Partial success: ${summary.successful_data_fetch}/${summary.total_devices} devices processed. ` +
+                    `Some devices may have connection issues. Visit Device Settings for detailed results.`,
+                    'Partial Success',
+                    { timeOut: 8000 }
+                );
+                
+            } else {
+                // Show error message
+                toastr.error(data.message || 'Failed to fetch data from devices', 'Fetch Failed');
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching device data:', error);
+            toastr.error('Network error occurred while fetching device data', 'Connection Error');
+        });
+    }
+</script>
+{% endblock %}
+
 {% block content %}
-<div class="content-header">
-    <h1 class="page-title">Admin Dashboard</h1>
-    <div class="content-header-actions">
-        <a href="{{ url_for('dashboard.users') }}" class="btn btn-primary me-2">
-            <i class="fas fa-user-cog me-1"></i> User Management System
-        </a>
-        <a href="{{ url_for('departments.create') }}" class="btn btn-secondary">
-            <i class="fas fa-plus-circle me-1"></i> New Department
-        </a>
+<!-- Enhanced Admin Dashboard Header -->
+<div class="dashboard-header">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center">
+        <div>
+            <h1 class="dashboard-title">
+                <i class="fas fa-tachometer-alt me-3"></i>
+                {% if current_user.role == 'product_owner' %}
+                    Product Owner Dashboard
+                {% else %}
+                    Admin Dashboard
+                {% endif %}
+            </h1>
+            <p class="welcome-text">
+                {% if current_user.role == 'product_owner' %}
+                    Manage your organization and monitor system performance as Product Owner
+                {% else %}
+                    Manage your organization and monitor system performance
+                {% endif %}
+            </p>
+        </div>
+        <div class="action-buttons">
+            <a href="{{ url_for('dashboard.users') }}" class="action-btn action-btn-primary">
+                <i class="fas fa-user-cog"></i> User Management System
+            </a>
+            <a href="{{ url_for('departments.create') }}" class="action-btn action-btn-secondary">
+                <i class="fas fa-plus-circle"></i> New Department
+            </a>
+        </div>
     </div>
 </div>
 
 <div class="row">
-    <!-- Stats Cards -->
-    <div class="col-lg-3 col-md-6 mb-4">
-        <div class="card">
+    <!-- Stats Cards Row 1 -->
+    <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
             <div class="stat-card">
-                <div class="stat-icon">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #d97706;">
                     <i class="fas fa-umbrella-beach"></i>
                 </div>
                 <div class="stat-content">
-                    <h5 class="stat-value">{{ stats.pending_leave_requests }}</h5>
-                    <p class="stat-label">Pending Leave Approvals</p>
-                </div>
+                <div class="stat-value pending-leave-count">{{ stats.pending_leave_requests or 0 }}</div>
+                <div class="stat-label">Pending Leave Approvals</div>
             </div>
         </div>
     </div>
     
-    <div class="col-lg-3 col-md-6 mb-4">
-        <div class="card">
+    <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
             <div class="stat-card">
-                <div class="stat-icon" style="background-color: rgba(0, 93, 153, 0.1); color: #005d99;">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); color: #1d4ed8;">
                     <i class="fas fa-clock"></i>
                 </div>
                 <div class="stat-content">
-                    <h5 class="stat-value">{{ stats.pending_permission_requests }}</h5>
-                    <p class="stat-label">Pending Permission Approvals</p>
-                </div>
+                <div class="stat-value pending-permission-count">{{ stats.pending_permission_requests or 0 }}</div>
+                <div class="stat-label">Pending Permission Approvals</div>
             </div>
         </div>
     </div>
     
-    <div class="col-lg-3 col-md-6 mb-4">
-        <div class="card">
+    <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
             <div class="stat-card">
-                <div class="stat-icon" style="background-color: rgba(23, 167, 74, 0.1); color: #17a74a;">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); color: #059669;">
                     <i class="fas fa-users"></i>
                 </div>
                 <div class="stat-content">
-                    <h5 class="stat-value">{{ stats.total_employees }}</h5>
-                    <p class="stat-label">Total Employees</p>
-                </div>
+                <div class="stat-value total-employees-count">{{ stats.total_employees or 0 }}</div>
+                <div class="stat-label">Total Employees</div>
             </div>
         </div>
     </div>
     
-    <div class="col-lg-3 col-md-6 mb-4">
-        <div class="card">
+    <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
             <div class="stat-card">
-                <div class="stat-icon" style="background-color: rgba(114, 57, 234, 0.1); color: #7239ea;">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%); color: #4338ca;">
                     <i class="fas fa-building"></i>
                 </div>
                 <div class="stat-content">
-                    <h5 class="stat-value">{{ stats.total_departments }}</h5>
-                    <p class="stat-label">Total Departments</p>
+                <div class="stat-value total-departments-count">{{ stats.total_departments or 0 }}</div>
+                <div class="stat-label">Total Departments</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Additional Stats for Admin/Product Owner -->
+    <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
+        <div class="stat-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%); color: #be185d;">
+                <i class="fas fa-calendar-check"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value">{{ stats.approved_leave_requests or 0 }}</div>
+                <div class="stat-label">Approved Leaves</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
+        <div class="stat-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); color: #374151;">
+                <i class="fas fa-user-clock"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value total-attendance-today">{{ stats.total_attendance_today or 0 }}</div>
+                <div class="stat-label">Present Today</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
+        <div class="stat-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); color: #dc2626;">
+                <i class="fas fa-user-times"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value team-absent-today">{{ stats.team_absent_today or 0 }}</div>
+                <div class="stat-label">Absent Today</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
+        <div class="stat-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #d97706;">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value">{{ stats.rejected_leave_requests or 0 }}</div>
+                <div class="stat-label">Rejected Leaves</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions Section -->
+    <div class="col-lg-12 mb-4">
+        <div class="quick-action-card" style="background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%); border: 1px solid #e2e8f0; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);">
+            <div class="quick-action-card-header" style="border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem;">
+                <h3 class="card-title mb-0" style="color: #1e293b; font-weight: 700; font-size: 1.5rem;">
+                    <i class="fas fa-bolt me-3" style="color: #667eea; font-size: 1.5rem;"></i>
+                    Quick Actions
+                </h3>
+                <p class="text-muted mb-0 mt-2" style="font-size: 0.9rem;">
+                    {% if current_user.role == 'product_owner' %}
+                        Essential product owner tools for system management
+                    {% else %}
+                        Essential administrative tools for system management
+                    {% endif %}
+                </p>
+            </div>
+            <div class="quick-action-card-body" style="padding-top: 2rem;">
+                <div class="row g-4">
+                    <div class="col-lg-3 col-md-6 col-sm-6">
+                        <a href="{{ url_for('dashboard.users') }}" class="action-btn action-btn-primary w-100 text-center quick-action-item">
+                            <i class="fas fa-user-plus" style="color: #10b981;"></i>
+                            <span>User Management</span>
+                            <small>Manage team members and users</small>
+                        </a>
+                    </div>
+                    <div class="col-lg-3 col-md-6 col-sm-6">
+                        <a href="{{ url_for('leave.index') }}" class="action-btn action-btn-secondary w-100 text-center quick-action-item">
+                            <i class="fas fa-calendar-check" style="color: #3b82f6;"></i>
+                            <span>Manage Leaves</span>
+                            <small>Approve leave requests</small>
+                        </a>
+                    </div>
+                    <div class="col-lg-3 col-md-6 col-sm-6">
+                        <a href="{{ url_for('attendance.device_settings') }}" class="action-btn action-btn-secondary w-100 text-center quick-action-item">
+                            <i class="fas fa-fingerprint" style="color: #ef4444;"></i>
+                            <span>Device Settings</span>
+                            <small>Configure attendance device</small>
+                        </a>
+                    </div>
+                    <div class="col-lg-3 col-md-6 col-sm-6">
+                        <a href="javascript:void(0)" onclick="fetchAllDevicesDataFromDashboard()" class="action-btn action-btn-secondary w-100 text-center quick-action-item">
+                            <i class="fas fa-download" style="color: #3b82f6;"></i>
+                            <span>Fetch All Device Data</span>
+                            <small>Sync data from all devices</small>
+                        </a>
+                    </div>
+                    <div class="col-lg-3 col-md-6 col-sm-6">
+                        <a href="{{ url_for('attendance.index') }}" class="action-btn action-btn-secondary w-100 text-center quick-action-item">
+                            <i class="fas fa-clipboard-list" style="color: #8b5cf6;"></i>
+                            <span>Attendance Management</span>
+                            <small>Monitor employee attendance</small>
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -73,46 +1924,173 @@
     
     <!-- Department Analytics Chart -->
     <div class="col-lg-8 mb-4">
-        <div class="card">
-            <div class="card-header border-0">
-                <h3 class="card-title">Department Analytics</h3>
+        <div class="employee-card">
+            <div class="employee-card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Department Analytics
+                </h3>
+                <div class="card-toolbar">
+                    <div class="btn-group" role="group">
+                        <button type="button" class="action-btn action-btn-secondary chart-toggle-btn active" data-chart="employees">
+                            <i class="fas fa-users me-1"></i>Employees
+                        </button>
+                        <button type="button" class="action-btn action-btn-secondary chart-toggle-btn" data-chart="attendance">
+                            <i class="fas fa-clock me-1"></i>Attendance
+                        </button>
+                        <button type="button" class="action-btn action-btn-secondary chart-toggle-btn" data-chart="leaves">
+                            <i class="fas fa-calendar me-1"></i>Leaves
+                        </button>
             </div>
-            <div class="card-body">
-                <canvas id="departmentChart" height="300" data-departments="{{ department_data|tojson }}"></canvas>
+                </div>
+            </div>
+            <div class="employee-card-body">
+                <div class="chart-container-enhanced">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="realtime-indicator">
+                            Live Data
+                        </span>
+                        <small class="text-muted">Last updated: <span id="lastUpdateTime">Just now</span></small>
+                    </div>
+                    <div class="chart-wrapper" style="position: relative; height: 300px;">
+                <canvas id="departmentChart" height="300"></canvas>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
     
     <!-- Request Status Chart -->
     <div class="col-lg-4 mb-4">
-        <div class="card">
-            <div class="card-header border-0">
-                <h3 class="card-title">Request Status Overview</h3>
+        <div class="employee-card request-status-card">
+            <div class="employee-card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-chart-pie me-2 text-primary"></i>
+                    Request Status Overview
+                </h3>
+                <div class="card-toolbar">
+                    <div class="dropdown">
+                        <button class="action-btn action-btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-filter me-1"></i>Filter
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-filter="all">
+                                <i class="fas fa-list me-2"></i>All Requests
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="leaves">
+                                <i class="fas fa-umbrella-beach me-2"></i>Leaves Only
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="permissions">
+                                <i class="fas fa-clock me-2"></i>Permissions Only
+                            </a></li>
+                        </ul>
             </div>
-            <div class="card-body">
-                <canvas id="requestStatusChart" height="300" 
+                </div>
+            </div>
+            
+            <!-- Summary Statistics -->
+            <div class="request-summary-stats">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="summary-stat-item">
+                            <div class="stat-icon-small bg-warning">
+                                <i class="fas fa-hourglass-half"></i>
+                            </div>
+                            <div class="stat-details">
+                                <div class="stat-value-small" id="totalPendingRequests">
+                                    {{ (stats.pending_leave_requests or 0) + (stats.pending_permission_requests or 0) }}
+                                </div>
+                                <div class="stat-label-small">Pending</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="summary-stat-item">
+                            <div class="stat-icon-small bg-success">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="stat-details">
+                                <div class="stat-value-small" id="totalApprovedRequests">
+                                    {{ (stats.approved_leave_requests or 0) + (stats.approved_permission_requests or 0) }}
+                                </div>
+                                <div class="stat-label-small">Approved</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-2 mt-1">
+                    <div class="col-6">
+                        <div class="summary-stat-item">
+                            <div class="stat-icon-small bg-danger">
+                                <i class="fas fa-times-circle"></i>
+                            </div>
+                            <div class="stat-details">
+                                <div class="stat-value-small" id="totalRejectedRequests">
+                                    {{ (stats.rejected_leave_requests or 0) + (stats.rejected_permission_requests or 0) }}
+                                </div>
+                                <div class="stat-label-small">Rejected</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="summary-stat-item">
+                            <div class="stat-icon-small bg-info">
+                                <i class="fas fa-chart-bar"></i>
+                            </div>
+                            <div class="stat-details">
+                                <div class="stat-value-small" id="totalAllRequests">
+                                    {{ (stats.pending_leave_requests or 0) + (stats.pending_permission_requests or 0) + (stats.approved_leave_requests or 0) + (stats.approved_permission_requests or 0) + (stats.rejected_leave_requests or 0) + (stats.rejected_permission_requests or 0) }}
+                                </div>
+                                <div class="stat-label-small">Total</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="employee-card-body">
+                <div class="chart-container-enhanced">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="realtime-indicator" id="requestStatusIndicator">
+                            <i class="fas fa-circle text-success me-1" style="font-size: 0.5rem;"></i>
+                            Live Data
+                        </span>
+                        <small class="text-muted">
+                            <i class="fas fa-clock me-1"></i>
+                            Last updated: <span id="requestStatusLastUpdate">Just now</span>
+                        </small>
+                    </div>
+                    <div class="chart-wrapper" style="position: relative; height: 280px;">
+                        <canvas id="requestStatusChart" height="280" 
                         data-pending-leaves="{{ stats.pending_leave_requests }}"
                         data-approved-leaves="{{ stats.approved_leave_requests }}"
                         data-rejected-leaves="{{ stats.rejected_leave_requests }}"
                         data-pending-permissions="{{ stats.pending_permission_requests }}"
                         data-approved-permissions="{{ stats.approved_permission_requests }}"
                         data-rejected-permissions="{{ stats.rejected_permission_requests }}"></canvas>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
     
     <!-- Pending Leave Requests -->
     <div class="col-lg-6 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Pending Leave Requests</h3>
+        <div class="employee-card">
+            <div class="employee-card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-calendar-times me-2"></i>
+                    Pending Leave Requests
+                </h3>
                 <div class="card-toolbar">
-                    <a href="{{ url_for('leave.index') }}" class="btn btn-sm btn-light">View All</a>
+                    <a href="{{ url_for('leave.index') }}" class="action-btn action-btn-secondary view-all-btn">
+                        <i class="fas fa-external-link-alt me-1"></i>View All
+                    </a>
                 </div>
             </div>
-            <div class="card-body p-0">
+            <div class="employee-card-body">
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="table enhanced-table">
                         <thead>
                             <tr>
                                 <th>Employee</th>
@@ -144,7 +2122,13 @@
                                 {% endfor %}
                             {% else %}
                                 <tr>
-                                    <td colspan="4" class="text-center p-4">No pending leave requests.</td>
+                                    <td colspan="4" class="text-center p-5">
+                                        <div class="empty-state">
+                                            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                                            <h5 class="text-muted mb-2">No pending leave requests</h5>
+                                            <p class="text-muted small mb-0">All leave requests have been processed</p>
+                                        </div>
+                                    </td>
                                 </tr>
                             {% endif %}
                         </tbody>
@@ -156,16 +2140,21 @@
     
     <!-- Pending Permission Requests -->
     <div class="col-lg-6 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Pending Permission Requests</h3>
+        <div class="employee-card">
+            <div class="employee-card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-clock me-2"></i>
+                    Pending Permission Requests
+                </h3>
                 <div class="card-toolbar">
-                    <a href="{{ url_for('permission.index') }}" class="btn btn-sm btn-light">View All</a>
+                    <a href="{{ url_for('permission.index') }}" class="action-btn action-btn-secondary view-all-btn">
+                        <i class="fas fa-external-link-alt me-1"></i>View All
+                    </a>
                 </div>
             </div>
-            <div class="card-body p-0">
+            <div class="employee-card-body">
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="table enhanced-table">
                         <thead>
                             <tr>
                                 <th>Employee</th>
@@ -189,7 +2178,7 @@
                                         </div>
                                     </td>
                                     <td>{{ permission.user.department.department_name if permission.user.department else 'No Department' }}</td>
-                                    <td>{{ permission.start_time.strftime('%d/%m/%Y %H:%M') }} - {{ permission.end_time.strftime('%H:%M') }}</td>
+                                    <td>{{ permission.start_time.strftime('%d/%m/%Y %I:%M %p') }} - {{ permission.end_time.strftime('%I:%M %p') }}</td>
                                     <td>
                                         <a href="{{ url_for('permission.view', id=permission.id) }}" class="btn btn-sm btn-primary">Review</a>
                                     </td>
@@ -197,7 +2186,13 @@
                                 {% endfor %}
                             {% else %}
                                 <tr>
-                                    <td colspan="4" class="text-center p-4">No pending permission requests.</td>
+                                    <td colspan="4" class="text-center p-5">
+                                        <div class="empty-state">
+                                            <i class="fas fa-clock fa-3x text-muted mb-3"></i>
+                                            <h5 class="text-muted mb-2">No pending permission requests</h5>
+                                            <p class="text-muted small mb-0">All permission requests have been processed</p>
+                                        </div>
+                                    </td>
                                 </tr>
                             {% endif %}
                         </tbody>
@@ -209,19 +2204,26 @@
     
     <!-- Recent Activity -->
     <div class="col-lg-12 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Recent Activity</h3>
+        <div class="employee-card">
+            <div class="employee-card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-history me-2"></i>
+                    Recent Activity
+                </h3>
                 <div class="card-toolbar">
-                    <div class="btn-group btn-group-sm" role="group">
-                        <button type="button" class="btn btn-light active" id="recent-leaves-tab">Leaves</button>
-                        <button type="button" class="btn btn-light" id="recent-permissions-tab">Permissions</button>
+                    <div class="btn-group btn-group-sm recent-activity-tabs" role="group">
+                        <button type="button" class="action-btn action-btn-primary active" id="recent-leaves-tab">
+                            <i class="fas fa-umbrella-beach me-1"></i>Leaves
+                        </button>
+                        <button type="button" class="action-btn action-btn-secondary" id="recent-permissions-tab">
+                            <i class="fas fa-clock me-1"></i>Permissions
+                        </button>
                     </div>
                 </div>
             </div>
-            <div class="card-body p-0">
+            <div class="employee-card-body">
                 <div class="table-responsive" id="recent-leaves-table">
-                    <table class="table table-hover">
+                    <table class="table enhanced-table">
                         <thead>
                             <tr>
                                 <th>Employee</th>
@@ -257,7 +2259,7 @@
                                             <span class="badge badge-light-danger">Rejected</span>
                                         {% endif %}
                                     </td>
-                                    <td>{{ leave.updated_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                    <td>{{ leave.updated_at.strftime('%d/%m/%Y %I:%M %p') }}</td>
                                     <td>
                                         <a href="{{ url_for('leave.view', id=leave.id) }}" class="btn btn-sm btn-icon btn-light" data-bs-toggle="tooltip" title="View Details">
                                             <i class="fas fa-eye"></i>
@@ -267,7 +2269,13 @@
                                 {% endfor %}
                             {% else %}
                                 <tr>
-                                    <td colspan="6" class="text-center p-4">No recent leave activity.</td>
+                                    <td colspan="6" class="text-center p-5">
+                                        <div class="empty-state">
+                                            <i class="fas fa-umbrella-beach fa-3x text-muted mb-3"></i>
+                                            <h5 class="text-muted mb-2">No recent leave activity</h5>
+                                            <p class="text-muted small mb-0">Recent leave requests will appear here</p>
+                                        </div>
+                                    </td>
                                 </tr>
                             {% endif %}
                         </tbody>
@@ -275,7 +2283,7 @@
                 </div>
                 
                 <div class="table-responsive" id="recent-permissions-table" style="display: none;">
-                    <table class="table table-hover">
+                    <table class="table enhanced-table">
                         <thead>
                             <tr>
                                 <th>Employee</th>
@@ -301,7 +2309,7 @@
                                         </div>
                                     </td>
                                     <td>{{ permission.user.department.department_name if permission.user.department else 'No Department' }}</td>
-                                    <td>{{ permission.start_time.strftime('%d/%m/%Y %H:%M') }} - {{ permission.end_time.strftime('%H:%M') }}</td>
+                                    <td>{{ permission.start_time.strftime('%d/%m/%Y %I:%M %p') }} - {{ permission.end_time.strftime('%I:%M %p') }}</td>
                                     <td>
                                         {% if permission.status == 'pending' %}
                                             <span class="badge badge-light-warning">Pending</span>
@@ -311,7 +2319,7 @@
                                             <span class="badge badge-light-danger">Rejected</span>
                                         {% endif %}
                                     </td>
-                                    <td>{{ permission.updated_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                    <td>{{ permission.updated_at.strftime('%d/%m/%Y %I:%M %p') }}</td>
                                     <td>
                                         <a href="{{ url_for('permission.view', id=permission.id) }}" class="btn btn-sm btn-icon btn-light" data-bs-toggle="tooltip" title="View Details">
                                             <i class="fas fa-eye"></i>
@@ -321,7 +2329,13 @@
                                 {% endfor %}
                             {% else %}
                                 <tr>
-                                    <td colspan="6" class="text-center p-4">No recent permission activity.</td>
+                                    <td colspan="6" class="text-center p-5">
+                                        <div class="empty-state">
+                                            <i class="fas fa-clock fa-3x text-muted mb-3"></i>
+                                            <h5 class="text-muted mb-2">No recent permission activity</h5>
+                                            <p class="text-muted small mb-0">Recent permission requests will appear here</p>
+                                        </div>
+                                    </td>
                                 </tr>
                             {% endif %}
                         </tbody>
@@ -330,34 +2344,412 @@
             </div>
         </div>
     </div>
+    
+    <!-- Leave Management Section -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Leave Management</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <div class="d-flex align-items-center p-3 bg-light rounded">
+                            <div class="me-3">
+                                <i class="fas fa-tags fa-2x text-primary"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1">Leave Types</h6>
+                                <p class="text-muted mb-0">Manage different types of leave</p>
+                                <a href="{{ url_for('dashboard.leave_types') }}" class="btn btn-sm btn-primary mt-2">
+                                    <i class="fas fa-cog me-1"></i>Manage
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="d-flex align-items-center p-3 bg-light rounded">
+                            <div class="me-3">
+                                <i class="fas fa-calendar-check fa-2x text-success"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1">Paid Holidays</h6>
+                                <p class="text-muted mb-0">Set company paid holidays</p>
+                                <a href="{{ url_for('dashboard.paid_holidays') }}" class="btn btn-sm btn-success mt-2">
+                                    <i class="fas fa-calendar-plus me-1"></i>Manage
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="d-flex align-items-center p-3 bg-light rounded">
+                            <div class="me-3">
+                                <i class="fas fa-balance-scale fa-2x text-warning"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1">Leave Balances</h6>
+                                <p class="text-muted mb-0">Set employee leave balances</p>
+                                <a href="{{ url_for('dashboard.leave_balances') }}" class="btn btn-sm btn-warning mt-2">
+                                    <i class="fas fa-user-cog me-1"></i>Manage
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Leave Management Data Tables -->
+    <div class="row">
+        <!-- Recent Leave Balances -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Recent Leave Balances</h3>
+                    <div class="card-toolbar">
+                        <a href="{{ url_for('dashboard.leave_balances') }}" class="action-btn action-btn-secondary view-all-btn">
+                            <i class="fas fa-external-link-alt me-1"></i>View All
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_leave_balances %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Leave Type</th>
+                                    <th>Remaining</th>
+                                    <th>Used</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for balance in recent_leave_balances %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="symbol symbol-35px me-2">
+                                                <span class="symbol-label bg-light-primary text-primary">
+                                                    {{ balance.user.first_name[0] }}{{ balance.user.last_name[0] }}
+                                                </span>
+                                            </div>
+                                            <div>{{ balance.user.first_name }} {{ balance.user.last_name }}</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge" style="background-color: {% if balance.leave_type.color %}{{ balance.leave_type.color }}{% else %}#6c757d{% endif %}; color: white;">
+                                            {{ balance.leave_type.name }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold {% if balance.remaining_days > 0 %}text-success{% else %}text-danger{% endif %}">
+                                            {{ balance.remaining_days }}
+                                        </span>
+                                    </td>
+                                    <td>{{ balance.used_days }}/{{ balance.total_days }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center p-4">
+                        <i class="fas fa-balance-scale fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No leave balances found</h5>
+                        <p class="text-muted">Set up leave balances for employees.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Upcoming Paid Holidays -->
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Upcoming Paid Holidays</h3>
+                    <div class="card-toolbar">
+                        <a href="{{ url_for('dashboard.paid_holidays') }}" class="action-btn action-btn-secondary view-all-btn">
+                            <i class="fas fa-external-link-alt me-1"></i>View All
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if upcoming_holidays %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Description</th>
+                                    <th>Type</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for holiday in upcoming_holidays %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-info">
+                                            {{ holiday.date.strftime('%B %d, %Y') }}
+                                        </span>
+                                    </td>
+                                    <td>{{ holiday.description }}</td>
+                                    <td>
+                                        {% if holiday.is_recurring %}
+                                            <span class="badge bg-warning">Recurring</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">One-time</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center p-4">
+                        <i class="fas fa-calendar-alt fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No upcoming holidays</h5>
+                        <p class="text-muted">Add company paid holidays.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Leave Type Statistics -->
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="employee-card">
+                <div class="employee-card-header">
+                    <h3 class="card-title" style="color: #2d3748 !important; font-weight: 600;">
+                        <i class="fas fa-chart-pie me-2" style="color: #667eea;"></i>
+                        Leave Type Statistics
+                    </h3>
+                </div>
+                <div class="employee-card-body" style="padding: 2rem;">
+                    <div class="row g-4">
+                        <!-- Annual Leave -->
+                        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                            <div class="leave-type-card annual-leave">
+                                <div class="leave-type-icon">
+                                    <span class="icon-letter">A</span>
+                                    </div>
+                                <div class="leave-type-content">
+                                    <h6 class="leave-type-title">Annual Leave</h6>
+                                    <div class="leave-type-stats">
+                                        <div class="stat-item">
+                                            <span class="stat-label">Balances:</span>
+                                            <span class="stat-value">40</span>
+                                </div>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Used:</span>
+                                            <span class="stat-value used">438</span>
+                                    </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Sick Leave -->
+                        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                            <div class="leave-type-card sick-leave">
+                                <div class="leave-type-icon">
+                                    <span class="icon-letter">S</span>
+                    </div>
+                                <div class="leave-type-content">
+                                    <h6 class="leave-type-title">Sick Leave</h6>
+                                    <div class="leave-type-stats">
+                                        <div class="stat-item">
+                                            <span class="stat-label">Balances:</span>
+                                            <span class="stat-value">0</span>
+                </div>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Used:</span>
+                                            <span class="stat-value used">0</span>
+            </div>
+        </div>
+    </div>
 </div>
+                        </div>
+                        
+                        <!-- Unpaid Leave -->
+                        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                            <div class="leave-type-card unpaid-leave">
+                                <div class="leave-type-icon">
+                                    <span class="icon-letter">U</span>
+                                </div>
+                                <div class="leave-type-content">
+                                    <h6 class="leave-type-title">Unpaid Leave</h6>
+                                    <div class="leave-type-stats">
+                                        <div class="stat-item">
+                                            <span class="stat-label">Balances:</span>
+                                            <span class="stat-value">0</span>
+                                        </div>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Used:</span>
+                                            <span class="stat-value used">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Paid Leave -->
+                        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                            <div class="leave-type-card paid-leave">
+                                <div class="leave-type-icon">
+                                    <span class="icon-letter">P</span>
+                                </div>
+                                <div class="leave-type-content">
+                                    <h6 class="leave-type-title">Paid Leave</h6>
+                                    <div class="leave-type-stats">
+                                        <div class="stat-item">
+                                            <span class="stat-label">Balances:</span>
+                                            <span class="stat-value">0</span>
+                                        </div>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Used:</span>
+                                            <span class="stat-value used">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Personal Leave -->
+                        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                            <div class="leave-type-card personal-leave">
+                                <div class="leave-type-icon">
+                                    <span class="icon-letter">P</span>
+                                </div>
+                                <div class="leave-type-content">
+                                    <h6 class="leave-type-title">Personal Leave</h6>
+                                    <div class="leave-type-stats">
+                                        <div class="stat-item">
+                                            <span class="stat-label">Balances:</span>
+                                            <span class="stat-value">0</span>
+                                        </div>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Used:</span>
+                                            <span class="stat-value used">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Emergency Leave -->
+                        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                            <div class="leave-type-card emergency-leave">
+                                <div class="leave-type-icon">
+                                    <span class="icon-letter">E</span>
+                                </div>
+                                <div class="leave-type-content">
+                                    <h6 class="leave-type-title">Emergency Leave</h6>
+                                    <div class="leave-type-stats">
+                                        <div class="stat-item">
+                                            <span class="stat-label">Balances:</span>
+                                            <span class="stat-value">0</span>
+                                        </div>
+                                        <div class="stat-item">
+                                            <span class="stat-label">Used:</span>
+                                            <span class="stat-value used">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Enhanced Table Header Styling -->
+<style>
+/* NUCLEAR OPTION - Maximum specificity for table headers */
+html body * .enhanced-table thead th,
+html body * .enhanced-table thead th *,
+html body * .employee-table thead th,
+html body * .employee-table thead th *,
+html body * thead th,
+html body * thead th * {
+    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%) !important;
+    color: #ffffff !important;
+    font-weight: bold !important;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2) !important;
+    font-size: 0.95rem !important;
+    padding: 1rem 0.75rem !important;
+    border: none !important;
+    position: relative !important;
+}
+
+/* Enhanced empty state styling */
+.empty-state {
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+.empty-state i {
+    opacity: 0.6;
+    margin-bottom: 1rem;
+}
+
+.empty-state h5 {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+    opacity: 0.8;
+    font-size: 0.875rem;
+}
+
+/* Enhanced table styling */
+.enhanced-table {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.enhanced-table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.enhanced-table tbody tr:hover {
+    background-color: rgba(102, 126, 234, 0.05);
+}
+
+.enhanced-table tbody td {
+    padding: 1rem 0.75rem;
+    vertical-align: middle;
+    border-color: rgba(0,0,0,0.1);
+}
+
+/* Symbol styling */
+.symbol-label {
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.bg-light-primary {
+    background-color: rgba(102, 126, 234, 0.1) !important;
+}
+
+.text-primary {
+    color: #667eea !important;
+}
+</style>
 {% endblock %}
 
-{% block extra_js %}
-<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Tab switching for Recent Activity
-        const leavesTab = document.getElementById('recent-leaves-tab');
-        const permissionsTab = document.getElementById('recent-permissions-tab');
-        const leavesTable = document.getElementById('recent-leaves-table');
-        const permissionsTable = document.getElementById('recent-permissions-table');
-        
-        if (leavesTab && permissionsTab) {
-            leavesTab.addEventListener('click', function() {
-                leavesTab.classList.add('active');
-                permissionsTab.classList.remove('active');
-                leavesTable.style.display = 'block';
-                permissionsTable.style.display = 'none';
-            });
-            
-            permissionsTab.addEventListener('click', function() {
-                permissionsTab.classList.add('active');
-                leavesTab.classList.remove('active');
-                permissionsTable.style.display = 'block';
-                leavesTable.style.display = 'none';
-            });
-        }
-    });
-</script>
-{% endblock %}

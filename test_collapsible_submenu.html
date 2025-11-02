@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collapsible Submenu Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-width: 265px;
+            --sidebar-collapsed-width: 70px;
+            --primary-color: #005d99;
+            --secondary-color: #17a74a;
+            --text-color: #181c32;
+            --text-muted: #7e8299;
+            --border-color: #e4e6ef;
+            --card-bg: #ffffff;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f8fa;
+        }
+        
+        .page-wrapper {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--card-bg);
+            border-right: 1px solid var(--border-color);
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 100;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 1rem;
+        }
+        
+        .sidebar.collapsed {
+            width: var(--sidebar-collapsed-width);
+        }
+        
+        .content-wrapper {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            transition: all 0.3s ease;
+            padding: 20px;
+        }
+        
+        .sidebar.collapsed ~ .content-wrapper {
+            margin-left: var(--sidebar-collapsed-width);
+        }
+        
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+        }
+        
+        .sidebar-toggle:hover {
+            background-color: rgba(0, 93, 153, 0.1);
+        }
+        
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            color: var(--text-color);
+            text-decoration: none;
+            border-radius: 0.375rem;
+            margin-bottom: 0.25rem;
+            position: relative;
+        }
+        
+        .nav-link:hover {
+            background-color: rgba(0, 93, 153, 0.1);
+            color: var(--primary-color);
+        }
+        
+        .nav-icon {
+            margin-right: 0.75rem;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .sidebar.collapsed .nav-icon {
+            margin-right: 0;
+        }
+        
+        .sidebar.collapsed .nav-text {
+            display: none;
+        }
+        
+        /* Collapsible Submenu Styles */
+        .sidebar .nav-item.dropdown.collapsible-submenu {
+            position: relative;
+            overflow: visible;
+        }
+        
+        .sidebar .dropdown-menu.sidebar-dropdown.submenu-content {
+            position: static;
+            top: auto;
+            left: auto;
+            right: auto;
+            z-index: auto;
+            display: none;
+            width: 100%;
+            padding: 0;
+            margin: 0;
+            background-color: transparent;
+            border: none;
+            border-radius: 0;
+            box-shadow: none;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+            max-height: 0;
+            overflow: hidden;
+        }
+        
+        .sidebar .nav-item.dropdown.collapsible-submenu.show .dropdown-menu.sidebar-dropdown.submenu-content {
+            display: block;
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+            pointer-events: auto;
+            max-height: 500px;
+            overflow: visible;
+        }
+        
+        /* Submenu item styling */
+        .sidebar .submenu-content .dropdown-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem 0.5rem 2.5rem;
+            color: #6c757d;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+            margin: 0.125rem 0;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .sidebar .submenu-content .dropdown-item:hover {
+            background-color: rgba(0, 93, 153, 0.08);
+            color: #005d99;
+            border-left-color: #005d99;
+            transform: translateX(4px);
+        }
+        
+        .sidebar .submenu-content .dropdown-item i {
+            margin-right: 0.75rem;
+            width: 16px;
+            text-align: center;
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+        
+        .sidebar .submenu-content .dropdown-item:hover i {
+            color: #005d99;
+        }
+        
+        .sidebar .submenu-content .dropdown-divider {
+            margin: 0.5rem 1rem;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Dropdown toggle arrow animation */
+        .sidebar .nav-link.dropdown-toggle::after {
+            display: inline-block;
+            margin-left: auto;
+            margin-right: 0;
+            vertical-align: middle;
+            content: "⌄";
+            font-size: 12px;
+            font-weight: normal;
+            color: #6c757d;
+            transition: transform 0.3s ease;
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .sidebar .nav-item.dropdown.collapsible-submenu.show .nav-link.dropdown-toggle::after {
+            transform: translateY(-50%) rotate(180deg);
+        }
+        
+        .sidebar .nav-link.dropdown-toggle:hover::after {
+            color: #005d99;
+        }
+        
+        /* Collapsed sidebar floating submenu */
+        .sidebar.collapsed .submenu-content {
+            position: fixed !important;
+            top: auto !important;
+            left: auto !important;
+            right: auto !important;
+            width: 200px !important;
+            background-color: white !important;
+            border: 1px solid rgba(0, 0, 0, 0.15) !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+            z-index: 9999 !important;
+            max-height: none !important;
+            overflow: visible !important;
+        }
+        
+        /* Smooth transitions for all states */
+        .sidebar .nav-item.dropdown.collapsible-submenu {
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar .nav-item.dropdown.collapsible-submenu .nav-link {
+            transition: all 0.3s ease;
+        }
+        
+        /* Active state styling */
+        .sidebar .nav-item.dropdown.collapsible-submenu.show .nav-link {
+            background-color: rgba(0, 93, 153, 0.1);
+            color: #005d99;
+            border-left-color: #005d99;
+        }
+        
+        .test-controls {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .feature-list {
+            background: #d4edda;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .feature-list h4 {
+            color: #155724;
+            margin-bottom: 0.5rem;
+        }
+        
+        .feature-list ul {
+            margin: 0;
+            padding-left: 1.5rem;
+        }
+        
+        .feature-list li {
+            margin-bottom: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-wrapper">
+        <div id="sidebar" class="sidebar">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <span class="nav-text">Everlast ERP</span>
+                <button id="sidebar-toggle" class="sidebar-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            
+            <nav class="nav-menu">
+                <a href="#" class="nav-link">
+                    <i class="fas fa-home nav-icon"></i>
+                    <span class="nav-text">Dashboard</span>
+                </a>
+                <a href="#" class="nav-link">
+                    <i class="fas fa-calendar nav-icon"></i>
+                    <span class="nav-text">Calendar</span>
+                </a>
+                
+                <!-- Leave Management Dropdown -->
+                <li class="nav-item dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" role="button">
+                        <i class="fas fa-calendar-check nav-icon"></i>
+                        <span class="nav-text">Leave Management</span>
+                    </a>
+                    <ul class="dropdown-menu sidebar-dropdown">
+                        <li><a class="dropdown-item" href="#">
+                            <i class="fas fa-list nav-icon"></i>
+                            <span class="nav-text">All Leave Requests</span>
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#">
+                            <i class="fas fa-tags nav-icon"></i>
+                            <span class="nav-text">Leave Types</span>
+                        </a></li>
+                        <li><a class="dropdown-item" href="#">
+                            <i class="fas fa-calendar-check nav-icon"></i>
+                            <span class="nav-text">Paid Holidays</span>
+                        </a></li>
+                        <li><a class="dropdown-item" href="#">
+                            <i class="fas fa-balance-scale nav-icon"></i>
+                            <span class="nav-text">Leave Balances</span>
+                        </a></li>
+                    </ul>
+                </li>
+                
+                <a href="#" class="nav-link">
+                    <i class="fas fa-users nav-icon"></i>
+                    <span class="nav-text">Employees</span>
+                </a>
+                <a href="#" class="nav-link">
+                    <i class="fas fa-clock nav-icon"></i>
+                    <span class="nav-text">Attendance</span>
+                </a>
+            </nav>
+        </div>
+        
+        <div id="content-wrapper" class="content-wrapper">
+            <h1>Collapsible Submenu Test</h1>
+            
+            <div class="feature-list">
+                <h4>✅ Features Implemented:</h4>
+                <ul>
+                    <li><strong>Smooth Animation:</strong> Submenu slides down/up with smooth transitions</li>
+                    <li><strong>Layout Push:</strong> Items below the submenu move down when opened</li>
+                    <li><strong>Professional Design:</strong> Matches existing sidebar styling and colors</li>
+                    <li><strong>Collapsed Sidebar:</strong> Shows floating popup when sidebar is collapsed</li>
+                    <li><strong>Hover Support:</strong> Hover to show submenu in collapsed mode</li>
+                    <li><strong>Arrow Animation:</strong> Toggle arrow rotates when submenu opens/closes</li>
+                    <li><strong>Clean JavaScript:</strong> No jQuery, pure vanilla JS with reusable code</li>
+                </ul>
+            </div>
+            
+            <div class="test-controls">
+                <h3>Test Controls</h3>
+                <p>Test the collapsible submenu functionality:</p>
+                
+                <div class="mb-3">
+                    <button id="test-submenu" class="btn btn-primary me-2">Test Submenu Toggle</button>
+                    <button id="toggle-sidebar" class="btn btn-secondary me-2">Toggle Sidebar</button>
+                    <button id="test-auto" class="btn btn-info">Auto Test Sequence</button>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <h4>Test Instructions:</h4>
+                <ol>
+                    <li><strong>Click "Leave Management":</strong> The submenu should slide down smoothly</li>
+                    <li><strong>Click Again:</strong> The submenu should slide up and hide</li>
+                    <li><strong>Toggle Sidebar:</strong> Test behavior in collapsed mode</li>
+                    <li><strong>Hover in Collapsed Mode:</strong> Submenu should appear as floating popup</li>
+                    <li><strong>Click Outside:</strong> Submenu should close when clicking elsewhere</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Simplified CollapsibleSubmenu implementation for testing
+        const CollapsibleSubmenu = {
+            init() {
+                this.initializeSubmenus();
+                this.setupSidebarCollapseHandler();
+                this.setupOutsideClickHandler();
+            },
+            
+            initializeSubmenus() {
+                const submenus = document.querySelectorAll('.sidebar .nav-item.dropdown');
+                console.log('Initializing collapsible submenus:', submenus.length);
+                
+                submenus.forEach((submenu, index) => {
+                    this.initializeSubmenu(submenu, index);
+                });
+            },
+            
+            initializeSubmenu(submenu, index) {
+                const toggle = submenu.querySelector('.nav-link.dropdown-toggle');
+                const menu = submenu.querySelector('.dropdown-menu');
+                
+                if (!toggle || !menu) {
+                    console.warn(`Submenu ${index} missing toggle or menu`);
+                    return;
+                }
+                
+                submenu.classList.add('collapsible-submenu');
+                menu.classList.add('submenu-content');
+                
+                this.setSubmenuState(submenu, false);
+                
+                toggle.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.toggleSubmenu(submenu);
+                });
+                
+                this.setupHoverHandler(submenu);
+                
+                console.log(`Submenu ${index} initialized:`, toggle.textContent.trim());
+            },
+            
+            toggleSubmenu(submenu) {
+                const isOpen = submenu.classList.contains('show');
+                const sidebar = document.getElementById('sidebar');
+                const isCollapsed = sidebar && sidebar.classList.contains('collapsed');
+                
+                this.closeAllSubmenus();
+                
+                if (!isOpen) {
+                    this.openSubmenu(submenu);
+                } else {
+                    this.closeSubmenu(submenu);
+                }
+            },
+            
+            openSubmenu(submenu) {
+                const menu = submenu.querySelector('.submenu-content');
+                const sidebar = document.getElementById('sidebar');
+                const isCollapsed = sidebar && sidebar.classList.contains('collapsed');
+                
+                submenu.classList.add('show');
+                menu.classList.add('show');
+                
+                if (isCollapsed) {
+                    this.showFloatingSubmenu(submenu);
+                } else {
+                    this.showInlineSubmenu(submenu);
+                }
+                
+                console.log('Submenu opened:', submenu.querySelector('.nav-text').textContent);
+            },
+            
+            closeSubmenu(submenu) {
+                const menu = submenu.querySelector('.submenu-content');
+                
+                submenu.classList.remove('show');
+                menu.classList.remove('show');
+                
+                this.resetSubmenuStyles(submenu);
+                
+                console.log('Submenu closed:', submenu.querySelector('.nav-text').textContent);
+            },
+            
+            showInlineSubmenu(submenu) {
+                const menu = submenu.querySelector('.submenu-content');
+                
+                menu.style.display = 'block';
+                menu.style.position = 'static';
+                menu.style.top = 'auto';
+                menu.style.left = 'auto';
+                menu.style.right = 'auto';
+                menu.style.width = '100%';
+                menu.style.maxHeight = '0';
+                menu.style.overflow = 'hidden';
+                menu.style.opacity = '0';
+                menu.style.transform = 'translateY(-10px)';
+                menu.style.transition = 'all 0.3s ease';
+                menu.style.background = 'rgba(0, 0, 0, 0.02)';
+                menu.style.borderLeft = '3px solid #005d99';
+                menu.style.borderRadius = '0';
+                menu.style.boxShadow = 'none';
+                menu.style.padding = '0';
+                menu.style.margin = '0';
+                menu.style.zIndex = 'auto';
+                
+                requestAnimationFrame(() => {
+                    menu.style.maxHeight = menu.scrollHeight + 'px';
+                    menu.style.opacity = '1';
+                    menu.style.transform = 'translateY(0)';
+                    menu.style.padding = '0.5rem 0';
+                });
+            },
+            
+            showFloatingSubmenu(submenu) {
+                const menu = submenu.querySelector('.submenu-content');
+                const toggle = submenu.querySelector('.nav-link.dropdown-toggle');
+                
+                const rect = toggle.getBoundingClientRect();
+                const sidebar = document.getElementById('sidebar');
+                const sidebarRect = sidebar.getBoundingClientRect();
+                
+                menu.style.display = 'block';
+                menu.style.position = 'fixed';
+                menu.style.top = rect.top + 'px';
+                menu.style.left = (sidebarRect.right + 10) + 'px';
+                menu.style.right = 'auto';
+                menu.style.width = '200px';
+                menu.style.maxHeight = 'none';
+                menu.style.overflow = 'visible';
+                menu.style.opacity = '1';
+                menu.style.transform = 'translateY(0)';
+                menu.style.transition = 'all 0.2s ease';
+                menu.style.background = 'white';
+                menu.style.border = '1px solid rgba(0, 0, 0, 0.15)';
+                menu.style.borderRadius = '8px';
+                menu.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.15)';
+                menu.style.padding = '0.5rem 0';
+                menu.style.margin = '0';
+                menu.style.zIndex = '9999';
+            },
+            
+            resetSubmenuStyles(submenu) {
+                const menu = submenu.querySelector('.submenu-content');
+                
+                menu.style.maxHeight = '0';
+                menu.style.opacity = '0';
+                menu.style.transform = 'translateY(-10px)';
+                
+                setTimeout(() => {
+                    if (!submenu.classList.contains('show')) {
+                        menu.style.display = 'none';
+                        menu.style.position = '';
+                        menu.style.top = '';
+                        menu.style.left = '';
+                        menu.style.right = '';
+                        menu.style.width = '';
+                        menu.style.maxHeight = '';
+                        menu.style.overflow = '';
+                        menu.style.background = '';
+                        menu.style.border = '';
+                        menu.style.borderRadius = '';
+                        menu.style.boxShadow = '';
+                        menu.style.padding = '';
+                        menu.style.zIndex = '';
+                    }
+                }, 300);
+            },
+            
+            setSubmenuState(submenu, isOpen) {
+                if (isOpen) {
+                    submenu.classList.add('show');
+                } else {
+                    submenu.classList.remove('show');
+                }
+            },
+            
+            closeAllSubmenus() {
+                document.querySelectorAll('.sidebar .nav-item.dropdown.show').forEach(submenu => {
+                    this.closeSubmenu(submenu);
+                });
+            },
+            
+            setupHoverHandler(submenu) {
+                const toggle = submenu.querySelector('.nav-link.dropdown-toggle');
+                const menu = submenu.querySelector('.submenu-content');
+                
+                toggle.addEventListener('mouseenter', () => {
+                    const sidebar = document.getElementById('sidebar');
+                    const isCollapsed = sidebar && sidebar.classList.contains('collapsed');
+                    
+                    if (isCollapsed && !submenu.classList.contains('show')) {
+                        this.openSubmenu(submenu);
+                    }
+                });
+                
+                submenu.addEventListener('mouseleave', () => {
+                    const sidebar = document.getElementById('sidebar');
+                    const isCollapsed = sidebar && sidebar.classList.contains('collapsed');
+                    
+                    if (isCollapsed && submenu.classList.contains('show')) {
+                        this.closeSubmenu(submenu);
+                    }
+                });
+            },
+            
+            setupSidebarCollapseHandler() {
+                const sidebar = document.getElementById('sidebar');
+                if (!sidebar) return;
+                
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                            const isCollapsed = sidebar.classList.contains('collapsed');
+                            
+                            if (isCollapsed) {
+                                this.closeAllSubmenus();
+                            }
+                        }
+                    });
+                });
+                
+                observer.observe(sidebar, { attributes: true });
+            },
+            
+            setupOutsideClickHandler() {
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.sidebar .nav-item.dropdown')) {
+                        this.closeAllSubmenus();
+                    }
+                });
+            }
+        };
+
+        // Initialize
+        CollapsibleSubmenu.init();
+
+        // Sidebar toggle
+        document.getElementById('sidebar-toggle').addEventListener('click', function() {
+            const sidebar = document.getElementById('sidebar');
+            const contentWrapper = document.getElementById('content-wrapper');
+            const willCollapse = !sidebar.classList.contains('collapsed');
+            
+            sidebar.classList.toggle('collapsed', willCollapse);
+            contentWrapper.style.marginLeft = willCollapse ? '70px' : '265px';
+        });
+
+        // Test buttons
+        document.getElementById('test-submenu').addEventListener('click', function() {
+            const submenu = document.querySelector('.sidebar .nav-item.dropdown.collapsible-submenu');
+            if (submenu) {
+                CollapsibleSubmenu.toggleSubmenu(submenu);
+            }
+        });
+
+        document.getElementById('toggle-sidebar').addEventListener('click', function() {
+            const sidebar = document.getElementById('sidebar');
+            const contentWrapper = document.getElementById('content-wrapper');
+            const willCollapse = !sidebar.classList.contains('collapsed');
+            
+            sidebar.classList.toggle('collapsed', willCollapse);
+            contentWrapper.style.marginLeft = willCollapse ? '70px' : '265px';
+        });
+
+        document.getElementById('test-auto').addEventListener('click', function() {
+            console.log('🧪 Starting automatic test sequence...');
+            
+            const submenu = document.querySelector('.sidebar .nav-item.dropdown.collapsible-submenu');
+            if (!submenu) return;
+            
+            // Test 1: Open submenu
+            console.log('Test 1: Opening submenu...');
+            CollapsibleSubmenu.toggleSubmenu(submenu);
+            
+            setTimeout(() => {
+                // Test 2: Close submenu
+                console.log('Test 2: Closing submenu...');
+                CollapsibleSubmenu.toggleSubmenu(submenu);
+                
+                setTimeout(() => {
+                    // Test 3: Toggle sidebar and test collapsed mode
+                    console.log('Test 3: Testing collapsed sidebar mode...');
+                    const sidebar = document.getElementById('sidebar');
+                    const contentWrapper = document.getElementById('content-wrapper');
+                    
+                    sidebar.classList.add('collapsed');
+                    contentWrapper.style.marginLeft = '70px';
+                    
+                    setTimeout(() => {
+                        CollapsibleSubmenu.toggleSubmenu(submenu);
+                        
+                        setTimeout(() => {
+                            // Restore sidebar
+                            sidebar.classList.remove('collapsed');
+                            contentWrapper.style.marginLeft = '265px';
+                            console.log('✅ Auto test completed!');
+                        }, 2000);
+                    }, 1000);
+                }, 2000);
+            }, 2000);
+        });
+
+        console.log('🚀 Collapsible Submenu Test Page Loaded');
+        console.log('Click "Leave Management" to test the submenu functionality');
+    </script>
+</body>
+</html>

@@ -1,13 +1,330 @@
 {% extends "layout.html" %}
 {% from "macros/forms.html" import render_field, render_form_errors %}
 
-
-
 {% block content %}
+<style>
+.action-btn {
+    transition: all 0.2s ease;
+    border-radius: 0 !important;
+    margin: 0;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid transparent;
+    min-width: 40px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.12);
+    z-index: 10;
+}
+
+.action-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.btn-outline-primary.action-btn {
+    border-color: #0d6efd;
+    color: #0d6efd;
+}
+
+.btn-outline-primary.action-btn:hover {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: white;
+}
+
+.btn-outline-warning.action-btn {
+    border-color: #ffc107;
+    color: #ffc107;
+}
+
+.btn-outline-warning.action-btn:hover {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #000;
+}
+
+.btn-outline-danger.action-btn {
+    border-color: #dc3545;
+    color: #dc3545;
+}
+
+.btn-outline-danger.action-btn:hover {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: white;
+}
+
+.btn-outline-info.action-btn {
+    border-color: #17a2b8;
+    color: #17a2b8;
+}
+
+.btn-outline-info.action-btn:hover {
+    background-color: #17a2b8;
+    border-color: #17a2b8;
+    color: white;
+}
+
+.btn-group {
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid #dee2e6;
+}
+
+.btn-group .action-btn:first-child {
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+    border-right: none;
+}
+
+.btn-group .action-btn:not(:first-child):not(:last-child) {
+    border-left: none;
+    border-right: none;
+}
+
+.btn-group .action-btn:last-child {
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+    border-left: none;
+}
+
+.action-btn i {
+    transition: transform 0.15s ease;
+    font-size: 14px;
+}
+
+.action-btn:hover i {
+    transform: scale(1.05);
+}
+
+.action-btn:focus {
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+    outline: none;
+}
+
+/* Enhanced Form Styling */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-control-lg {
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+    padding: 0.75rem 1rem;
+}
+
+.form-control-lg:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+    transform: translateY(-1px);
+}
+
+.form-label {
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+}
+
+.form-text {
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+}
+
+.form-switch-lg .form-check-input {
+    width: 3rem;
+    height: 1.5rem;
+    border-radius: 1rem;
+}
+
+.form-switch-lg .form-check-input:checked {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+.card {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.card-header {
+    border-bottom: none;
+    padding: 1.5rem;
+}
+
+.btn-lg {
+    border-radius: 8px;
+    font-weight: 600;
+    padding: 0.75rem 2rem;
+    transition: all 0.3s ease;
+}
+
+.btn-lg:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+}
+
+/* Status toggle animation */
+.status-text {
+    transition: color 0.3s ease;
+}
+
+.form-check-input:checked + .form-check-label .status-text {
+    color: #198754;
+}
+
+.form-check-input:not(:checked) + .form-check-label .status-text {
+    color: #6c757d;
+}
+
+/* Modal Enhancements */
+.modal-lg {
+    max-width: 600px;
+}
+
+.modal-content {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.modal-header {
+    border-bottom: none;
+    padding: 1.5rem;
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+.modal-footer {
+    border-top: none;
+    padding: 1.5rem;
+}
+
+/* Edit modal specific styles */
+.edit-status-text {
+    transition: color 0.3s ease;
+}
+
+.form-check-input:checked + .form-check-label .edit-status-text {
+    color: #198754;
+}
+
+.form-check-input:not(:checked) + .form-check-label .edit-status-text {
+    color: #6c757d;
+}
+
+/* Button enhancements */
+.btn-outline-secondary {
+    border-color: #6c757d;
+    color: #6c757d;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: white;
+}
+
+/* Table Enhancements */
+.table-hover tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.05);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.device-row {
+    transition: all 0.2s ease;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.device-row:last-child {
+    border-bottom: none;
+}
+
+.device-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.table thead th {
+    font-size: 0.9rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.table tbody td {
+    vertical-align: middle;
+}
+
+/* Badge enhancements */
+.bg-success-subtle {
+    background-color: rgba(25, 135, 84, 0.1) !important;
+}
+
+.bg-danger-subtle {
+    background-color: rgba(220, 53, 69, 0.1) !important;
+}
+
+.bg-secondary-subtle {
+    background-color: rgba(108, 117, 125, 0.1) !important;
+}
+
+.border-success-subtle {
+    border-color: rgba(25, 135, 84, 0.2) !important;
+}
+
+.border-danger-subtle {
+    border-color: rgba(220, 53, 69, 0.2) !important;
+}
+
+.border-secondary-subtle {
+    border-color: rgba(108, 117, 125, 0.2) !important;
+}
+
+/* Empty state styling */
+.empty-state {
+    padding: 3rem 2rem;
+}
+
+.empty-state i {
+    opacity: 0.3;
+}
+
+/* Card header enhancements */
+.card-header {
+    border-bottom: 1px solid #e9ecef;
+}
+
+/* Code styling for IP addresses */
+code {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.85rem;
+    padding: 0.25rem 0.5rem;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+}
+</style>
+
     <div class="container-fluid">
         <div class="row mb-4">
             <div class="col-sm-6">
-                <h1 class="page-title">Device Settings</h1>
+                <h1 class="page-title">Device Configuration</h1>
             </div>
             <div class="col-sm-6">
                 <div class="float-sm-end">
@@ -17,143 +334,406 @@
                 </div>
             </div>
         </div>
-        {% if not current_user.is_admin() %}
+        {% if current_user.role != 'product_owner' %}
         <div class="alert alert-info bg-light-info mb-4">
             <div class="d-flex align-items-center">
                 <i class="fas fa-info-circle me-2"></i>
                 <div>
                     <h4 class="alert-heading mb-1">View-Only Mode</h4>
-                    <p class="mb-0">You are viewing the device settings in read-only mode. Contact an administrator for any changes.</p>
+                    <p class="mb-0">You are viewing the device settings in read-only mode. Only Product Owner can modify these settings.</p>
                 </div>
             </div>
         </div>
         {% endif %}
 
-        <div class="row g-5">
-            <div class="col-xl-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">Device Configuration</h3>
-                    </div>
-                    <div class="card-body">
-                        {{ render_form_errors(form) }}
-                        <form method="POST" action="{{ url_for('attendance.device_settings') }}" class="form">
-                            {{ form.csrf_token }}
-
-                            <div class="mb-4">
-                                <label class="form-label fw-bold">Device IP</label>
-                                {% if current_user.is_admin() %}
-                                {{ render_field(form.device_ip, attrs={"placeholder": "192.168.11.2"}) }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-solid" value="{{ device.device_ip }}" readonly>
-                                {% endif %}
-                                <div class="form-text text-muted">Current IP: {{ device.device_ip }}</div>
+        <!-- Fetch All Devices Data Section -->
+        {% if current_user.role in ['admin', 'product_owner', 'director'] %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm border-0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <div class="card-body p-4 text-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h4 class="mb-2">
+                                    <i class="fas fa-download me-2"></i>
+                                    Fetch Data from All Devices
+                                </h4>
+                                <p class="mb-0 opacity-90">
+                                    Comprehensive data retrieval from all active devices including attendance records, user data, and device information.
+                                </p>
                             </div>
-
-                            <div class="mb-4">
-                                <label class="form-label fw-bold">Device Port</label>
-                                {% if current_user.is_admin() %}
-                                {{ render_field(form.device_port, attrs={"placeholder": "8080"}) }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-solid" value="{{ device.device_port }}" readonly>
-                                {% endif %}
-                                <div class="form-text text-muted">Current Port: {{ device.device_port }}</div>
+                            <div>
+                                <button type="button" class="btn btn-light btn-lg px-4" onclick="fetchAllDevicesData()" id="fetchAllBtn">
+                                    <i class="fas fa-sync-alt me-2"></i>
+                                    Fetch All Data
+                                </button>
                             </div>
-
-                            <div class="mb-4">
-                                <label class="form-label fw-bold">Device Name</label>
-                                {% if current_user.is_admin() %}
-                                {{ render_field(form.device_name, attrs={"placeholder": "Main Office Device"}) }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-solid" value="{{ device.device_name or 'Default Device' }}" readonly>
-                                {% endif %}
-                            </div>
-
-                            {% if current_user.is_admin() %}
-                            <div class="d-flex justify-content-end">
-                                {{ form.submit(class="btn btn-primary") }}
-                            </div>
-                            {% endif %}
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-xl-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">Device Status</h3>
-                    </div>
-                    <div class="card-body">
-                        {% if device_status.connected %}
-                            <div class="alert alert-success mb-4">
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-check-circle me-2"></i>
-                                    <strong>Device Connected</strong>
-                                </div>
-                            </div>
-
-                            {% if device_status.device_info %}
-                                <h6 class="fw-bold mb-3">Device Information</h6>
-                                <table class="table table-sm device-info-table">
-                                    <tbody>
-                                        <tr>
-                                            <th>Firmware Version</th>
-                                            <td>{{ device_status.device_info.firmware_version }}</td>
-                                        </tr>
-                                        <tr>
-                                            <th>Serial Number</th>
-                                            <td>{{ device_status.device_info.serial_number }}</td>
-                                        </tr>
-                                        <tr>
-                                            <th>Platform</th>
-                                            <td>{{ device_status.device_info.platform }}</td>
-                                        </tr>
-                                        <tr>
-                                            <th>Device Name</th>
-                                            <td>{{ device_status.device_info.device_name }}</td>
-                                        </tr>
-                                        <tr>
-                                            <th>Registered Users</th>
-                                            <td>{{ device_status.device_info.users }}</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-
-                                {% if device_status.last_sync %}
-                                    <p class="text-muted mb-4">
-                                        <i class="fas fa-sync me-1"></i>
-                                        <small>Last Sync: {{ device_status.last_sync|datetime }}</small>
-                                    </p>
-                                {% endif %}
-                            {% endif %}
-                        {% else %}
-                            <div class="alert alert-danger mb-4">
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-exclamation-circle me-2"></i>
-                                    <div>
-                                        <strong>Device Disconnected</strong>
-                                        {% if device_status.error %}
-                                            <p class="mb-0 mt-2"><small>{{ device_status.error }}</small></p>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                        {% endif %}
-
-                        <div class="d-grid gap-2">
-                            <button type="button" id="testConnectionBtn" class="btn btn-primary" {{ ' disabled' if not current_user.is_admin() }}>
-                                <i class="fas fa-sync me-2"></i> Test Connection
-                            </button>
-                            <button type="button" id="fetchDataBtn" class="btn btn-primary" {{ ' disabled' if not current_user.is_admin() }}>
-                                <i class="fas fa-cloud-download-alt me-2"></i> Fetch Attendance Data
-                            </button>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+        {% endif %}
 
+        <!-- Add New Device Form -->
+        {% if current_user.role == 'product_owner' %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-primary text-white">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-plus-circle me-2"></i>
+                            <h3 class="card-title mb-0">Add New Device</h3>
+                        </div>
+                    </div>
+                    <div class="card-body p-4">
+                        {{ render_form_errors(form) }}
+                        <form method="POST" action="{{ url_for('attendance.add_device') }}" class="form">
+                            {{ form.csrf_token }}
+                            <div class="row g-4">
+                                <div class="col-lg-4 col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label fw-semibold text-dark mb-2">
+                                            <i class="fas fa-network-wired me-1 text-primary"></i>
+                                            Device IP Address
+                                        </label>
+                                        {{ form.device_ip(class="form-control form-control-lg", placeholder="192.168.11.2", required="true", label=False) }}
+                                        <div class="form-text text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Enter the IP address of your biometric device
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-2 col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label fw-semibold text-dark mb-2">
+                                            <i class="fas fa-plug me-1 text-primary"></i>
+                                            Port
+                                        </label>
+                                        {{ form.device_port(class="form-control form-control-lg", placeholder="4370", required="true", label=False) }}
+                                        <div class="form-text text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Default: 4370
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-4 col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label fw-semibold text-dark mb-2">
+                                            <i class="fas fa-tag me-1 text-primary"></i>
+                                            Device Name
+                                        </label>
+                                        {{ form.device_name(class="form-control form-control-lg", placeholder="Main Office Device", label=False) }}
+                                        <div class="form-text text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Give your device a friendly name
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-2 col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label fw-semibold text-dark mb-2">
+                                            <i class="fas fa-toggle-on me-1 text-primary"></i>
+                                            Status
+                                        </label>
+                                        <div class="d-flex align-items-center mt-3">
+                                            <div class="form-check form-switch form-switch-lg">
+                                                {{ form.is_active(class="form-check-input", id="is_active") }}
+                                                <label class="form-check-label fw-semibold ms-2" for="is_active">
+                                                    <span class="status-text">Active</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="form-text text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Enable to start syncing
+                                        </div>
+                            </div>
+                            </div>
+                            </div>
+                            <div class="row mt-4">
+                                <div class="col-12">
+                            <div class="d-flex justify-content-end">
+                                        <button type="submit" class="btn btn-primary btn-lg px-4">
+                                            <i class="fas fa-save me-2"></i>
+                                            Add Device
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+                    </div>
+        {% endif %}
+
+        <!-- Devices List -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-light border-0">
+                        <div class="d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center">
+                                <i class="fas fa-list-alt me-2 text-primary"></i>
+                                <h3 class="card-title mb-0">Registered Devices</h3>
+                                <span class="badge bg-primary ms-2">{{ devices|length }} device{{ 's' if devices|length != 1 else '' }}</span>
+                                </div>
+                            <div class="d-flex align-items-center text-muted justify-content-end">
+                                <i class="fas fa-info-circle me-1"></i>
+                                <span>Manage your biometric devices</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if devices %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="border-0 fw-semibold text-dark py-3 px-4">
+                                            <i class="fas fa-tag me-2 text-primary"></i>Device Name
+                                        </th>
+                                        <th class="border-0 fw-semibold text-dark py-3 px-4">
+                                            <i class="fas fa-network-wired me-2 text-primary"></i>IP Address
+                                        </th>
+                                        <th class="border-0 fw-semibold text-dark py-3 px-4">
+                                            <i class="fas fa-plug me-2 text-primary"></i>Port
+                                        </th>
+                                        <th class="border-0 fw-semibold text-dark py-3 px-4">
+                                            <i class="fas fa-toggle-on me-2 text-primary"></i>Status
+                                        </th>
+                                        <th class="border-0 fw-semibold text-dark py-3 px-4">
+                                            <i class="fas fa-wifi me-2 text-primary"></i>Connection
+                                        </th>
+                                        <th class="border-0 fw-semibold text-dark py-3 px-4 text-center">
+                                            <i class="fas fa-cogs me-2 text-primary"></i>Actions
+                                        </th>
+                                        </tr>
+                                </thead>
+                                <tbody>
+                                    {% for device in devices %}
+                                    <tr class="device-row">
+                                        <td class="py-3 px-4">
+                                            <div class="d-flex align-items-center">
+                                                <div class="device-icon me-3">
+                                                    <i class="fas fa-fingerprint text-primary"></i>
+                                                </div>
+                                                <div>
+                                                    <strong class="text-dark">{{ device.get_display_name() }}</strong>
+                                                    {% if device.device_name %}
+                                                        <br><small class="text-muted">ID: {{ device.id }}</small>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-4">
+                                            <code class="bg-light px-2 py-1 rounded">{{ device.device_ip }}</code>
+                                        </td>
+                                        <td class="py-3 px-4">
+                                            <span class="badge bg-light text-dark border">{{ device.device_port }}</span>
+                                        </td>
+                                        <td class="py-3 px-4">
+                                            {% if device.is_active %}
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                    <i class="fas fa-check-circle me-1"></i>Active
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+                                                    <i class="fas fa-pause-circle me-1"></i>Inactive
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="py-3 px-4">
+                                            {% set status = device_statuses.get(device.id, {}) %}
+                                            {% if status.connected %}
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                    <i class="fas fa-check-circle me-1"></i>Connected
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                                    <i class="fas fa-times-circle me-1"></i>Disconnected
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="py-3 px-4 text-center">
+                                            {% if current_user.role == 'product_owner' %}
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-sm btn-outline-primary action-btn" 
+                                                        onclick="testDeviceConnection({{ device.id }}, '{{ device.device_ip }}', {{ device.device_port }})"
+                                                        title="Test Connection">
+                                                    <i class="fas fa-wifi"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-info action-btn" 
+                                                        onclick="viewDeviceUsers({{ device.id }}, '{{ device.get_display_name() }}')"
+                                                        title="View Users">
+                                                    <i class="fas fa-users"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-warning action-btn" 
+                                                        onclick="editDevice({{ device.id }}, '{{ device.device_name or '' }}', '{{ device.device_ip }}', {{ device.device_port }}, {{ device.is_active|lower }})"
+                                                        title="Edit Device">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger action-btn" 
+                                                        onclick="deleteDevice({{ device.id }}, '{{ device.get_display_name() }}')"
+                                                        title="Delete Device">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                            {% else %}
+                                            <span class="text-muted">
+                                                <i class="fas fa-lock me-1"></i>View Only
+                                            </span>
+                                            {% endif %}
+                                        </td>
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <div class="empty-state">
+                                <i class="fas fa-fingerprint fa-4x text-muted mb-4"></i>
+                                <h4 class="text-muted mb-3">No Devices Registered</h4>
+                                <p class="text-muted mb-4">Add your first biometric device to get started with attendance tracking.</p>
+                                {% if current_user.role == 'product_owner' %}
+                                <button class="btn btn-primary" onclick="document.querySelector('html').scrollIntoView({behavior: 'smooth'})">
+                                    <i class="fas fa-plus me-2"></i>Add Your First Device
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                            {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Edit Device Modal -->
+    <div class="modal fade" id="editDeviceModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white">
+                                <div class="d-flex align-items-center">
+                        <i class="fas fa-edit me-2"></i>
+                        <h5 class="modal-title mb-0">Edit Device</h5>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" id="editDeviceForm">
+                    {{ form.csrf_token }}
+                    <div class="modal-body p-4">
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label fw-semibold text-dark mb-2">
+                                        <i class="fas fa-tag me-1 text-primary"></i>
+                                        Device Name
+                                    </label>
+                                    <input type="text" class="form-control form-control-lg" name="device_name" id="edit_device_name" placeholder="Enter device name">
+                                    <div class="form-text text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Give your device a friendly name
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label fw-semibold text-dark mb-2">
+                                        <i class="fas fa-network-wired me-1 text-primary"></i>
+                                        Device IP Address
+                                    </label>
+                                    <input type="text" class="form-control form-control-lg" name="device_ip" id="edit_device_ip" placeholder="192.168.11.2">
+                                    <div class="form-text text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Enter the IP address of your device
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label fw-semibold text-dark mb-2">
+                                        <i class="fas fa-plug me-1 text-primary"></i>
+                                        Port
+                                    </label>
+                                    <input type="number" class="form-control form-control-lg" name="device_port" id="edit_device_port" placeholder="4370">
+                                    <div class="form-text text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Default: 4370
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label fw-semibold text-dark mb-2">
+                                        <i class="fas fa-toggle-on me-1 text-primary"></i>
+                                        Status
+                                    </label>
+                                    <div class="d-flex align-items-center mt-3">
+                                        <div class="form-check form-switch form-switch-lg">
+                                            <input class="form-check-input" type="checkbox" name="is_active" id="edit_is_active">
+                                            <label class="form-check-label fw-semibold ms-2" for="edit_is_active">
+                                                <span class="edit-status-text">Active</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="form-text text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Enable to start syncing
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light border-0 p-4">
+                        <div class="d-flex justify-content-end w-100 gap-3">
+                            <button type="button" class="btn btn-outline-secondary btn-lg px-4" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-2"></i>
+                                Cancel
+                            </button>
+                            <button type="submit" class="btn btn-primary btn-lg px-4">
+                                <i class="fas fa-save me-2"></i>
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Device Users Modal -->
+    <div class="modal fade" id="deviceUsersModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-info text-white">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-users me-2"></i>
+                        <h5 class="modal-title mb-0">Device Users</h5>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div id="deviceUsersContent">
+                        <div class="text-center py-4">
+                            <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                            <p class="text-muted mt-2">Loading device users...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0 p-4">
+                    <div class="d-flex justify-content-end w-100">
+                        <button type="button" class="btn btn-secondary btn-lg px-4" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-2"></i>
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 {% endblock %}
 
@@ -166,30 +746,104 @@ document.addEventListener('DOMContentLoaded', function() {
         return new bootstrap.Tooltip(tooltipTriggerEl)
     });
 
-    // Common function to handle button state and spinner
-    function handleButtonState(button, isLoading, icon, text) {
-        button.disabled = isLoading;
-        if (isLoading) {
-            button.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i> ${text}...`;
-        } else {
-            button.innerHTML = `<i class="fas ${icon} me-2"></i> ${text}`;
+    // Enhanced toggle switch functionality for Add Device form
+    const statusToggle = document.getElementById('is_active');
+    const statusText = document.querySelector('.status-text');
+    
+    if (statusToggle && statusText) {
+        // Update status text on toggle
+        function updateStatusText() {
+            if (statusToggle.checked) {
+                statusText.textContent = 'Active';
+                statusText.style.color = '#198754';
+            } else {
+                statusText.textContent = 'Inactive';
+                statusText.style.color = '#6c757d';
+            }
         }
+        
+        // Initial update
+        updateStatusText();
+        
+        // Add event listener
+        statusToggle.addEventListener('change', updateStatusText);
     }
 
-{% if current_user.is_admin() %}
-    const testConnectionBtn = document.getElementById('testConnectionBtn');
-    const fetchDataBtn = document.getElementById('fetchDataBtn');
+    // Enhanced toggle switch functionality for Edit Device modal
+    const editStatusToggle = document.getElementById('edit_is_active');
+    const editStatusText = document.querySelector('.edit-status-text');
+    
+    if (editStatusToggle && editStatusText) {
+        // Update status text on toggle
+        function updateEditStatusText() {
+            if (editStatusToggle.checked) {
+                editStatusText.textContent = 'Active';
+                editStatusText.style.color = '#198754';
+        } else {
+                editStatusText.textContent = 'Inactive';
+                editStatusText.style.color = '#6c757d';
+            }
+        }
+        
+        // Add event listener
+        editStatusToggle.addEventListener('change', updateEditStatusText);
+    }
 
-    if (testConnectionBtn) {
-        testConnectionBtn.addEventListener('click', function() {
-            handleButtonState(this, true, 'fa-sync', 'Testing');
+    // Form validation and enhancement
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const deviceIp = document.querySelector('input[name="device_ip"]');
+            const devicePort = document.querySelector('input[name="device_port"]');
+            
+            // Basic validation
+            if (deviceIp && !deviceIp.value.trim()) {
+                e.preventDefault();
+                toastr.error('Please enter a device IP address');
+                deviceIp.focus();
+                return false;
+            }
+            
+            if (devicePort && !devicePort.value.trim()) {
+                e.preventDefault();
+                toastr.error('Please enter a device port');
+                devicePort.focus();
+                return false;
+            }
+            
+            // Show loading state
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Adding Device...';
+            }
+        });
+    }
+});
 
-            fetch('{{ url_for("attendance.test_connection") }}')
+// JavaScript functions available to all users who can view the page
+// Test device connection
+function testDeviceConnection(deviceId, deviceIp, devicePort) {
+    // Check user role for Product Owner access
+    const userRole = '{{ current_user.role }}';
+    if (userRole !== 'product_owner') {
+        toastr.warning('Only Product Owner can test device connections');
+        return;
+    }
+    const button = event.target.closest('button');
+    const originalText = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Testing...';
+
+    fetch(`/attendance/test-connection?device_ip=${deviceIp}&device_port=${devicePort}`, {
+        credentials: 'include'
+    })
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
                         toastr.success(data.message);
-                        setTimeout(() => location.reload(), 1500);
+                        // Auto-reload disabled
+                        console.log('📵 Auto-reload disabled - device action completed');
                     } else {
                         toastr.error(data.message);
                     }
@@ -198,34 +852,539 @@ document.addEventListener('DOMContentLoaded', function() {
                     toastr.error('Failed to test connection');
                 })
                 .finally(() => {
-                    handleButtonState(testConnectionBtn, false, 'fa-sync', 'Test Connection');
-                });
+            button.disabled = false;
+            button.innerHTML = originalText;
         });
+}
+
+
+// Edit device
+function editDevice(deviceId, deviceName, deviceIp, devicePort, isActive) {
+    // Check user role for Product Owner access
+    const userRole = '{{ current_user.role }}';
+    if (userRole !== 'product_owner') {
+        toastr.warning('Only Product Owner can edit devices');
+        return;
     }
+    document.getElementById('edit_device_name').value = deviceName;
+    document.getElementById('edit_device_ip').value = deviceIp;
+    document.getElementById('edit_device_port').value = devicePort;
+    document.getElementById('edit_is_active').checked = isActive;
+    
+    // Update the status text to match the toggle state
+    const editStatusText = document.querySelector('.edit-status-text');
+    if (editStatusText) {
+        if (isActive) {
+            editStatusText.textContent = 'Active';
+            editStatusText.style.color = '#198754';
+                    } else {
+            editStatusText.textContent = 'Inactive';
+            editStatusText.style.color = '#6c757d';
+        }
+    }
+    
+    document.getElementById('editDeviceForm').action = `/attendance/device/${deviceId}/edit`;
+    
+    const modal = new bootstrap.Modal(document.getElementById('editDeviceModal'));
+    modal.show();
+}
 
-    if (fetchDataBtn) {
-        fetchDataBtn.addEventListener('click', function() {
-            handleButtonState(this, true, 'fa-cloud-download-alt', 'Fetching');
-
-            fetch('{{ url_for("attendance.sync_fingerprint") }}')
+// View device users
+function viewDeviceUsers(deviceId, deviceName) {
+    // This function is available to all users for viewing
+    const modalElement = document.getElementById('deviceUsersModal');
+    const modal = new bootstrap.Modal(modalElement);
+    const content = document.getElementById('deviceUsersContent');
+    
+    // Fix accessibility issue by removing aria-hidden when modal is shown
+    modalElement.addEventListener('shown.bs.modal', function() {
+        modalElement.removeAttribute('aria-hidden');
+    });
+    
+    modalElement.addEventListener('hidden.bs.modal', function() {
+        modalElement.setAttribute('aria-hidden', 'true');
+    });
+    
+    // Show loading state
+    content.innerHTML = `
+        <div class="text-center py-4">
+            <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+            <p class="text-muted mt-2">Loading users from ${deviceName}...</p>
+        </div>
+    `;
+    
+    modal.show();
+    
+    // Fetch device users
+    fetch(`/attendance/device/${deviceId}/users`, {
+        credentials: 'include'
+    })
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
-                        toastr.success(data.message);
+            displayDeviceUsers(data);
                     } else {
-                        toastr.error(data.message);
+            content.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error: ${data.message}
+                </div>
+            `;
                     }
                 })
                 .catch(error => {
-                    toastr.error('Failed to fetch attendance data');
-                })
-                .finally(() => {
-                    handleButtonState(fetchDataBtn, false, 'fa-cloud-download-alt', 'Fetch Attendance Data');
-                });
-        });
+        content.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Error loading device users: ${error.message}
+            </div>
+        `;
+    });
+}
+
+// Display device users in the modal
+function displayDeviceUsers(data) {
+    const content = document.getElementById('deviceUsersContent');
+    
+    const deviceInfo = data.device_info;
+    const existingUsers = data.existing_users || [];
+    const newUsers = data.new_users || [];
+    
+    content.innerHTML = `
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <h6 class="card-title mb-3">
+                            <i class="fas fa-info-circle me-2"></i>Device Information
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <strong>Device Name:</strong><br>
+                                <span class="text-muted">${deviceInfo.device_name || 'Unknown'}</span>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Firmware:</strong><br>
+                                <span class="text-muted">${deviceInfo.firmware_version || 'Unknown'}</span>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Serial Number:</strong><br>
+                                <span class="text-muted">${deviceInfo.serial_number || 'Unknown'}</span>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Platform:</strong><br>
+                                <span class="text-muted">${deviceInfo.platform || 'Unknown'}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Existing Users (${existingUsers.length})
+                        </h6>
+                    </div>
+                    <div class="card-body p-0">
+                        ${existingUsers.length > 0 ? `
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Device ID</th>
+                                            <th>Device Name</th>
+                                            <th>System User</th>
+                                            <th>Privilege</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${existingUsers.map(user => `
+                                            <tr>
+                                                <td><code>${user.device_user_id}</code></td>
+                                                <td>${user.device_name || 'N/A'}</td>
+                                                <td>
+                                                    <span class="badge bg-success-subtle text-success">
+                                                        ${user.system_user_name || 'Unknown'}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-info-subtle text-info">
+                                                        ${user.privilege || 'N/A'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : `
+                            <div class="text-center py-4 text-muted">
+                                <i class="fas fa-user-check fa-2x mb-2"></i>
+                                <p>No existing users found</p>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h6 class="mb-0">
+                            <i class="fas fa-user-plus me-2"></i>
+                            New Users (${newUsers.length})
+                        </h6>
+                    </div>
+                    <div class="card-body p-0">
+                        ${newUsers.length > 0 ? `
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Device ID</th>
+                                            <th>Device Name</th>
+                                            <th>Privilege</th>
+                                            <th>Group ID</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${newUsers.map(user => `
+                                            <tr>
+                                                <td><code>${user.device_user_id}</code></td>
+                                                <td>${user.device_name || 'N/A'}</td>
+                                                <td>
+                                                    <span class="badge bg-info-subtle text-info">
+                                                        ${user.privilege || 'N/A'}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-secondary-subtle text-secondary">
+                                                        ${user.group_id || 'N/A'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : `
+                            <div class="text-center py-4 text-muted">
+                                <i class="fas fa-user-plus fa-2x mb-2"></i>
+                                <p>No new users found</p>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Total Users:</strong> ${data.total_users} | 
+                    <strong>Existing:</strong> ${existingUsers.length} | 
+                    <strong>New:</strong> ${newUsers.length}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Delete device
+function deleteDevice(deviceId, deviceName) {
+    // Check user role for Product Owner access
+    const userRole = '{{ current_user.role }}';
+    if (userRole !== 'product_owner') {
+        toastr.warning('Only Product Owner can delete devices');
+        return;
     }
-    {% endif %}
-});
+    if (confirm(`Are you sure you want to delete "${deviceName}"? This action cannot be undone.`)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/attendance/device/${deviceId}/delete`;
+        
+        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+    }
+
+// Fetch data from all devices
+function fetchAllDevicesData() {
+    const button = document.getElementById('fetchAllBtn');
+    const originalText = button.innerHTML;
+    
+    // Disable button and show loading state
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Fetching Data...';
+    
+    // Show initial notification
+    toastr.info('Starting comprehensive data fetch from all devices...', 'Data Fetch Started', {
+        timeOut: 3000
+    });
+    
+    // Make the fetch request
+    fetch('/attendance/fetch-all-devices-data', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        credentials: 'include'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // Show detailed success message
+            const summary = data.summary;
+            toastr.success(
+                `Successfully fetched data from ${summary.successful_data_fetch}/${summary.total_devices} devices. ` +
+                `Attendance: ${summary.total_attendance_records} records, Users: ${summary.total_users_synced} synced.`,
+                'Data Fetch Complete',
+                { timeOut: 8000 }
+            );
+            
+            // Show detailed results modal
+            showFetchResultsModal(data);
+            
+        } else if (data.status === 'partial_success') {
+            // Show partial success with details
+            const summary = data.summary;
+            toastr.warning(
+                `Partial success: ${summary.successful_data_fetch}/${summary.total_devices} devices processed. ` +
+                `Some devices may have connection issues.`,
+                'Partial Success',
+                { timeOut: 8000 }
+            );
+            
+            // Show detailed results modal
+            showFetchResultsModal(data);
+            
+        } else {
+            // Show error message
+            toastr.error(data.message || 'Failed to fetch data from devices', 'Fetch Failed');
+            
+            // Show error details if available
+            if (data.errors && data.errors.length > 0) {
+                console.error('Device fetch errors:', data.errors);
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching device data:', error);
+        toastr.error('Network error occurred while fetching device data', 'Connection Error');
+    })
+    .finally(() => {
+        // Reset button state
+        button.disabled = false;
+        button.innerHTML = originalText;
+        
+        // Optionally reload the page to show updated data
+        setTimeout(() => {
+            if (confirm('Data fetch completed. Would you like to refresh the page to see updated information?')) {
+                // Auto-reload disabled
+                console.log('📵 Auto-reload disabled - fetch completed');
+            }
+        }, 2000);
+    });
+}
+
+// Show detailed fetch results in a modal
+function showFetchResultsModal(data) {
+    // Create modal HTML
+    const modalHtml = `
+        <div class="modal fade" id="fetchResultsModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header bg-info text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-chart-bar me-2"></i>
+                            Device Data Fetch Results
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Summary Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary mb-3">
+                                    <i class="fas fa-chart-pie me-1"></i>
+                                    Summary
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="text-center p-3 bg-light rounded">
+                                            <h4 class="text-primary mb-1">${data.summary.total_devices}</h4>
+                                            <small class="text-muted">Total Devices</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center p-3 bg-light rounded">
+                                            <h4 class="text-success mb-1">${data.summary.successful_connections}</h4>
+                                            <small class="text-muted">Connected</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center p-3 bg-light rounded">
+                                            <h4 class="text-info mb-1">${data.summary.total_attendance_records}</h4>
+                                            <small class="text-muted">Attendance Records</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center p-3 bg-light rounded">
+                                            <h4 class="text-warning mb-1">${data.summary.total_users_synced}</h4>
+                                            <small class="text-muted">Users Synced</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Device Details Section -->
+                        <div class="row">
+                            <div class="col-12">
+                                <h6 class="text-primary mb-3">
+                                    <i class="fas fa-list me-1"></i>
+                                    Device Details
+                                </h6>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>Device</th>
+                                                <th>Status</th>
+                                                <th>Connection</th>
+                                                <th>Attendance</th>
+                                                <th>Users</th>
+                                                <th>Errors</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${data.device_results.map(device => `
+                                                <tr>
+                                                    <td>
+                                                        <strong>${device.device_name}</strong><br>
+                                                        <small class="text-muted">${device.device_ip}:${device.device_port}</small>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge ${getStatusBadgeClass(device.status)}">
+                                                            ${device.status.replace('_', ' ').toUpperCase()}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge ${device.connection_status.connected ? 'bg-success' : 'bg-danger'}">
+                                                            ${device.connection_status.connected ? 'Connected' : 'Disconnected'}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        ${device.data_types.attendance ? 
+                                                            `${device.data_types.attendance.records_added || 0} added` : 
+                                                            'N/A'
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        ${device.data_types.device_info ? 
+                                                            `${device.data_types.device_info.users_count || 0} users` : 
+                                                            'N/A'
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        ${device.errors.length > 0 ? 
+                                                            `<span class="text-danger">${device.errors.length} errors</span>` : 
+                                                            '<span class="text-success">None</span>'
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        ${data.errors.length > 0 ? `
+                        <!-- Errors Section -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h6 class="text-danger mb-3">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    Errors Encountered
+                                </h6>
+                                <div class="alert alert-danger">
+                                    <ul class="mb-0">
+                                        ${data.errors.map(error => `<li>${error}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" onclick="exportFetchResults()">
+                            <i class="fas fa-download me-1"></i>
+                            Export Results
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('fetchResultsModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add modal to page
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('fetchResultsModal'));
+    modal.show();
+    
+    // Store results for export
+    window.lastFetchResults = data;
+}
+
+// Helper function to get status badge class
+function getStatusBadgeClass(status) {
+    switch(status) {
+        case 'completed': return 'bg-success';
+        case 'completed_with_errors': return 'bg-warning';
+        case 'connection_failed': return 'bg-danger';
+        case 'failed': return 'bg-danger';
+        default: return 'bg-secondary';
+    }
+}
+
+// Export fetch results to JSON
+function exportFetchResults() {
+    if (window.lastFetchResults) {
+        const dataStr = JSON.stringify(window.lastFetchResults, null, 2);
+        const dataBlob = new Blob([dataStr], {type: 'application/json'});
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `device_fetch_results_${new Date().toISOString().split('T')[0]}.json`;
+        link.click();
+        URL.revokeObjectURL(url);
+        
+        toastr.success('Fetch results exported successfully', 'Export Complete');
+    }
+}
 </script>
-    </div>
 {% endblock %}

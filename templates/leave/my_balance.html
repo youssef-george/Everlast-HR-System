@@ -1,0 +1,260 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1">My Leave Balance</h1>
+                    <p class="text-muted mb-0">Track your leave entitlements and usage</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('leave.index') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-calendar me-2"></i>View All Requests
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="text-primary mb-2">
+                        <i class="fas fa-calendar-check fa-2x"></i>
+                    </div>
+                    <h4 class="mb-1">{{ total_leave_days }}</h4>
+                    <p class="text-muted mb-0">Total Leave Days</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="text-success mb-2">
+                        <i class="fas fa-clock fa-2x"></i>
+                    </div>
+                    <h4 class="mb-1">{{ total_remaining_days }}</h4>
+                    <p class="text-muted mb-0">Remaining Days</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="text-warning mb-2">
+                        <i class="fas fa-calendar-times fa-2x"></i>
+                    </div>
+                    <h4 class="mb-1">{{ total_used_days }}</h4>
+                    <p class="text-muted mb-0">Used Days</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leave Balance Details -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-balance-scale text-primary me-2"></i>
+                        Leave Balance by Type
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if leave_balances %}
+                        {% for balance in leave_balances %}
+                        <div class="leave-balance-item mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <h6 class="mb-1">{{ balance.leave_type.name if balance.leave_type else 'Unknown Type' }}</h6>
+                                    <small class="text-muted">{{ balance.leave_type.description if balance.leave_type and balance.leave_type.description else 'Leave entitlement' }}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="h5 mb-0 text-success">{{ balance.remaining_days }}</span>
+                                    <span class="text-muted">/ {{ balance.total_days }} days</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Progress Bar -->
+                            <div class="progress mb-2" style="height: 8px;">
+                                {% set percentage = (balance.remaining_days / balance.total_days * 100) if balance.total_days > 0 else 0 %}
+                                {% if percentage > 50 %}
+                                    {% set progress_class = 'bg-success' %}
+                                {% elif percentage > 25 %}
+                                    {% set progress_class = 'bg-warning' %}
+                                {% else %}
+                                    {% set progress_class = 'bg-danger' %}
+                                {% endif %}
+                                <div class="progress-bar {{ progress_class }}" role="progressbar" 
+                                     style="width: {{ percentage }}%" 
+                                     aria-valuenow="{{ percentage }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                </div>
+                            </div>
+                            
+                            <!-- Usage Details -->
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <small class="text-muted">Used</small>
+                                    <div class="fw-bold text-warning">{{ balance.total_days - balance.remaining_days }}</div>
+                                </div>
+                                <div class="col-4">
+                                    <small class="text-muted">Remaining</small>
+                                    <div class="fw-bold text-success">{{ balance.remaining_days }}</div>
+                                </div>
+                                <div class="col-4">
+                                    <small class="text-muted">Total</small>
+                                    <div class="fw-bold text-primary">{{ balance.total_days }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        {% if not loop.last %}
+                        <hr class="my-3">
+                        {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No Leave Balance Data</h5>
+                            <p class="text-muted">Your leave balance information is not available at the moment.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Requests Sidebar -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history text-primary me-2"></i>
+                        Recent Requests
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_requests %}
+                        {% for request in recent_requests %}
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="flex-shrink-0">
+                                {% if request.status == 'approved' %}
+                                    <span class="badge bg-success rounded-pill">
+                                        <i class="fas fa-check"></i>
+                                    </span>
+                                {% elif request.status == 'rejected' %}
+                                    <span class="badge bg-danger rounded-pill">
+                                        <i class="fas fa-times"></i>
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-warning rounded-pill">
+                                        <i class="fas fa-clock"></i>
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <div class="fw-bold">{{ request.leave_type.name if request.leave_type else 'Leave Request' }}</div>
+                                <small class="text-muted">
+                                    {{ request.start_date.strftime('%b %d') }} - {{ request.end_date.strftime('%b %d, %Y') }}
+                                </small>
+                            </div>
+                        </div>
+                        {% if not loop.last %}
+                        <hr class="my-2">
+                        {% endif %}
+                        {% endfor %}
+                        
+                        <div class="text-center mt-3">
+                            <a href="{{ url_for('leave.index') }}" class="btn btn-outline-primary btn-sm">
+                                View All Requests
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
+                            <p class="text-muted mb-0">No recent requests</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt text-primary me-2"></i>
+                        Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('leave.create') }}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>New Leave Request
+                        </a>
+                        <a href="{{ url_for('permission.create') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-clock me-2"></i>Permission Request
+                        </a>
+                        <a href="{{ url_for('calendar.index') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-calendar me-2"></i>View Calendar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom CSS for this page -->
+<style>
+.leave-balance-item {
+    padding: 1rem;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+.leave-balance-item:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.progress {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.card {
+    border-radius: 12px;
+}
+
+.btn {
+    border-radius: 8px;
+}
+
+.badge {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.75rem;
+}
+
+@media (max-width: 768px) {
+    .leave-balance-item {
+        padding: 0.75rem;
+    }
+    
+    .h3 {
+        font-size: 1.5rem;
+    }
+    
+    .fa-2x {
+        font-size: 1.5em !important;
+    }
+}
+</style>
+{% endblock %}

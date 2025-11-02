@@ -1,53 +1,547 @@
 {% extends "layout.html" %}
 
+{% block extra_css %}
+<!-- EMERGENCY TABLE HEADER VISIBILITY FIX FOR LEAVE REQUESTS -->
+<style>
+/* Force table headers to be visible with maximum specificity */
+.table thead th,
+.employee-table thead th,
+.enhanced-table thead th,
+table thead th {
+    background: #1e40af !important;
+    background-color: #1e40af !important;
+    background-image: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.6) !important;
+    font-size: 0.9rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    padding: 1rem 0.75rem !important;
+    border: none !important;
+    border-bottom: 2px solid #1e3a8a !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Force all child elements in headers to be white */
+.table thead th *,
+.employee-table thead th *,
+.enhanced-table thead th *,
+table thead th * {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.6) !important;
+    -webkit-text-fill-color: #ffffff !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+</style>
+<style>
+    /* Enhanced Employee Leave Management UI */
+    .employee-page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    .employee-page-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+    }
+    
+    .employee-page-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin-bottom: 0;
+    }
+    
+    .employee-action-buttons {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    
+    .employee-btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .employee-btn-primary {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .employee-btn-primary:hover {
+        background: rgba(255, 255, 255, 0.3);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+    }
+    
+    .employee-btn-secondary {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .employee-btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .employee-btn.active {
+        background: rgba(255, 255, 255, 0.3);
+        color: white;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    .employee-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        border: none;
+        overflow: hidden;
+    }
+    
+    .employee-card-header {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        border-bottom: 1px solid #e2e8f0;
+        padding: 1.5rem 2rem;
+    }
+    
+    .employee-card-body {
+        padding: 2rem;
+    }
+    
+    .employee-filter-section {
+        background: #f8fafc;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .employee-form-control {
+        border-radius: 12px;
+        border: 2px solid #e2e8f0;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+    
+    .employee-form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .employee-table {
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+    
+    .employee-table thead {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .employee-table thead th {
+        border: none;
+        padding: 1rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 0.85rem;
+    }
+    
+    .employee-table tbody tr {
+        transition: all 0.3s ease;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    
+    .employee-table tbody tr:hover {
+        background: #f8fafc;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+    
+    .employee-table tbody td {
+        padding: 1rem;
+        border: none;
+        vertical-align: middle;
+    }
+    
+    .employee-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .employee-badge-pending {
+        background: #fef3c7;
+        color: #d97706;
+    }
+    
+    .employee-badge-approved {
+        background: #d1fae5;
+        color: #059669;
+    }
+    
+    .employee-badge-rejected {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+    
+    .employee-empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #64748b;
+    }
+    
+    .employee-empty-state i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+    
+    .employee-empty-state h5 {
+        color: #475569;
+        margin-bottom: 0.5rem;
+    }
+    
+    .employee-empty-state p {
+        margin-bottom: 0;
+    }
+    
+    @media (max-width: 768px) {
+        .employee-page-header {
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .employee-page-title {
+            font-size: 2rem;
+        }
+        
+        .employee-action-buttons {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .employee-btn {
+            justify-content: center;
+        }
+    }
+    
+    /* Overview Cards Styling - Matching Director Dashboard Design */
+    .overview-header-container {
+        background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 10px 30px rgba(139, 92, 246, 0.2);
+        margin-bottom: 2rem;
+    }
+    
+    .overview-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+    
+    .overview-title {
+        color: white;
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    .director-view-badge {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .overview-cards-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+    }
+    
+    .overview-stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        min-height: 120px;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .overview-stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
+    }
+    
+    .card-icon-container {
+        display: flex;
+        justify-content: flex-start;
+        margin-bottom: 1rem;
+    }
+    
+    .card-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.25rem;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .card-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    
+    .card-content .stat-number {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #1f2937;
+        line-height: 1;
+        margin-bottom: 0.5rem;
+    }
+    
+    .card-content .stat-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .card-progress-bar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        animation: progressSlide 1.5s ease-in-out;
+    }
+    
+    .warning-bar {
+        background: linear-gradient(90deg, #f59e0b, #f97316);
+    }
+    
+    .success-bar {
+        background: linear-gradient(90deg, #10b981, #059669);
+    }
+    
+    .danger-bar {
+        background: linear-gradient(90deg, #ef4444, #dc2626);
+    }
+    
+    .primary-bar {
+        background: linear-gradient(90deg, #3b82f6, #2563eb);
+    }
+    
+    @keyframes progressSlide {
+        0% { width: 0%; }
+        100% { width: 100%; }
+    }
+    
+    /* Responsive Design for Overview Cards */
+    @media (max-width: 1200px) {
+        .overview-cards-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .overview-cards-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .overview-header {
+            flex-direction: column;
+            text-align: center;
+            gap: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="content-header">
-    <h1 class="page-title">{{ title }}</h1>
-    <div class="content-header-actions">
-        {% if current_user.role in ['manager', 'admin', 'general_manager'] %}
-            <!-- Role-specific view controls -->
-            <div class="btn-group me-3">
-                <a href="{{ url_for('leave.index', view='my') }}" class="btn btn-light {{ 'active' if view_type == 'my' else '' }}">
-                    <i class="fas fa-user me-1"></i> My Requests
-                </a>
-                {% if current_user.role == 'manager' %}
-                <a href="{{ url_for('leave.index', view='team') }}" class="btn btn-light {{ 'active' if view_type == 'team' or not view_type else '' }}">
-                    <i class="fas fa-users me-1"></i> Team Requests
-                </a>
-                {% elif current_user.role in ['admin', 'general_manager'] %}
-                <a href="{{ url_for('leave.index') }}" class="btn btn-light {{ 'active' if not view_type else '' }}">
-                    <i class="fas fa-clock me-1"></i> Pending Approvals
-                </a>
-                <a href="{{ url_for('leave.index', view='all') }}" class="btn btn-light {{ 'active' if view_type == 'all' else '' }}">
-                    <i class="fas fa-list me-1"></i> All Requests
-                </a>
-                {% endif %}
-            </div>
-        {% endif %}
-        
-        {% if current_user.role != 'director' %}
-        <a href="{{ url_for('leave.create') }}" class="btn btn-primary">
-            <i class="fas fa-plus-circle me-1"></i> New Leave Request
-        </a>
-        {% endif %}
-        
-        {% if current_user.role == 'admin' %}
-        <a href="{{ url_for('leave.admin_create') }}" class="btn btn-info ms-2">
-            <i class="fas fa-user-plus me-1"></i> Create for Employee
-        </a>
-        {% endif %}
+<div class="employee-page-header">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center">
+        <div>
+            <h1 class="employee-page-title">
+                <i class="fas fa-calendar-alt me-3"></i>
+                {{ title }}
+            </h1>
+            <p class="employee-page-subtitle">Manage your leave requests and track their status</p>
+        </div>
+        <div class="employee-action-buttons">
+            {% if current_user.role in ['manager', 'admin'] %}
+                <!-- Role-specific view controls -->
+                <div class="btn-group">
+                    <a href="{{ url_for('leave.index', view='my') }}" class="employee-btn employee-btn-secondary {{ 'active' if view_type == 'my' else '' }}">
+                        <i class="fas fa-user"></i> My Requests
+                    </a>
+                    {% if current_user.role == 'manager' %}
+                    <a href="{{ url_for('leave.index', view='team') }}" class="employee-btn employee-btn-secondary {{ 'active' if view_type == 'team' or not view_type else '' }}">
+                        <i class="fas fa-users"></i> Team Requests
+                    </a>
+                    {% elif current_user.role in ['admin'] %}
+                    <a href="{{ url_for('leave.index') }}" class="employee-btn employee-btn-secondary {{ 'active' if not view_type else '' }}">
+                        <i class="fas fa-clock"></i> Pending Approvals
+                    </a>
+                    <a href="{{ url_for('leave.index', view='all') }}" class="employee-btn employee-btn-secondary {{ 'active' if view_type == 'all' else '' }}">
+                        <i class="fas fa-list"></i> All Requests
+                    </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+            
+            {% if current_user.role == 'employee' %}
+            <a href="{{ url_for('leave.my_balance') }}" class="employee-btn employee-btn-secondary">
+                <i class="fas fa-balance-scale"></i> My Leave Balance
+            </a>
+            {% endif %}
+            
+            {% if current_user.role != 'director' %}
+            <a href="{{ url_for('leave.create') }}" class="employee-btn employee-btn-primary">
+                <i class="fas fa-plus-circle"></i> New Leave Request
+            </a>
+            {% endif %}
+            
+            {% if current_user.role in ['admin', 'product_owner', 'manager'] %}
+            <a href="{{ url_for('leave.admin_create') }}" class="employee-btn employee-btn-secondary">
+                <i class="fas fa-user-plus"></i> Create for Employee
+            </a>
+            {% endif %}
+        </div>
     </div>
 </div>
+
+{% if show_director_overview %}
+<!-- Leave Requests Overview Section for Directors -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="overview-header-container">
+            <div class="overview-header">
+                <h3 class="overview-title">
+                    <i class="fas fa-calendar-times me-2"></i>
+                    Leave Requests Overview
+                </h3>
+                <span class="director-view-badge">
+                    <i class="fas fa-crown me-1"></i>Director View
+                </span>
+            </div>
+            <div class="overview-cards-grid">
+                <div class="overview-stat-card pending-overview-card">
+                    <div class="card-icon-container">
+                        <div class="card-icon bg-warning">
+                            <i class="fas fa-hourglass-half"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="stat-number">{{ pending_leave_requests|length }}</div>
+                        <div class="stat-label">PENDING</div>
+                    </div>
+                    <div class="card-progress-bar warning-bar"></div>
+                </div>
+                
+                <div class="overview-stat-card approved-overview-card">
+                    <div class="card-icon-container">
+                        <div class="card-icon bg-success">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="stat-number">{{ approved_leave_requests|length }}</div>
+                        <div class="stat-label">APPROVED</div>
+                    </div>
+                    <div class="card-progress-bar success-bar"></div>
+                </div>
+                
+                <div class="overview-stat-card rejected-overview-card">
+                    <div class="card-icon-container">
+                        <div class="card-icon bg-danger">
+                            <i class="fas fa-times-circle"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="stat-number">{{ rejected_leave_requests|length }}</div>
+                        <div class="stat-label">REJECTED</div>
+                    </div>
+                    <div class="card-progress-bar danger-bar"></div>
+                </div>
+                
+                <div class="overview-stat-card total-overview-card">
+                    <div class="card-icon-container">
+                        <div class="card-icon bg-primary">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="stat-number">{{ all_leave_requests|length }}</div>
+                        <div class="stat-label">TOTAL REQUESTS</div>
+                    </div>
+                    <div class="card-progress-bar primary-bar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <div class="content-body">
     <div class="row">
         <div class="col-12">
-            <div class="card">
+            <div class="employee-card">
                 <!-- Filters Section -->
-                <div class="card-header border-bottom">
-                    <div class="d-flex flex-column flex-md-row gap-2 align-items-md-center justify-content-between">
+                <div class="employee-card-header">
+                    <div class="d-flex flex-column flex-md-row gap-3 align-items-md-center justify-content-between">
                         <div class="d-flex gap-2 flex-wrap">
-                            <select class="form-select" id="status-filter" style="width: auto;">
+                            <select class="form-select employee-form-control" id="status-filter" style="width: auto;">
                                 <option value="">All Statuses</option>
                                 <option value="pending">Pending</option>
                                 <option value="approved">Approved</option>
@@ -55,7 +549,7 @@
                             </select>
                             
                             {% if current_user.role in ['manager', 'admin', 'director'] %}
-                            <select class="form-select" id="department-filter" style="width: auto;">
+                            <select class="form-select employee-form-control" id="department-filter" style="width: auto;">
                                 <option value="">All Departments</option>
                                 {% for dept in departments %}
                                 <option value="{{ dept.id }}">{{ dept.department_name }}</option>
@@ -63,7 +557,7 @@
                             </select>
                             {% endif %}
                             
-                            <select class="form-select" id="date-filter" style="width: auto;">
+                            <select class="form-select employee-form-control" id="date-filter" style="width: auto;">
                                 <option value="">All Time</option>
                                 <option value="today">Today</option>
                                 <option value="week">This Week</option>
@@ -73,22 +567,23 @@
                         </div>
                         
                         <div class="d-flex align-items-center gap-2">
-                            <span class="text-muted">Total Records: </span>
-                            <span class="badge bg-primary" id="total-records">{{ total_records }}</span>
+                            <span class="text-muted fw-bold">Total Records: </span>
+                            <span class="badge bg-primary rounded-pill px-3 py-2" id="total-records">{{ total_records }}</span>
                         </div>
                     </div>
                 </div>
                 
                 <!-- Table Section -->
-                <div class="card-body p-0">
+                <div class="employee-card-body">
                     <div class="table-responsive">
-                        <table class="table table-hover" id="leave-requests-table">
+                        <table class="table employee-table" id="leave-requests-table">
                             <thead>
                                 <tr>
                                     {% if current_user.role in ['manager', 'admin', 'director'] %}
                                     <th>Employee</th>
                                     <th>Department</th>
                                     {% endif %}
+                                    <th>Leave Type</th>
                                     <th>Start Date</th>
                                     <th>End Date</th>
                                     <th>Duration</th>
@@ -102,7 +597,9 @@
                             <tbody>
                                 {% if leave_requests %}
                                     {% for leave in leave_requests %}
-                                    <tr data-status="{{ leave.status }}" data-department="{{ leave.user.department_id if leave.user.department_id else 'none' }}">
+                                    <tr data-status="{{ leave.status }}" 
+                                        data-department="{{ leave.user.department_id if leave.user.department_id else 'none' }}"
+                                        data-created-date="{{ leave.created_at.strftime('%Y-%m-%d') }}">
                                         {% if current_user.role in ['manager', 'admin', 'director'] %}
                                         <td>
                                             <div class="d-flex align-items-center">
@@ -116,46 +613,62 @@
                                         </td>
                                         <td>{{ leave.user.department.department_name if leave.user.department else 'No Department' }}</td>
                                         {% endif %}
-                                        <td>{{ leave.start_date.strftime('%d/%m/%Y') }}</td>
+                                        <td>{{ leave.leave_type.name }}</td>
+                                            <td>{{ leave.start_date.strftime('%d/%m/%Y') }}</td>
                                         <td>{{ leave.end_date.strftime('%d/%m/%Y') }}</td>
                                         <td>{{ (leave.end_date - leave.start_date).days + 1 }} days</td>
                                         <td>{{ leave.reason|truncate(30) }}</td>
                                         <td>
                                             {% if leave.status == 'pending' %}
-                                                <span class="badge badge-light-warning">Pending</span>
+                                                <span class="employee-badge employee-badge-pending">Pending</span>
                                             {% elif leave.status == 'approved' %}
-                                                <span class="badge badge-light-success">Approved</span>
+                                                <span class="employee-badge employee-badge-approved">Approved</span>
                                             {% else %}
-                                                <span class="badge badge-light-danger">Rejected</span>
+                                                <span class="employee-badge employee-badge-rejected">Rejected</span>
                                             {% endif %}
                                         </td>
                                         <td class="approval-column">
                                             <div class="d-flex flex-column gap-1">
-                                                {% if leave.manager_status %}
-                                                <small>
-                                                    Manager: 
-                                                    <span class="badge badge-light-{{ 'success' if leave.manager_status == 'approved' else 'danger' if leave.manager_status == 'rejected' else 'warning' }}">
-                                                        {{ leave.manager_status|title }}
-                                                    </span>
-                                                </small>
-                                                {% endif %}
-                                                
-                                                {% if leave.admin_status %}
-                                                <small>
-                                                    Admin: 
-                                                    <span class="badge badge-light-{{ 'success' if leave.admin_status == 'approved' else 'danger' if leave.admin_status == 'rejected' else 'warning' }}">
-                                                        {{ leave.admin_status|title }}
-                                                    </span>
-                                                </small>
-                                                {% endif %}
-                                                
-                                                {% if leave.general_manager_status %}
-                                                <small>
-                                                    GM: 
-                                                    <span class="badge badge-light-{{ 'success' if leave.general_manager_status == 'approved' else 'danger' if leave.general_manager_status == 'rejected' else 'warning' }}">
-                                                        {{ leave.general_manager_status|title }}
-                                                    </span>
-                                                </small>
+                                                {% if current_user.role == 'manager' %}
+                                                    <!-- For managers, show different logic based on whether it's their own request -->
+                                                    {% if leave.user_id == current_user.id %}
+                                                        <!-- Manager's own request - show overall status only -->
+                                                        {% if leave.status == 'approved' %}
+                                                            <span class="employee-badge employee-badge-approved">Approved</span>
+                                                        {% elif leave.status == 'rejected' %}
+                                                            <span class="employee-badge employee-badge-rejected">Rejected</span>
+                                                        {% else %}
+                                                            <span class="employee-badge employee-badge-pending">Pending</span>
+                                                        {% endif %}
+                                                    {% else %}
+                                                        <!-- Other employees' requests - show manager and admin status -->
+                                                        {% if leave.manager_status %}
+                                                        <small class="d-flex align-items-center gap-1">
+                                                            <span class="fw-bold">Manager:</span>
+                                                            <span class="employee-badge employee-badge-{{ 'approved' if leave.manager_status == 'approved' else 'rejected' if leave.manager_status == 'rejected' else 'pending' }}">
+                                                                {{ leave.manager_status|title }}
+                                                            </span>
+                                                        </small>
+                                                        {% endif %}
+                                                        
+                                                        {% if leave.admin_status %}
+                                                        <small class="d-flex align-items-center gap-1">
+                                                            <span class="fw-bold">Admin:</span>
+                                                            <span class="employee-badge employee-badge-{{ 'approved' if leave.admin_status == 'approved' else 'rejected' if leave.admin_status == 'rejected' else 'pending' }}">
+                                                                {{ leave.admin_status|title }}
+                                                            </span>
+                                                        </small>
+                                                        {% endif %}
+                                                    {% endif %}
+                                                {% else %}
+                                                    <!-- For admins and others, show overall status -->
+                                                    {% if leave.status == 'approved' %}
+                                                        <span class="employee-badge employee-badge-approved">Approved</span>
+                                                    {% elif leave.status == 'rejected' %}
+                                                        <span class="employee-badge employee-badge-rejected">Rejected</span>
+                                                    {% else %}
+                                                        <span class="employee-badge employee-badge-pending">Pending</span>
+                                                    {% endif %}
                                                 {% endif %}
                                             </div>
                                         </td>
@@ -165,13 +678,28 @@
                                                 <a href="{{ url_for('leave.view', id=leave.id) }}" class="btn btn-sm btn-icon btn-light" data-bs-toggle="tooltip" title="View Details">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
+                                                
+                                                <!-- Employee can edit/delete their own pending requests -->
                                                 {% if leave.status == 'pending' and leave.user_id == current_user.id %}
                                                     <a href="{{ url_for('leave.edit', id=leave.id) }}" class="btn btn-sm btn-icon btn-light" data-bs-toggle="tooltip" title="Edit">
                                                         <i class="fas fa-edit"></i>
                                                     </a>
                                                     <form method="POST" action="{{ url_for('leave.delete', id=leave.id) }}" class="d-inline" data-confirm="Are you sure you want to delete this leave request?">
-                                                        {{ csrf_token() }}
+                                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                         <button type="submit" class="btn btn-sm btn-icon btn-light-danger" data-bs-toggle="tooltip" title="Delete">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
+                                                
+                                                <!-- Admin can edit/delete any request -->
+                                                {% if current_user.role in ['admin', 'director'] %}
+                                                    <a href="{{ url_for('leave.edit_leave', leave_id=leave.id) }}" class="btn btn-sm btn-icon btn-light-warning" data-bs-toggle="tooltip" title="Edit (Admin)">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <form method="POST" action="{{ url_for('leave.delete_leave', leave_id=leave.id) }}" class="d-inline" data-confirm="Are you sure you want to delete this leave request? This action cannot be undone.">
+                                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                        <button type="submit" class="btn btn-sm btn-icon btn-light-danger" data-bs-toggle="tooltip" title="Delete (Admin)">
                                                             <i class="fas fa-trash"></i>
                                                         </button>
                                                     </form>
@@ -261,7 +789,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 show = false;
             }
             
-            // Apply date filter (to be implemented)
+            // Apply date filter
+            if (dateFilter && dateFilter.value) {
+                const createdDate = row.getAttribute('data-created-date');
+                const today = new Date();
+                const rowDate = new Date(createdDate);
+                
+                let showByDate = true;
+                
+                switch(dateFilter.value) {
+                    case 'today':
+                        showByDate = rowDate.toDateString() === today.toDateString();
+                        break;
+                    case 'week':
+                        const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+                        showByDate = rowDate >= weekAgo;
+                        break;
+                    case 'month':
+                        const monthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+                        showByDate = rowDate >= monthAgo;
+                        break;
+                    case 'custom':
+                        // TODO: Implement custom date range picker
+                        break;
+                }
+                
+                if (!showByDate) {
+                    show = false;
+                }
+            }
             
             row.style.display = show ? '' : 'none';
             if (show) visibleCount++;

@@ -1,0 +1,1153 @@
+/* ========================================
+   GLOBAL EMPLOYEE UI THEME
+   ======================================== */
+
+/* Enhanced Page Headers for All Roles */
+.employee-page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 20px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.employee-page-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.employee-page-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin-bottom: 0;
+}
+
+.employee-action-buttons {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* Enhanced Buttons for All Roles */
+.employee-btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: none;
+    cursor: pointer;
+}
+
+.employee-btn-primary {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.employee-btn-primary:hover {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+}
+
+.employee-btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.employee-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.employee-btn.active {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+/* Enhanced Cards for All Roles */
+.employee-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    border: none;
+    overflow: hidden;
+}
+
+.employee-card-header {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-bottom: 1px solid #e2e8f0;
+    padding: 1.5rem 2rem;
+}
+
+.employee-card-body {
+    padding: 2rem;
+}
+
+/* Enhanced Form Controls for All Roles */
+.employee-form-control {
+    border-radius: 12px;
+    border: 2px solid #e2e8f0;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.employee-form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Enhanced Tables for All Roles */
+.employee-table {
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    border: none;
+    background: white;
+}
+
+.employee-table thead {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    color: white !important;
+}
+
+.employee-table thead th {
+    border: none !important;
+    padding: 1rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    font-size: 0.9rem !important;
+    color: white !important;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
+}
+
+.employee-table tbody {
+    background: white;
+}
+
+.employee-table tbody tr {
+    transition: all 0.3s ease;
+    border-bottom: 1px solid #f1f5f9;
+    background: white;
+}
+
+.employee-table tbody tr:hover {
+    background: #f8fafc !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+.employee-table tbody tr:nth-child(even) {
+    background: #fafbfc !important;
+}
+
+.employee-table tbody tr:nth-child(even):hover {
+    background: #f1f5f9 !important;
+}
+
+.employee-table tbody td {
+    padding: 1rem;
+    border: none;
+    vertical-align: middle;
+    color: #374151 !important;
+    background: transparent !important;
+}
+
+/* Enhanced table styling for all roles */
+.enhanced-table {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    border: none;
+    background: white;
+}
+
+.enhanced-table thead {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+}
+
+.enhanced-table thead th {
+    color: white !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    font-size: 0.9rem !important;
+    padding: 1rem !important;
+    border: none !important;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
+}
+
+.enhanced-table tbody tr:hover {
+    background: #f8fafc !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+/* Override any existing table styles */
+.table.employee-table {
+    background: white !important;
+}
+
+.table.employee-table thead th {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    color: white !important;
+    border: none !important;
+    font-weight: 700 !important;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
+}
+
+.table.employee-table tbody tr {
+    background: white !important;
+}
+
+.table.employee-table tbody tr:nth-child(even) {
+    background: #fafbfc !important;
+}
+
+.table.employee-table tbody tr:hover {
+    background: #f8fafc !important;
+}
+
+.table.employee-table tbody td {
+    background: transparent !important;
+    color: #374151 !important;
+    border: none !important;
+}
+
+/* Universal table header white text for all roles */
+.table thead th {
+    color: white !important;
+}
+
+.table thead th * {
+    color: white !important;
+}
+
+/* Specific overrides for all table types */
+table thead th,
+.table thead th,
+.employee-table thead th,
+.enhanced-table thead th {
+    color: white !important;
+}
+
+table thead th *,
+.table thead th *,
+.employee-table thead th *,
+.enhanced-table thead th * {
+    color: white !important;
+}
+
+/* Ensure all table headers have white text regardless of existing styles */
+thead th,
+thead th span,
+thead th i,
+thead th strong,
+thead th b,
+thead th a,
+thead th div,
+thead th small,
+thead th p {
+    color: white !important;
+}
+
+/* Force white text on all table header content */
+.table thead th,
+.table thead th *,
+.employee-table thead th,
+.employee-table thead th *,
+.enhanced-table thead th,
+.enhanced-table thead th *,
+table thead th,
+table thead th * {
+    color: white !important;
+    text-decoration: none !important;
+}
+
+/* Additional specific selectors for stubborn elements */
+thead tr th,
+thead tr th *,
+.table-responsive thead th,
+.table-responsive thead th *,
+.card .table thead th,
+.card .table thead th * {
+    color: white !important;
+}
+
+/* Bootstrap table overrides */
+.table-striped thead th,
+.table-striped thead th *,
+.table-bordered thead th,
+.table-bordered thead th *,
+.table-hover thead th,
+.table-hover thead th *,
+.table-sm thead th,
+.table-sm thead th * {
+    color: white !important;
+}
+
+/* Attendance table specific overrides */
+.attendance-table thead th,
+.attendance-table thead th *,
+#todaysAttendanceTable thead th,
+#todaysAttendanceTable thead th *,
+#historicalAttendanceTable thead th,
+#historicalAttendanceTable thead th * {
+    color: white !important;
+}
+
+/* DataTables overrides if used */
+.dataTable thead th,
+.dataTable thead th *,
+.dataTables_wrapper thead th,
+.dataTables_wrapper thead th * {
+    color: white !important;
+}
+
+/* Ultimate override for any stubborn table header text */
+thead th[style*="color"],
+thead th *[style*="color"] {
+    color: white !important;
+}
+
+/* Comprehensive table header text color enforcement */
+table thead th,
+table thead th span,
+table thead th a,
+table thead th div,
+table thead th i,
+table thead th strong,
+table thead th b,
+table thead th em,
+table thead th small,
+table thead th p,
+table thead th label {
+    color: white !important;
+}
+
+/* Specific attendance table headers enforcement */
+th:contains("Fingerprint ID"),
+th:contains("Employee"),
+th:contains("Check In"),
+th:contains("Check Out"),
+th:contains("Duration"),
+th:contains("All Logs"),
+th:contains("Status"),
+th:contains("Details") {
+    color: white !important;
+}
+
+/* Force white text on ALL table headers regardless of content */
+thead th:nth-child(1),
+thead th:nth-child(2),
+thead th:nth-child(3),
+thead th:nth-child(4),
+thead th:nth-child(5),
+thead th:nth-child(6),
+thead th:nth-child(7),
+thead th:nth-child(8) {
+    color: white !important;
+}
+
+/* Absolute override for any table header text */
+.table thead tr th,
+.table thead tr th *,
+.employee-table thead tr th,
+.employee-table thead tr th *,
+table thead tr th,
+table thead tr th *,
+thead tr th,
+thead tr th * {
+    color: white !important;
+    background-color: transparent !important;
+}
+
+/* Override Bootstrap default colors */
+.table-dark thead th,
+.table-light thead th,
+.table-primary thead th,
+.table-secondary thead th,
+.table-success thead th,
+.table-danger thead th,
+.table-warning thead th,
+.table-info thead th {
+    color: white !important;
+}
+
+/* Nuclear option - override everything */
+thead th,
+thead th *,
+.table thead th,
+.table thead th *,
+.employee-table thead th,
+.employee-table thead th *,
+.enhanced-table thead th,
+.enhanced-table thead th *,
+table thead th,
+table thead th *,
+.table-responsive thead th,
+.table-responsive thead th *,
+.card .table thead th,
+.card .table thead th *,
+.container thead th,
+.container thead th *,
+.row thead th,
+.row thead th *,
+div thead th,
+div thead th * {
+    color: white !important;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    font-weight: 700 !important;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
+    opacity: 1 !important;
+    font-size: 0.9rem !important;
+}
+
+/* Specific targeting for common table structures */
+.employee-card .table thead th,
+.employee-card .table thead th *,
+.employee-card-body .table thead th,
+.employee-card-body .table thead th *,
+#todaysAttendanceTable thead th,
+#todaysAttendanceTable thead th *,
+#historicalAttendanceTable thead th,
+#historicalAttendanceTable thead th * {
+    color: white !important;
+}
+
+/* Override any potential inline styles or JavaScript-set colors */
+thead th[style],
+thead th[style] *,
+.table thead th[style],
+.table thead th[style] * {
+    color: white !important;
+}
+
+/* Card Toolbar Alignment - Ensure View All buttons are aligned to the right */
+.card-toolbar,
+.employee-card .card-toolbar,
+.employee-card-header .card-toolbar {
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    margin-left: auto !important;
+    flex-shrink: 0 !important;
+}
+
+.employee-card-header,
+.card-header,
+.employee-card .employee-card-header,
+.employee-card .card-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    flex-wrap: nowrap !important;
+}
+
+.employee-card-header .card-title,
+.card-header .card-title,
+.employee-card-header h3,
+.card-header h3 {
+    flex: 1 !important;
+    margin: 0 !important;
+    margin-right: 1rem !important;
+}
+
+/* View All Button Global Styling */
+.view-all-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+    border: none !important;
+    padding: 0.5rem 1rem !important;
+    border-radius: 8px !important;
+    font-size: 0.85rem !important;
+    font-weight: 500 !important;
+    text-decoration: none !important;
+    transition: all 0.3s ease !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.25rem !important;
+    margin-left: auto !important;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2) !important;
+}
+
+.view-all-btn:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3) !important;
+    color: white !important;
+    text-decoration: none !important;
+    background: linear-gradient(135deg, #5a6fd8 0%, #6b4190 100%) !important;
+}
+
+.view-all-btn:active {
+    transform: translateY(0) !important;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2) !important;
+}
+
+.view-all-btn:focus {
+    color: white !important;
+    text-decoration: none !important;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3) !important;
+}
+
+.view-all-btn i {
+    font-size: 0.8rem !important;
+}
+
+/* Responsive View All Button */
+@media (max-width: 768px) {
+    .view-all-btn {
+        padding: 0.4rem 0.75rem !important;
+        font-size: 0.8rem !important;
+    }
+    
+    .view-all-btn i {
+        font-size: 0.75rem !important;
+    }
+}
+
+/* Enhanced Badges for All Roles */
+.employee-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-block;
+}
+
+.employee-badge-pending {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.employee-badge-approved {
+    background: #d1fae5;
+    color: #059669;
+}
+
+.employee-badge-rejected {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.employee-badge-present {
+    background: #d1fae5;
+    color: #059669;
+}
+
+.employee-badge-absent {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.employee-badge-paid-leave {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.employee-badge-annual-leave {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.employee-badge-sick-leave {
+    background: #fce7f3;
+    color: #be185d;
+}
+
+.employee-badge-unpaid-leave {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.employee-badge-permission {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+.employee-badge-warning {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.employee-badge-info {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.employee-badge-success {
+    background: #d1fae5;
+    color: #059669;
+}
+
+.employee-badge-danger {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+/* Enhanced Empty States for All Roles */
+.employee-empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #64748b;
+}
+
+.employee-empty-state i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.employee-empty-state h5 {
+    color: #475569;
+    margin-bottom: 0.5rem;
+}
+
+.employee-empty-state p {
+    margin-bottom: 0;
+}
+
+/* Enhanced Filter Sections for All Roles */
+.employee-filter-section {
+    background: #f8fafc;
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid #e2e8f0;
+}
+
+/* Enhanced Section Headings for All Roles */
+.employee-section-heading {
+    color: #374151;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+/* Enhanced Stats Cards for All Roles */
+.employee-stat-card {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    border: none;
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.employee-stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+}
+
+.employee-stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.employee-stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.employee-stat-label {
+    color: #6c757d;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+/* Enhanced Navigation for All Roles */
+.employee-nav-link {
+    display: flex;
+    align-items: center;
+    padding: 0.875rem 1.5rem;
+    color: #6b7280;
+    text-decoration: none;
+    border-radius: 12px;
+    margin: 0.25rem 0;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.employee-nav-link:hover {
+    color: #667eea;
+    background: rgba(102, 126, 234, 0.1);
+    transform: translateX(5px);
+}
+
+.employee-nav-link.active {
+    color: #667eea;
+    background: rgba(102, 126, 234, 0.15);
+    border-left: 4px solid #667eea;
+}
+
+.employee-nav-link i {
+    width: 20px;
+    text-align: center;
+    margin-right: 12px;
+    font-size: 1.1rem;
+}
+
+/* Enhanced Alerts for All Roles */
+.employee-alert {
+    border-radius: 12px;
+    border: none;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+.employee-alert-success {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    color: #065f46;
+    border-left: 4px solid #059669;
+}
+
+.employee-alert-danger {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    color: #991b1b;
+    border-left: 4px solid #dc2626;
+}
+
+.employee-alert-warning {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+    border-left: 4px solid #d97706;
+}
+
+.employee-alert-info {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    color: #1e40af;
+    border-left: 4px solid #3b82f6;
+}
+
+/* Enhanced Modals for All Roles */
+.employee-modal .modal-content {
+    border-radius: 20px;
+    border: none;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+}
+
+.employee-modal .modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 20px 20px 0 0;
+    border-bottom: none;
+    padding: 1.5rem 2rem;
+}
+
+.employee-modal .modal-title {
+    font-weight: 600;
+    font-size: 1.25rem;
+}
+
+.employee-modal .modal-body {
+    padding: 2rem;
+}
+
+.employee-modal .modal-footer {
+    border-top: 1px solid #e5e7eb;
+    padding: 1.5rem 2rem;
+    background: #f9fafb;
+    border-radius: 0 0 20px 20px;
+}
+
+/* Enhanced Pagination for All Roles */
+.employee-pagination .page-link {
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    color: #6b7280;
+    padding: 0.5rem 1rem;
+    margin: 0 0.25rem;
+    transition: all 0.3s ease;
+}
+
+.employee-pagination .page-link:hover {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+    transform: translateY(-2px);
+}
+
+.employee-pagination .page-item.active .page-link {
+    background: #667eea;
+    border-color: #667eea;
+    color: white;
+}
+
+/* Enhanced Chart Styling */
+.chart-container {
+    position: relative;
+    min-height: 300px;
+}
+
+.chart-loading {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 10px;
+    padding: 2rem;
+}
+
+/* Enhanced Dropdown Styling */
+.dropdown-menu {
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    padding: 0.5rem 0;
+}
+
+.dropdown-item {
+    padding: 0.75rem 1.5rem;
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    margin: 0.25rem 0.5rem;
+}
+
+.dropdown-item:hover {
+    background: rgba(102, 126, 234, 0.1);
+    color: #667eea;
+    transform: translateX(5px);
+}
+
+/* Enhanced Button Group Styling */
+.btn-group .employee-btn {
+    border-radius: 0;
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-group .employee-btn:first-child {
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
+}
+
+.btn-group .employee-btn:last-child {
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+    border-right: none;
+}
+
+.btn-group .employee-btn.active {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+/* Enhanced Card Toolbar */
+.card-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Enhanced Stats Card Animations */
+.employee-stat-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.employee-stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: left 0.5s ease;
+}
+
+.employee-stat-card:hover::before {
+    left: 100%;
+}
+
+/* Enhanced Table Actions */
+.table .btn-group .btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8rem;
+    border-radius: 6px;
+}
+
+/* Enhanced Empty States */
+.employee-empty-state {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-radius: 15px;
+    border: 2px dashed #cbd5e1;
+}
+
+.employee-empty-state i {
+    color: #94a3b8;
+}
+
+/* Enhanced Loading States */
+.loading-skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Enhanced Responsive Design */
+@media (max-width: 768px) {
+    .employee-page-header {
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .employee-page-title {
+        font-size: 2rem;
+    }
+    
+    .employee-action-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .employee-btn {
+        justify-content: center;
+    }
+    
+    .employee-card-body {
+        padding: 1.5rem;
+    }
+    
+    .employee-table thead th,
+    .employee-table tbody td {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.85rem;
+    }
+    
+    .btn-group {
+        flex-direction: column;
+    }
+    
+    .btn-group .employee-btn {
+        border-radius: 12px;
+        border-right: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .btn-group .employee-btn:last-child {
+        border-bottom: none;
+    }
+    
+    .card-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .employee-card {
+        background: #1f2937;
+        color: #f9fafb;
+    }
+    
+    .employee-card-header {
+        background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+        border-bottom-color: #4b5563;
+    }
+    
+    .employee-table tbody tr {
+        background: #1f2937;
+        color: #f9fafb;
+    }
+    
+    .employee-table tbody tr:nth-child(even) {
+        background: #111827;
+    }
+    
+    .employee-table tbody tr:hover {
+        background: #374151;
+    }
+    
+    .employee-table tbody td {
+        color: #f9fafb;
+    }
+}
+
+/* ULTIMATE TABLE HEADER VISIBILITY OVERRIDE - PLACE AT END */
+/* This ensures ALL table headers across ALL roles have excellent visibility */
+table thead th,
+.table thead th,
+.employee-table thead th,
+.enhanced-table thead th,
+.attendance-table thead th,
+.table-responsive table thead th,
+.card table thead th,
+.employee-card table thead th,
+.employee-card-body table thead th,
+#todaysAttendanceTable thead th,
+#historicalAttendanceTable thead th,
+.dataTable thead th,
+.dataTables_wrapper thead th {
+    /* High contrast blue background */
+    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%) !important;
+    
+    /* Bold white text with shadow for maximum readability */
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.4) !important;
+    
+    /* Better typography */
+    font-size: 0.95rem !important;
+    letter-spacing: 0.5px !important;
+    text-transform: uppercase !important;
+    
+    /* Proper spacing and borders */
+    padding: 1rem 0.75rem !important;
+    border: none !important;
+    border-bottom: 2px solid rgba(255,255,255,0.2) !important;
+    
+    /* Ensure visibility */
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: table-cell !important;
+}
+
+/* Override ALL child elements in table headers */
+table thead th *,
+.table thead th *,
+.employee-table thead th *,
+.enhanced-table thead th *,
+.attendance-table thead th *,
+.table-responsive table thead th *,
+.card table thead th *,
+.employee-card table thead th *,
+.employee-card-body table thead th *,
+#todaysAttendanceTable thead th *,
+#historicalAttendanceTable thead th *,
+.dataTable thead th *,
+.dataTables_wrapper thead th * {
+    color: #ffffff !important;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.4) !important;
+    font-weight: inherit !important;
+}
+
+/* Override any inline styles that might conflict */
+table thead th[style*="color"],
+.table thead th[style*="color"],
+table thead th[style*="background"],
+.table thead th[style*="background"] {
+    color: #ffffff !important;
+    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%) !important;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.4) !important;
+}
+
+/* Hover effect for better interactivity */
+table thead th:hover,
+.table thead th:hover,
+.employee-table thead th:hover,
+.enhanced-table thead th:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3) !important;
+    transition: all 0.2s ease !important;
+}
+
+/* ========================================
+   EMERGENCY TABLE HEADER VISIBILITY FIX
+   ======================================== */
+
+/* NUCLEAR OPTION - Maximum specificity override for table headers */
+html body * table thead th,
+html body * .table thead th,
+html body * .employee-table thead th,
+html body * .enhanced-table thead th,
+html body * .attendance-table thead th,
+html body * .table-responsive table thead th,
+html body * .card table thead th,
+html body * .employee-card table thead th,
+html body * .employee-card-body table thead th,
+html body * #todaysAttendanceTable thead th,
+html body * #historicalAttendanceTable thead th,
+html body * .dataTable thead th,
+html body * .dataTables_wrapper thead th,
+html body * .table-header-enhanced th,
+html body * .quick-action-card table thead th,
+html body * .leave-balance-card table thead th {
+    background: #1e40af !important;
+    background-color: #1e40af !important;
+    background-image: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.6) !important;
+    font-size: 0.9rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    padding: 1rem 0.75rem !important;
+    border: none !important;
+    border-bottom: 2px solid #1e3a8a !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: table-cell !important;
+    -webkit-text-fill-color: #ffffff !important;
+    text-decoration: none !important;
+}
+
+/* Override ALL child elements in table headers */
+html body * table thead th *,
+html body * .table thead th *,
+html body * .employee-table thead th *,
+html body * .enhanced-table thead th *,
+html body * .attendance-table thead th *,
+html body * .table-responsive table thead th *,
+html body * .card table thead th *,
+html body * .employee-card table thead th *,
+html body * .employee-card-body table thead th *,
+html body * #todaysAttendanceTable thead th *,
+html body * #historicalAttendanceTable thead th *,
+html body * .dataTable thead th *,
+html body * .dataTables_wrapper thead th *,
+html body * .table-header-enhanced th *,
+html body * .quick-action-card table thead th *,
+html body * .leave-balance-card table thead th * {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.6) !important;
+    text-decoration: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: inline !important;
+    -webkit-text-fill-color: #ffffff !important;
+}

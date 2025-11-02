@@ -1,7 +1,219 @@
 {% extends "layout.html" %}
 
 {% block extra_css %}
+<!-- EMERGENCY TABLE HEADER VISIBILITY FIX FOR ATTENDANCE -->
 <style>
+/* Force table headers to be visible with maximum specificity */
+.table thead th,
+.employee-table thead th,
+.enhanced-table thead th,
+#todaysAttendanceTable thead th,
+#historicalAttendanceTable thead th,
+table thead th {
+    background: #1e40af !important;
+    background-color: #1e40af !important;
+    background-image: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.6) !important;
+    font-size: 0.9rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    padding: 1rem 0.75rem !important;
+    border: none !important;
+    border-bottom: 2px solid #1e3a8a !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Force all child elements in headers to be white */
+.table thead th *,
+.employee-table thead th *,
+.enhanced-table thead th *,
+#todaysAttendanceTable thead th *,
+#historicalAttendanceTable thead th *,
+table thead th * {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.6) !important;
+    -webkit-text-fill-color: #ffffff !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+</style>
+<style>
+    /* Enhanced Employee Attendance UI */
+    .employee-page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    .employee-page-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+    }
+    
+    .employee-page-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin-bottom: 0;
+    }
+    
+    .employee-action-buttons {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    
+    .employee-btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .employee-btn-primary {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .employee-btn-primary:hover {
+        background: rgba(255, 255, 255, 0.3);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+    }
+    
+    .employee-btn-secondary {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .employee-btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .employee-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        border: none;
+        overflow: hidden;
+    }
+    
+    .employee-card-header {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        border-bottom: 1px solid #e2e8f0;
+        padding: 1.5rem 2rem;
+    }
+    
+    .employee-card-body {
+        padding: 2rem;
+    }
+    
+    .employee-table {
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+    
+    .employee-table thead {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .employee-table thead th {
+        border: none;
+        padding: 1rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 0.85rem;
+    }
+    
+    .employee-table tbody tr {
+        transition: all 0.3s ease;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    
+    .employee-table tbody tr:hover {
+        background: #f8fafc;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+    
+    .employee-table tbody td {
+        padding: 1rem;
+        border: none;
+        vertical-align: middle;
+    }
+    
+    .employee-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .employee-badge-present {
+        background: #d1fae5;
+        color: #059669;
+    }
+    
+    .employee-badge-absent {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+    
+    .employee-badge-paid-leave {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+    
+    .employee-badge-annual-leave {
+        background: #fef3c7;
+        color: #d97706;
+    }
+    
+    .employee-badge-sick-leave {
+        background: #fce7f3;
+        color: #be185d;
+    }
+    
+    .employee-badge-unpaid-leave {
+        background: #f3f4f6;
+        color: #374151;
+    }
+    
+    .employee-badge-permission {
+        background: #e0e7ff;
+        color: #3730a3;
+    }
+    
     .sync-button {
         position: relative;
     }
@@ -36,6 +248,54 @@
         font-size: 0.9rem;
         margin-top: 0.5rem;
     }
+    
+    /* Enhanced Sync Status Alert Styling */
+    .sync-status-alert {
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        margin-bottom: 1rem;
+    }
+    
+    .sync-status-alert .alert-heading {
+        font-weight: 600;
+        font-size: 1rem;
+    }
+    
+    .sync-status-alert .fa-lg {
+        font-size: 1.25rem;
+    }
+    
+    .sync-details {
+        margin-top: 0.75rem;
+    }
+    
+    .sync-details .badge {
+        font-size: 0.8rem;
+        padding: 0.375rem 0.75rem;
+        border-radius: 8px;
+    }
+    
+    .sync-details .badge i {
+        font-size: 0.75rem;
+        margin-right: 0.25rem;
+    }
+    
+    /* Alert animations */
+    .sync-status-alert.fade.show {
+        animation: slideInFromTop 0.3s ease-out;
+    }
+    
+    @keyframes slideInFromTop {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
     .latest-records {
         max-height: 200px;
         overflow-y: auto;
@@ -50,46 +310,80 @@
     .auto-sync-toggle {
         margin-right: 1rem;
     }
+    .device-status-card {
+        min-height: 200px;
+    }
+    .action-buttons {
+        gap: 0.5rem;
+    }
+    .action-buttons .btn {
+        min-width: 140px;
+    }
+    @media (max-width: 768px) {
+        .action-buttons {
+            flex-direction: column;
+        }
+        .action-buttons .btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
     <div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Attendance Management</h5>
-            </div>
-                <div class="card-body">
-                    <!-- Sync Controls -->
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-body">
-                                    <h6 class="card-subtitle mb-3">Device Status</h6>
-                                    <div id="deviceStatus" class="mb-3">
-                                        <div class="d-flex align-items-center">
-                                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
-                        <span class="visually-hidden">Loading...</span>
+        <!-- Enhanced Employee Header -->
+        <div class="employee-page-header">
+            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center">
+                <div>
+                    <h1 class="employee-page-title">
+                        <i class="fas fa-clipboard-list me-3"></i>
+                        {% if current_user.role == 'employee' %}
+                            My Attendance Logs
+                        {% else %}
+                            Attendance Management
+                        {% endif %}
+                    </h1>
+                    <p class="employee-page-subtitle">
+                        {% if current_user.role == 'employee' %}
+                            Track your daily attendance and working hours
+                        {% else %}
+                            Manage employee attendance and monitor working hours
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="employee-action-buttons">
+                    {% if current_user.role in ['admin', 'product_owner'] %}
+                        <button id="syncButton" class="employee-btn employee-btn-primary" onclick="handleSyncClick()">
+                            <i class="fas fa-sync-alt"></i> Sync Attendance Now
+                        </button>
+                        <a href="{{ url_for('attendance.device_settings') }}" class="employee-btn employee-btn-secondary">
+                            <i class="fas fa-cog"></i> Device Settings
+                        </a>
+                    {% endif %}
+                    <div id="autoFetchStatus" class="employee-btn employee-btn-secondary" style="opacity: 0.7; pointer-events: none; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-circle" style="font-size: 0.5rem; color: #10b981;"></i>
+                        <span>Auto-Update Active</span>
                     </div>
-                                            Checking device status...
-            </div>
-        </div>
-                                    <button id="syncButton" class="btn btn-primary" onclick="triggerSync()">
-                                        <i class="fas fa-sync-alt"></i> Sync Attendance Now
-                                    </button>
-                                    <a href="{{ url_for('attendance.device_settings') }}" class="btn btn-outline-primary ms-2">
-                                        <i class="fas fa-cog"></i> Device Settings
-                                    </a>
-                                    <div id="syncStatus" class="mt-2"></div>
-                                    <div id="nextSync" class="text-muted mt-2">
-                                        <small>Next automatic sync in: <span id="nextSyncTime">60</span> seconds</small>
                 </div>
             </div>
         </div>
-    </div>
-</div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="employee-card">
+                <div class="employee-card-header">
+                    <h5 class="card-title mb-0">
+                        {% if current_user.role == 'employee' %}
+                            My Attendance Logs
+                        {% else %}
+                            Attendance Management
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="employee-card-body">
+                    <!-- Sync Controls - Only for non-employees -->
 
                     <!-- Date Range Filter -->
 
@@ -116,6 +410,13 @@
                                             {% endfor %}
                                         </select>
                                     </div>
+                                    {% elif current_user.role == 'employee' %}
+                                    <div class="col-auto">
+                                        <div class="alert alert-info mb-0 py-2">
+                                            <i class="fas fa-user me-2"></i>
+                                            Viewing your attendance logs
+                                        </div>
+                                    </div>
                                     {% endif %}
                                     
                                     <div class="col-auto">
@@ -135,7 +436,7 @@
                                 </div>
                                 <div class="card-body">
                                     <div class="table-responsive">
-                                        <table class="table table-bordered table-hover">
+                                        <table class="table employee-table">
                                             <thead>
                                                 <tr>
                                                     <th>Employee</th>
@@ -341,7 +642,7 @@
                     {% if not request.args.get('start_date') or (request.args.get('start_date') == request.args.get('end_date') and request.args.get('start_date') == today.strftime('%Y-%m-%d')) %}
                     <h6 class="card-subtitle mb-3">Today's Attendance</h6>
                     <div class="table-responsive">
-                        <table class="table table-striped table-hover">
+                        <table class="table employee-table">
                         <thead>
                             <tr>
                                 <th>Fingerprint ID</th>
@@ -349,11 +650,14 @@
                                 <th>Check In</th>
                                 <th>Check Out</th>
                                 <th>Duration</th>
+                                <th>All Logs</th>
                                 <th>Status</th>
+                                <th>Details</th>
                             </tr>
                         </thead>
                             <tbody>
                                 {% for user_id, data in daily_attendance.items() %}
+                                    {% if data['user'] and data['user'].first_name and data['user'].last_name %}
                             <tr>
                                 <td>
                                     {% if data['user'].fingerprint_number %}
@@ -365,33 +669,133 @@
                                 <td>{{ data['user'].get_full_name() }}</td>
                                 <td>
                                         {% if data['check_in'] %}
-                                        {{ data['check_in'].timestamp.strftime('%I:%M %p') }}
+                                        <span class="badge bg-success">{{ data['check_in'].timestamp.strftime('%I:%M %p') }}</span>
                                     {% else %}
                                         -
                                     {% endif %}
                                 </td>
                                 <td>
                                         {% if data['check_out'] %}
-                                        {{ data['check_out'].timestamp.strftime('%I:%M %p') }}
+                                        <span class="badge bg-danger">{{ data['check_out'].timestamp.strftime('%I:%M %p') }}</span>
                                     {% else %}
                                         -
                                     {% endif %}
                                 </td>
                                     <td>{{ data['duration'] or '-' }}</td>
                                 <td>
+                                    {% if data.get('all_logs') and data['all_logs']|length > 0 %}
+                                        <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#logs-{{ user_id }}" aria-expanded="false">
+                                            View All ({{ data['all_logs']|length }})
+                                        </button>
+                                        <div class="collapse mt-2" id="logs-{{ user_id }}">
+                                            <div class="card card-body p-2">
+                                                {% for log in data['all_logs'] %}
+                                                <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+                                                    <div class="d-flex flex-column">
+                                                        <span class="{% if log == data['check_in'] %}text-success fw-bold{% elif log == data['check_out'] %}text-danger fw-bold{% else %}text-muted{% endif %}">
+                                                            {{ log.timestamp.strftime('%I:%M %p') }}
+                                                        </span>
+                                                        {% if log.device %}
+                                                            <small class="text-muted">
+                                                                <i class="fas fa-fingerprint me-1"></i>{{ log.device.get_display_name() }}
+                                                            </small>
+                                                        {% else %}
+                                                            <small class="text-muted">Unknown Device</small>
+                                                        {% endif %}
+                                                    </div>
+                                                    <span class="badge {% if log == data['check_in'] %}bg-success{% elif log == data['check_out'] %}bg-danger{% else %}bg-secondary{% endif %}">
+                                                        {% if log == data['check_in'] %}Check-In{% elif log == data['check_out'] %}Check-Out{% else %}Additional{% endif %}
+                                                    </span>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
                                         {% if data['status'] == 'present' %}
-                                        <span class="badge bg-success">Present</span>
+                                            {% if data.get('leave_type_name') %}
+                                                <span class="badge bg-warning">{{ data['leave_type_name'] }} / Present</span>
+                                            {% elif data.get('holiday_name') %}
+                                                <span class="badge bg-info">{{ data['holiday_name'] }} / Present</span>
+                                            {% elif data.get('permission_request') %}
+                                                <span class="badge bg-info">Present (Permission)</span>
+                                            {% else %}
+                                                <span class="badge bg-success">Present</span>
+                                            {% endif %}
                                         {% elif data['status'] == 'in_office' %}
-                                        <span class="badge bg-info">In Office</span>
+                                            <span class="badge bg-info">In Office</span>
                                         {% elif data['status'] == 'Absent' %}
-                                        <span class="badge bg-danger">Absent</span>
+                                            <span class="badge bg-danger">Absent</span>
                                         {% elif data['status'] == 'DayOff' %}
-                                        <span class="badge bg-secondary">Day Off</span>
+                                            <span class="badge bg-secondary">Day Off</span>
                                         {% elif data['status'] == 'DayOff / Present' %}
-                                        <span class="badge bg-primary">Day Off / Present</span>
+                                            <span class="badge bg-primary">Day Off / Present</span>
+                                        {% elif data['status'] == 'leave' %}
+                                            {% if data.get('leave_type_name') %}
+                                                <span class="badge bg-warning">{{ data['leave_type_name'] }}</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Leave</span>
+                                            {% endif %}
+                                        {% elif data['status'] == 'paid_holiday' %}
+                                            {% if data.get('holiday_name') %}
+                                                <span class="badge bg-info">{{ data['holiday_name'] }}</span>
+                                            {% else %}
+                                                <span class="badge bg-info">Paid Holiday</span>
+                                            {% endif %}
+                                        {% elif 'Present /' in data['status'] %}
+                                            <span class="badge bg-success">{{ data['status'] }}</span>
+                                        {% elif data.get('holiday_name') and data['status'] != 'present' %}
+                                            <span class="badge bg-info">{{ data['status'] }}</span>
+                                        {% elif data['status'] == 'permission' %}
+                                            <span class="badge bg-info">Permission</span>
+                                        {% elif data['status'] == 'Leave Request' %}
+                                            <span class="badge bg-warning">Leave Request</span>
+                                        {% elif data['status'] == 'Permission Request' %}
+                                            <span class="badge bg-info">Permission Request</span>
+                                        {% elif data['status'] == 'Not Yet Joined' %}
+                                            <span class="badge bg-light text-dark">Not Yet Joined</span>
+                                        {% endif %}
+                                </td>
+                                <td>
+                                    {% if data.get('leave_type_name') or (data['status'] == 'DayOff' and data.get('leave_request')) %}
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-calendar-times me-1"></i>
+                                            {{ data.get('leave_type_name', 'Leave Request') }}
+                                        </span>
+                                    {% elif data.get('holiday_name') %}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-calendar-check me-1"></i>
+                                            {{ data['holiday_name'] }}
+                                        </span>
+                                    {% elif 'Present /' in data['status'] %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-calendar-check me-1"></i>
+                                            {{ data['status'].split(' / ')[1] }}
+                                        </span>
+                                    {% elif data.get('permission_request') and data['status'] == 'present' %}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-clock me-1"></i>
+                                            {{ data['permission_request'].reason }}
+                                        </span>
+                                    {% elif data.get('leave_request') %}
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-calendar-times me-1"></i>
+                                            {{ data['leave_request'].reason }}
+                                        </span>
+                                    {% elif data.get('permission_request') %}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-clock me-1"></i>
+                                            {{ data['permission_request'].reason }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">-</span>
                                     {% endif %}
                                 </td>
                             </tr>
+                                    {% endif %}
                             {% endfor %}
                         </tbody>
                     </table>
@@ -401,10 +805,16 @@
                     <!-- Historical Data -->
                 {% if historical_attendance %}
                     <h6 class="card-subtitle mb-3 mt-4">Historical Attendance</h6>
-                    {% for date, attendance in historical_attendance.items() %}
-                    <h6 class="mt-3">{{ date }}</h6>
+                    {% for date, date_data in historical_attendance.items() %}
+                    <h6 class="mt-3">
+                        {{ date }}
+                        {% if date_data.is_paid_holiday %}
+                            <span class="badge bg-info ms-2">{{ date_data.paid_holiday }}</span>
+                        {% endif %}
+                    </h6>
+                    {% set attendance = date_data.attendance_data %}
                     <div class="table-responsive">
-                        <table class="table table-striped table-hover">
+                        <table class="table employee-table">
                         <thead>
                             <tr>
                                 <th>Fingerprint ID</th>
@@ -412,11 +822,14 @@
                                 <th>Check In</th>
                                 <th>Check Out</th>
                                 <th>Duration</th>
+                                <th>All Logs</th>
                                 <th>Status</th>
+                                <th>Details</th>
                             </tr>
                         </thead>
                         <tbody>
                                 {% for user_id, data in attendance.items() %}
+                                    {% if data['user'] and data['user'].first_name and data['user'].last_name %}
                                 <tr>
                                     <td>
                                         {% if data['user'].fingerprint_number %}
@@ -428,22 +841,53 @@
                                     <td>{{ data['user'].get_full_name() }}</td>
                                     <td>
                                         {% if data['check_in'] %}
-                                        {{ data['check_in'].timestamp.strftime('%I:%M %p') }}
+                                        <span class="badge bg-success">{{ data['check_in'].timestamp.strftime('%I:%M %p') }}</span>
                                         {% else %}
                                         -
                                         {% endif %}
                                     </td>
                                     <td>
                                         {% if data['check_out'] %}
-                                        {{ data['check_out'].timestamp.strftime('%I:%M %p') }}
+                                        <span class="badge bg-danger">{{ data['check_out'].timestamp.strftime('%I:%M %p') }}</span>
                                         {% else %}
                                         -
                                         {% endif %}
                                     </td>
                                     <td>{{ data['duration'] or '-' }}</td>
                                     <td>
+                                        {% if data.get('all_logs') and data['all_logs']|length > 0 %}
+                                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#logs-{{ date }}-{{ user_id }}" aria-expanded="false">
+                                                View All ({{ data['all_logs']|length }})
+                                            </button>
+                                            <div class="collapse mt-2" id="logs-{{ date }}-{{ user_id }}">
+                                                <div class="card card-body p-2">
+                                                    {% for log in data['all_logs'] %}
+                                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                                        <span class="{% if log == data['check_in'] %}text-success fw-bold{% elif log == data['check_out'] %}text-danger fw-bold{% else %}text-muted{% endif %}">
+                                                            {{ log.timestamp.strftime('%I:%M %p') }}
+                                                        </span>
+                                                        <span class="badge {% if log == data['check_in'] %}bg-success{% elif log == data['check_out'] %}bg-danger{% else %}bg-secondary{% endif %}">
+                                                            {% if log == data['check_in'] %}Check-In{% elif log == data['check_out'] %}Check-Out{% else %}Additional{% endif %}
+                                                        </span>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
                                         {% if data['status'] == 'present' %}
-                                            <span class="badge bg-success">Present</span>
+                                            {% if data.get('leave_type_name') %}
+                                                <span class="badge bg-warning">{{ data['leave_type_name'] }} / Present</span>
+                                            {% elif data.get('holiday_name') %}
+                                                <span class="badge bg-info">{{ data['holiday_name'] }} / Present</span>
+                                            {% elif data.get('permission_request') %}
+                                                <span class="badge bg-info">Present (Permission)</span>
+                                            {% else %}
+                                                <span class="badge bg-success">Present</span>
+                                            {% endif %}
                                         {% elif data['status'] == 'in_office' %}
                                             <span class="badge bg-info">In Office</span>
                                         {% elif data['status'] == 'Absent' %}
@@ -452,11 +896,62 @@
                                             <span class="badge bg-secondary">Day Off</span>
                                         {% elif data['status'] == 'DayOff / Present' %}
                                             <span class="badge bg-primary">Day Off / Present</span>
+                                        {% elif data['status'] == 'leave' %}
+                                            {% if data.get('leave_type_name') %}
+                                                <span class="badge bg-warning">{{ data['leave_type_name'] }}</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Leave</span>
+                                            {% endif %}
+                                        {% elif data['status'] == 'paid_holiday' %}
+                                            {% if data.get('holiday_name') %}
+                                                <span class="badge bg-info">{{ data['holiday_name'] }}</span>
+                                            {% else %}
+                                                <span class="badge bg-info">Paid Holiday</span>
+                                            {% endif %}
+                                        {% elif 'Present /' in data['status'] %}
+                                            <span class="badge bg-success">{{ data['status'] }}</span>
+                                        {% elif data.get('holiday_name') and data['status'] != 'present' %}
+                                            <span class="badge bg-info">{{ data['status'] }}</span>
                                         {% elif data['status'] == 'On Leave' or data['status'] == 'Leave Request' %}
                                             <span class="badge bg-warning">Leave Request</span>
+                                        {% elif data['status'] == 'Permission Request' %}
+                                            <span class="badge bg-info">Permission Request</span>
+                                        {% elif data['status'] == 'Not Yet Joined' %}
+                                            <span class="badge bg-light text-dark">Not Yet Joined</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if data.get('leave_type_name') or (data['status'] == 'DayOff' and data.get('leave_request')) %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-calendar-times me-1"></i>
+                                                {{ data.get('leave_type_name', 'Leave Request') }}
+                                            </span>
+                                        {% elif data.get('holiday_name') %}
+                                            <span class="badge bg-info">
+                                                <i class="fas fa-calendar-check me-1"></i>
+                                                {{ data['holiday_name'] }}
+                                            </span>
+                                        {% elif 'Present /' in data['status'] %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-calendar-check me-1"></i>
+                                                {{ data['status'].split(' / ')[1] }}
+                                            </span>
+                                        {% elif data.get('leave_request') %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-calendar-times me-1"></i>
+                                                {{ data['leave_request'].reason }}
+                                            </span>
+                                        {% elif data.get('permission_request') %}
+                                            <span class="badge bg-info">
+                                                <i class="fas fa-clock me-1"></i>
+                                                {{ data['permission_request'].reason }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">-</span>
                                         {% endif %}
                                     </td>
                                 </tr>
+                                    {% endif %}
                             {% endfor %}
                         </tbody>
                     </table>
@@ -479,96 +974,413 @@
 {% endblock %}
 
 {% block extra_js %}
+{% if current_user.role != 'employee' %}
 <script>
 const syncButton = document.getElementById('syncButton');
-const deviceStatus = document.getElementById('deviceStatus');
 
-function updateSyncStatus(syncing) {
+function clearSyncAlerts() {
+    // Remove all sync-related alerts from anywhere on the page
+    const allAlerts = document.querySelectorAll('.alert, .sync-status-alert, .auto-sync-alert');
+    allAlerts.forEach(alert => {
+        const alertText = alert.textContent.toLowerCase();
+        if (alertText.includes('sync') || 
+            alertText.includes('operation') ||
+            alertText.includes('running') ||
+            alertText.includes('forbidden') ||
+            alert.classList.contains('sync-status-alert') ||
+            alert.classList.contains('auto-sync-alert')) {
+            alert.remove();
+        }
+    });
+}
+
+function showSyncAlert(message, type = 'info') {
+    // Clear existing alerts first
+    clearSyncAlerts();
+    
+    // Create alert element
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `sync-status-alert alert alert-${type} alert-dismissible fade show`;
+    
+    // Set icon based on type
+    let icon = 'fas fa-info-circle';
+    let heading = 'Sync Status';
+    
+    switch(type) {
+        case 'success':
+            icon = 'fas fa-check-circle';
+            heading = 'Sync Successful';
+            break;
+        case 'warning':
+            icon = 'fas fa-exclamation-triangle';
+            heading = 'Sync Warning';
+            break;
+        case 'danger':
+            icon = 'fas fa-exclamation-circle';
+            heading = 'Sync Failed';
+            break;
+        case 'info':
+        default:
+            icon = 'fas fa-info-circle';
+            heading = 'Sync Info';
+            break;
+    }
+    
+    alertDiv.innerHTML = `
+        <div class="d-flex align-items-start">
+            <div class="flex-shrink-0">
+                <i class="${icon} fa-lg me-3"></i>
+            </div>
+            <div class="flex-grow-1">
+                <h6 class="alert-heading mb-1">${heading}</h6>
+                <div>${message}</div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    // Insert the alert in the header area for better visibility
+    const headerArea = document.querySelector('.employee-page-header');
+    if (headerArea) {
+        const alertContainer = document.createElement('div');
+        alertContainer.className = 'mt-3';
+        alertContainer.appendChild(alertDiv);
+        headerArea.appendChild(alertContainer);
+    } else {
+        // Fallback to content area
+        const contentArea = document.querySelector('.employee-card-body');
+        if (contentArea) {
+            contentArea.insertBefore(alertDiv, contentArea.firstChild);
+        }
+    }
+    
+    // Auto-dismiss info and warning alerts after 5 seconds
+    if (type === 'info' || type === 'warning') {
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
+}
+
+function handleSyncClick() {
+    // Check if sync is already in progress
+    if (window.syncInProgress) {
+        console.log('Sync already in progress, ignoring click');
+        return;
+    }
+    
+    // Check if button is disabled
+    const syncButton = document.getElementById('syncButton');
+    if (syncButton && syncButton.disabled) {
+        console.log('Sync button is disabled, ignoring click');
+        return;
+    }
+    
+    // Proceed with sync
+    triggerSync();
+}
+
+function updateSyncStatus(syncing, message = 'Syncing...') {
+    const syncButton = document.getElementById('syncButton');
     if (syncButton) {
         syncButton.disabled = syncing;
         if (syncing) {
-            syncButton.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Syncing...';
+            syncButton.innerHTML = `<i class="fas fa-sync-alt fa-spin"></i> ${message}`;
+            syncButton.classList.add('disabled');
         } else {
             syncButton.innerHTML = '<i class="fas fa-sync-alt"></i> Sync Attendance Now';
+            syncButton.classList.remove('disabled');
         }
     }
 }
 
-async function triggerSync() {
+async function triggerSync(retryCount = 0) {
+    // Prevent multiple simultaneous sync operations
+    if (window.syncInProgress) {
+        console.log('Sync already in progress, ignoring request');
+        return;
+    }
+    
+    console.log(`Starting sync operation${retryCount > 0 ? ` (retry ${retryCount})` : ''}...`);
+    
     try {
-        updateSyncStatus(true);
+        window.syncInProgress = true;
+        updateSyncStatus(true, retryCount > 0 ? `Retrying... (${retryCount})` : 'Connecting...');
+        console.log('Sync button disabled and status updated');
+        
+        // Remove all existing sync-related alerts immediately
+        clearSyncAlerts();
+        
+        // Show simple connecting message
+        showSyncAlert('Connecting to fingerprint devices...', 'info');
         
         // Get CSRF token from meta tag
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         
-        const response = await fetch('/attendance/manual-sync', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken
-            },
-            credentials: 'same-origin'
-        });
+        let response;
+        try {
+            console.log('Sending sync request to /attendance/manual-sync');
+            
+            // Create AbortController for timeout handling
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {
+                console.log('Sync timeout reached, aborting request...');
+                controller.abort();
+            }, 300000); // 5 minute timeout for sync operations
+            
+            response = await fetch('/attendance/manual-sync', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                credentials: 'same-origin',
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            console.log('Sync response received:', response.status, response.statusText);
+        } catch (networkError) {
+            // Handle network errors (connection reset, timeout, etc.)
+            console.error('Network error during manual sync:', networkError);
+            
+            if (networkError.name === 'AbortError') {
+                // Sync operation timed out after 5 minutes
+                showSyncAlert('Sync operation timed out after 5 minutes. This indicates the sync is processing a large amount of data. The sync may still be running in the background. Please wait a few minutes before trying again.', 'warning');
+                
+                // Don't retry automatically for timeouts - let user decide
+                console.log('Sync aborted due to timeout - no automatic retry');
+            } else if (networkError.message.includes('Failed to fetch') || 
+                       networkError.message.includes('ERR_CONNECTION_RESET')) {
+                // Connection reset - likely sync is taking too long
+                showSyncAlert('Connection was reset by the server. This usually means the sync is taking longer than expected. Please wait a few minutes before trying again.', 'warning');
+            } else {
+                if (retryCount < 1) {
+                    showSyncAlert(`Network error. Retrying... (${retryCount + 1}/1)`, 'warning');
+                    setTimeout(() => triggerSync(retryCount + 1), 2000);
+                    return;
+                } else {
+                    showSyncAlert(`Network error: ${networkError.message}. Please try again.`, 'danger');
+                }
+            }
+            return;
+        }
         
-        const data = await response.json();
+        let data;
+        try {
+            data = await response.json();
+        } catch (e) {
+            // Handle non-JSON responses
+            console.error('Invalid JSON response:', e);
+            throw new Error(`Server error: ${response.status} ${response.statusText}`);
+        }
+        
+        // Handle different HTTP status codes
+        if (response.status === 403) {
+            throw new Error('Access denied. You do not have permission to perform this action.');
+        } else if (response.status === 404) {
+            throw new Error('Sync endpoint not found. Please contact your administrator.');
+        } else if (response.status >= 500) {
+            throw new Error('Server error. Please try again later or contact your administrator.');
+        }
         
         if (response.ok) {
-            // Show success message
-            const alertDiv = document.createElement('div');
-            alertDiv.className = 'alert alert-success alert-dismissible fade show';
-            alertDiv.innerHTML = `
-                <strong>Success!</strong> ${data.message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            deviceStatus.parentNode.insertBefore(alertDiv, deviceStatus);
             
-            // Refresh the page after 2 seconds
-            setTimeout(() => {
-                location.reload();
-            }, 2000);
+            // Create enhanced sync status alert
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'sync-status-alert alert alert-dismissible fade show';
+            
+            let alertClass, icon, title, message;
+            
+            // Handle different response statuses
+            if (data.status === 'success') {
+                alertClass = 'alert-success';
+                icon = 'fas fa-check-circle';
+                title = 'All Done!';
+                message = 'Attendance data synchronized successfully.';
+                
+                // Add detailed results for successful sync
+                if (data.records_added !== undefined || data.records_updated !== undefined) {
+                    message += '<div class="mt-2 sync-details">';
+                    if (data.records_added > 0) {
+                        message += `<span class="badge bg-primary me-2"><i class="fas fa-plus"></i> ${data.records_added} new</span>`;
+                    }
+                    if (data.records_updated > 0) {
+                        message += `<span class="badge bg-info me-2"><i class="fas fa-sync-alt"></i> ${data.records_updated} updated</span>`;
+                    }
+                    if (data.records_added === 0 && data.records_updated === 0) {
+                        message += '<span class="badge bg-secondary"><i class="fas fa-info-circle"></i> No new data</span>';
+                    }
+                    message += '</div>';
+                    
+                    // Add device information if available
+                    if (data.devices_synced && data.devices_synced.length > 0) {
+                        message += '<div class="mt-2"><small class="text-muted"><i class="fas fa-fingerprint me-1"></i>Synced from: ' + data.devices_synced.join(', ') + '</small></div>';
+                    }
+                }
+            } else if (data.status === 'info') {
+                // Check if this is a "sync already running" message
+                if (data.message && data.message.toLowerCase().includes('already running')) {
+                    alertClass = 'alert-warning';
+                    icon = 'fas fa-clock';
+                    title = 'Sync Already Running';
+                    message = data.message + '<div class="mt-2"><small class="text-muted">Please wait for the current sync to complete before starting a new one.</small></div>';
+                } else {
+                    alertClass = 'alert-info';
+                    icon = 'fas fa-info-circle';
+                    title = 'Sync Status';
+                    message = data.message;
+                }
+            } else {
+                alertClass = 'alert-warning';
+                icon = 'fas fa-exclamation-triangle';
+                title = 'Sync Notice';
+                message = data.message;
+            }
+            
+            alertDiv.className += ' ' + alertClass;
+            alertDiv.innerHTML = `
+                <div class="d-flex align-items-start">
+                    <div class="flex-shrink-0">
+                        <i class="${icon} fa-lg me-3"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="alert-heading mb-1">${title}</h6>
+                        <div>${message}</div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            // Insert the alert in the header area for better visibility
+            const headerArea = document.querySelector('.employee-page-header');
+            if (headerArea) {
+                const alertContainer = document.createElement('div');
+                alertContainer.className = 'mt-3';
+                alertContainer.appendChild(alertDiv);
+                headerArea.appendChild(alertContainer);
+            } else {
+                // Fallback to content area
+                const contentArea = document.querySelector('.employee-card-body');
+                if (contentArea) {
+                    contentArea.insertBefore(alertDiv, contentArea.firstChild);
+                }
+            }
+            
+            // Auto-dismiss info alerts after 5 seconds
+            if (data.status === 'info') {
+                setTimeout(() => {
+                    alertDiv.remove();
+                }, 5000);
+            }
+            
+            // Handle async sync response - trigger immediate data refresh
+            if (data.status === 'success') {
+                console.log('✅ Sync completed successfully - triggering immediate data refresh...');
+                
+                // Trigger immediate data fetch if auto-fetch system is available
+                setTimeout(() => {
+                    if (window.autoFetch && typeof window.autoFetch.fetchAllData === 'function') {
+                        console.log('🔄 Refreshing data after sync...');
+                        window.autoFetch.fetchAllData().then(() => {
+                            console.log('✅ Data refreshed successfully');
+                        }).catch(err => {
+                            console.error('❌ Error refreshing data:', err);
+                        });
+                    } else {
+                        // Fallback: reload the page
+                        console.log('🔄 Reloading page...');
+                        setTimeout(() => window.location.reload(), 1000);
+                    }
+                }, 500);
+            }
         } else {
             throw new Error(data.message || 'Sync failed');
         }
     } catch (error) {
-        // Show error message
+        // Remove any existing sync alerts first
+        clearSyncAlerts();
+        
+        // Show enhanced error message
         const alertDiv = document.createElement('div');
-        alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+        alertDiv.className = 'sync-status-alert alert alert-danger alert-dismissible fade show';
         alertDiv.innerHTML = `
-            <strong>Error!</strong> ${error.message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        deviceStatus.parentNode.insertBefore(alertDiv, deviceStatus);
-    } finally {
-        updateSyncStatus(false);
-    }
-}
-
-// Auto-refresh status every 30 seconds
-setInterval(() => {
-    fetch('/attendance/realtime-status')
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                updateDeviceStatus(data);
-            }
-        })
-        .catch(error => console.error('Error updating status:', error));
-}, 30000);
-
-function updateDeviceStatus(data) {
-    if (deviceStatus) {
-        const lastSync = data.timestamp ? new Date(data.timestamp) : null;
-        const status = `
-            <div class="d-flex align-items-center mb-2">
-                <i class="fas fa-check-circle text-success me-2"></i>
-                <span>Device Connected</span>
+            <div class="d-flex align-items-start">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-exclamation-circle fa-lg me-3"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="alert-heading mb-1">Sync Failed</h6>
+                    <div>${error.message}</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
-            <small class="text-muted">
-                Last sync: ${lastSync ? lastSync.toLocaleString() : 'Never'}
-            </small>
         `;
-        deviceStatus.innerHTML = status;
+        
+        // Insert the alert in the header area for better visibility
+        const headerArea = document.querySelector('.employee-page-header');
+        if (headerArea) {
+            const alertContainer = document.createElement('div');
+            alertContainer.className = 'mt-3';
+            alertContainer.appendChild(alertDiv);
+            headerArea.appendChild(alertContainer);
+        } else {
+            // Fallback to content area
+            const contentArea = document.querySelector('.employee-card-body');
+            if (contentArea) {
+                contentArea.insertBefore(alertDiv, contentArea.firstChild);
+            }
+        }
+    } finally {
+        console.log('Sync operation completed, resetting state');
+        window.syncInProgress = false;
+        updateSyncStatus(false);
+        console.log('Sync state reset complete');
     }
 }
+
+// Clear any existing sync alerts when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait a bit for the page to fully load, then clear sync alerts
+    setTimeout(clearSyncAlerts, 500);
+});
+
+// Auto-fetch status indicator animation
+document.addEventListener('DOMContentLoaded', function() {
+    const statusIndicator = document.getElementById('autoFetchStatus');
+    if (!statusIndicator) return;
+    
+    // Pulse animation when fetching
+    setInterval(() => {
+        if (window.autoFetch && window.autoFetch.fetchInProgress) {
+            statusIndicator.style.opacity = '1';
+            statusIndicator.querySelector('i').style.animation = 'pulse 1s ease-in-out infinite';
+            statusIndicator.querySelector('span').textContent = 'Checking for updates...';
+        } else {
+            statusIndicator.style.opacity = '0.7';
+            statusIndicator.querySelector('i').style.animation = 'none';
+            statusIndicator.querySelector('span').textContent = 'Auto-Update Active';
+        }
+    }, 500);
+});
+</script>
+
+<style>
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+</style>
+{% endif %}
+
+<script>
+// Make auto-fetch status visible to all users on attendance page
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔄 Attendance page loaded - Auto-fetch system should be active');
+    console.log('📊 Auto-fetch will check for new data every 30 seconds');
+    console.log('🔄 Page will reload automatically when new attendance data is detected');
+});
 </script>
 {% endblock %}

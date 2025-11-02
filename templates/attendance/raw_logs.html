@@ -84,7 +84,7 @@
                                 <th>Department</th>
                                 <th>Timestamp</th>
                                 <th>Type</th>
-                                <th>Device IP</th>
+                                <th>Device</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -112,7 +112,13 @@
                                         {{ log.scan_type|title }}
                                     </span>
                                 </td>
-                                <td>{{ log.device_ip }}</td>
+                                <td>
+                                    {% if log.device %}
+                                        {{ log.device.get_display_name() }}
+                                    {% else %}
+                                        Unknown Device
+                                    {% endif %}
+                                </td>
                             </tr>
                             {% else %}
                             <tr>

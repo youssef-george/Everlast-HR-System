@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Role Detection</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; }
+        .error { background-color: #f8d7da; }
+        .info { background-color: #d1ecf1; }
+        .log { background: #f8f9fa; padding: 10px; border-radius: 5px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; }
+    </style>
+</head>
+<body data-user-role="employee">
+    <h1>Debug Role Detection</h1>
+    
+    <div class="debug-section info">
+        <h3>Current Role Detection</h3>
+        <div id="role-info"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h3>Test Different Roles</h3>
+        <button onclick="testRole('employee')">Test Employee</button>
+        <button onclick="testRole('manager')">Test Manager</button>
+        <button onclick="testRole('admin')">Test Admin</button>
+        <button onclick="testRole('director')">Test Director</button>
+    </div>
+    
+    <div class="debug-section">
+        <h3>Auto-Fetch Status</h3>
+        <div id="auto-fetch-status"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h3>Console Logs</h3>
+        <div id="console-logs" class="log"></div>
+    </div>
+    
+    <script>
+        // Override console methods to capture logs
+        const originalLog = console.log;
+        const originalWarn = console.warn;
+        const originalError = console.error;
+        
+        function addLog(message, type = 'log') {
+            const logDiv = document.getElementById('console-logs');
+            const logEntry = document.createElement('div');
+            logEntry.style.marginBottom = '5px';
+            
+            if (type === 'error') {
+                logEntry.style.color = '#dc3545';
+            } else if (type === 'warn') {
+                logEntry.style.color = '#ffc107';
+            } else {
+                logEntry.style.color = '#28a745';
+            }
+            
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addLog(args.join(' '), 'log');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addLog(args.join(' '), 'warn');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addLog(args.join(' '), 'error');
+        };
+        
+        function updateRoleInfo() {
+            const role = document.body.getAttribute('data-user-role');
+            const roleInfo = document.getElementById('role-info');
+            roleInfo.innerHTML = `
+                <p><strong>Detected Role:</strong> ${role}</p>
+                <p><strong>Current Path:</strong> ${window.location.pathname}</p>
+                <p><strong>Auto-Fetch Available:</strong> ${window.autoFetch ? 'Yes' : 'No'}</p>
+            `;
+        }
+        
+        function testRole(role) {
+            console.log(`Testing role: ${role}`);
+            
+            // Set the role
+            document.body.setAttribute('data-user-role', role);
+            
+            // Destroy existing auto-fetch
+            if (window.autoFetch) {
+                console.log('Destroying existing auto-fetch system');
+                window.autoFetch.destroy();
+                window.autoFetch = null;
+            }
+            
+            // Update role info
+            updateRoleInfo();
+            
+            // Test if auto-fetch would initialize
+            const currentPath = window.location.pathname;
+            const fetchPages = [
+                '/dashboard/',
+                '/leave/',
+                '/attendance/',
+                '/calendar/',
+                '/permission/',
+                '/'
+            ];
+            
+            const shouldEnableAutoFetch = fetchPages.some(page => currentPath.startsWith(page));
+            console.log(`Should enable auto-fetch: ${shouldEnableAutoFetch}`);
+            
+            if (shouldEnableAutoFetch) {
+                console.log(`Initializing auto-fetch for ${role} role...`);
+                
+                // Initialize auto-fetch
+                window.autoFetch = new AutoFetchSystem({
+                    fetchInterval: 5000, // 5 seconds for testing
+                    refreshInterval: 30000, // 30 seconds for testing
+                    enabled: true,
+                    userRole: role,
+                    debug: true
+                });
+                
+                console.log(`Auto-fetch initialized for ${role}`);
+                
+                // Test API call
+                testAPICall(role);
+            } else {
+                console.log(`Auto-fetch not enabled for current path: ${currentPath}`);
+            }
+        }
+        
+        async function testAPICall(role) {
+            try {
+                console.log(`Testing API call for ${role}...`);
+                
+                const response = await fetch('/api/dashboard/stats');
+                const data = await response.json();
+                
+                console.log(`API Response for ${role}:`, data);
+                
+                if (data.status === 'success' && data.data) {
+                    console.log(`API call successful for ${role}`);
+                    console.log(`Data keys: ${Object.keys(data.data)}`);
+                } else {
+                    console.error(`API call failed for ${role}:`, data);
+                }
+                
+            } catch (error) {
+                console.error(`Error testing API for ${role}:`, error);
+            }
+        }
+        
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            console.log('Page loaded');
+            updateRoleInfo();
+            
+            // Test current role
+            const currentRole = document.body.getAttribute('data-user-role');
+            console.log(`Current role: ${currentRole}`);
+            
+            // Check if auto-fetch should start
+            const currentPath = window.location.pathname;
+            const fetchPages = [
+                '/dashboard/',
+                '/leave/',
+                '/attendance/',
+                '/calendar/',
+                '/permission/',
+                '/'
+            ];
+            
+            const shouldEnableAutoFetch = fetchPages.some(page => currentPath.startsWith(page));
+            console.log(`Should enable auto-fetch: ${shouldEnableAutoFetch}`);
+            
+            if (shouldEnableAutoFetch) {
+                console.log('Auto-fetch should be enabled for this page');
+            } else {
+                console.log('Auto-fetch not enabled for this page');
+            }
+        });
+    </script>
+    
+    <!-- Include the auto-fetch script -->
+    <script src="static/js/auto-fetch.js"></script>
+</body>
+</html>

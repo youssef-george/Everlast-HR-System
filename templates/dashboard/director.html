@@ -1,113 +1,1756 @@
 {% extends "layout.html" %}
 
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js" rel="preload" as="script">
+<style>
+    /* Enhanced Director Dashboard Styles - Matching Admin Theme with Director Branding */
+    .dashboard-header {
+        background-color: #8b5cf6;
+        color: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .dashboard-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background-color: transparent;
+        animation: pulse 4s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        border: none;
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+    }
+    
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+    
+    .quick-action-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        border: none;
+        transition: all 0.3s ease;
+    }
+    
+    .quick-action-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+    
+    .quick-action-card-header {
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .quick-action-card-body {
+        padding: 0;
+    }
+    
+    .recent-requests-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        border: none;
+        overflow: hidden;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #6c757d;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+    
+    .welcome-text {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin-bottom: 0;
+    }
+    
+    .dashboard-title {
+        position: relative;
+        z-index: 2;
+    }
+    
+    .dashboard-title h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: white;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    
+    .action-btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .action-btn-primary {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .action-btn-primary:hover {
+        background: rgba(255, 255, 255, 0.3);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+    }
+    
+    .action-btn-secondary {
+        background: rgba(255, 255, 255, 0.9);
+        color: #2d3748;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .action-btn-secondary:hover {
+        background: rgba(255, 255, 255, 1);
+        color: #1a202c;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+    }
+    
+    .chart-container {
+        position: relative;
+        min-height: 300px;
+    }
+    
+    .chart-loading {
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 10px;
+        padding: 2rem;
+    }
+    
+    .mini-calendar {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        border: none;
+    }
+    
+    /* Universal table header white text */
+    .table thead th,
+    table thead th,
+    .employee-table thead th,
+    .enhanced-table thead th {
+        color: white !important;
+    }
+    
+    .table thead th *,
+    table thead th *,
+    .employee-table thead th *,
+    .enhanced-table thead th * {
+        color: white !important;
+    }
+    
+    thead th,
+    thead th span,
+    thead th i,
+    thead th strong,
+    thead th b {
+        color: white !important;
+    }
+    
+    /* Quick Actions Enhanced Styling */
+    .quick-action-item {
+        padding: 2rem 1rem !important;
+        height: 150px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        align-items: center !important;
+        text-decoration: none !important;
+        transition: all 0.3s ease !important;
+        border-radius: 12px !important;
+        position: relative !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+        width: 100% !important;
+    }
+
+    .quick-action-item:hover {
+        transform: translateY(-5px) !important;
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3) !important;
+    }
+
+    .quick-action-item i {
+        transition: all 0.3s ease !important;
+    }
+
+    .quick-action-item:hover i {
+        transform: scale(1.1) !important;
+    }
+
+    .quick-action-item small {
+        font-size: 0.75rem !important;
+        margin-top: 0.5rem !important;
+        opacity: 0.8 !important;
+    }
+
+    .quick-action-item span {
+        font-weight: 600 !important;
+        font-size: 0.9rem !important;
+    }
+    
+    /* Enhanced Stats Card Layout */
+    .stat-content {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .stat-details {
+        flex: 1;
+    }
+    
+    .stat-value {
+        font-size: 2rem !important;
+        font-weight: 700 !important;
+        color: #1f2937 !important;
+        line-height: 1 !important;
+        margin-bottom: 0.25rem !important;
+    }
+    
+    .stat-label {
+        font-size: 0.875rem !important;
+        color: #6b7280 !important;
+        font-weight: 500 !important;
+        margin: 0 !important;
+    }
+    
+    .stat-icon {
+        width: 60px !important;
+        height: 60px !important;
+        border-radius: 12px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 1.5rem !important;
+        flex-shrink: 0 !important;
+    }
+    
+    /* Director-specific styling */
+    .director-badge {
+        background-color: #fbbf24;
+        color: #1f2937;
+        font-weight: 600;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* View-only indicators */
+    .view-only-badge {
+        background: rgba(139, 92, 246, 0.1);
+        color: #8b5cf6;
+        border: 1px solid rgba(139, 92, 246, 0.2);
+    }
+    
+    /* Enhanced Chart Toggle Buttons Styling */
+    .chart-toggle-btn {
+        background-color: #f8f9fa !important;
+        border: 2px solid #dee2e6 !important;
+        color: #495057 !important;
+        padding: 0.75rem 1.25rem !important;
+        font-size: 0.875rem !important;
+        font-weight: 600 !important;
+        border-radius: 10px !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        margin: 0 0.5rem !important;
+        position: relative !important;
+        overflow: hidden !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+    }
+    
+    .chart-toggle-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background-color: transparent;
+        transition: left 0.5s;
+    }
+    
+    .chart-toggle-btn:hover::before {
+        left: 100%;
+    }
+    
+    .chart-toggle-btn:hover {
+        background-color: #e9ecef !important;
+        border-color: #8b5cf6 !important;
+        color: #8b5cf6 !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 25px rgba(139, 92, 246, 0.2) !important;
+    }
+    
+    .chart-toggle-btn.active {
+        background-color: #8b5cf6 !important;
+        border-color: #8b5cf6 !important;
+        color: white !important;
+        box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4) !important;
+        transform: translateY(-2px) !important;
+    }
+    
+    .chart-toggle-btn.active:hover {
+        background-color: #7c3aed !important;
+        box-shadow: 0 12px 35px rgba(139, 92, 246, 0.5) !important;
+    }
+    
+    .chart-toggle-btn i {
+        margin-right: 0.5rem !important;
+        font-size: 1rem !important;
+        transition: transform 0.3s ease !important;
+    }
+    
+    .chart-toggle-btn:hover i {
+        transform: scale(1.1) !important;
+    }
+    
+    .btn-group .chart-toggle-btn:first-child {
+        border-radius: 10px !important;
+        margin-right: 0.5rem !important;
+    }
+    
+    .btn-group .chart-toggle-btn:not(:first-child):not(:last-child) {
+        border-radius: 10px !important;
+        margin: 0 0.25rem !important;
+    }
+    
+    .btn-group .chart-toggle-btn:last-child {
+        border-radius: 10px !important;
+        margin-left: 0.5rem !important;
+    }
+    
+    /* Chart Container Enhanced */
+    .chart-container-enhanced {
+        position: relative;
+        padding: 2rem;
+        background-color: #fafbfc;
+        border-radius: 15px;
+        border: 2px solid #e5e7eb;
+        min-height: 400px;
+        box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+    }
+    
+    .chart-container-enhanced:hover {
+        box-shadow: inset 0 4px 20px rgba(139, 92, 246, 0.1);
+        border-color: rgba(139, 92, 246, 0.3);
+    }
+    
+    .realtime-indicator {
+        background-color: #10b981;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.75px;
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .realtime-indicator::before {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
+        background-color: #10b981;
+        border-radius: 25px;
+        z-index: -1;
+        animation: pulse-border 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulse-border {
+        0%, 100% { opacity: 0.5; }
+        50% { opacity: 1; }
+    }
+    
+    /* Summary Items */
+    .summary-item {
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .summary-item:last-child {
+        border-bottom: none;
+    }
+    
+    .summary-item .text-muted {
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .summary-item .fw-bold {
+        font-size: 1.125rem;
+        font-weight: 700;
+    }
+    
+    /* Enhanced Table Styles for Director */
+    .director-table {
+        border-collapse: separate;
+        border-spacing: 0;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    
+    .director-table thead th {
+        background-color: #8b5cf6 !important;
+        color: white !important;
+        font-weight: 600 !important;
+        padding: 1rem 0.75rem !important;
+        border: none !important;
+        text-transform: uppercase !important;
+        font-size: 0.8rem !important;
+        letter-spacing: 0.5px !important;
+    }
+    
+    .director-table tbody tr {
+        transition: all 0.3s ease;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    
+    .director-table tbody tr:hover {
+        background-color: #f8fafc;
+        transform: scale(1.01);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .director-table tbody td {
+        padding: 1rem 0.75rem;
+        vertical-align: middle;
+        border: none;
+    }
+    
+    .director-table-sm {
+        font-size: 0.875rem;
+    }
+    
+    .director-table-sm thead th {
+        background-color: #3b82f6 !important;
+        color: white !important;
+        font-weight: 600 !important;
+        padding: 0.75rem 0.5rem !important;
+        border: none !important;
+        text-transform: uppercase !important;
+        font-size: 0.75rem !important;
+        letter-spacing: 0.5px !important;
+    }
+    
+    .director-table-sm tbody td {
+        padding: 0.75rem 0.5rem;
+        vertical-align: middle;
+        border: none;
+    }
+    
+    .director-table-sm tbody tr:hover {
+        background-color: #f8fafc;
+    }
+    
+    /* Activity Timeline Styles */
+    .activity-timeline {
+        position: relative;
+        padding-left: 0;
+    }
+    
+    .activity-item {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        background: #f8fafc;
+        border-radius: 12px;
+        border-left: 4px solid #8b5cf6;
+        transition: all 0.3s ease;
+    }
+    
+    .activity-item:hover {
+        background: #f1f5f9;
+        transform: translateX(5px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    
+    .activity-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        flex-shrink: 0;
+    }
+    
+    .activity-content {
+        flex: 1;
+    }
+    
+    .activity-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.25rem;
+    }
+    
+    .activity-action {
+        color: #6b7280;
+        font-size: 0.9rem;
+    }
+    
+    .activity-time {
+        margin-top: 0.25rem;
+    }
+    
+    /* Leave Type Statistics Cards */
+    .stat-card-director {
+        background: white;
+        border-radius: 12px;
+        padding: 1.25rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        border: 1px solid #f1f5f9;
+        transition: all 0.3s ease;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .stat-card-director:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    }
+    
+    .stat-icon-director {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    
+    .stat-details-director {
+        flex: 1;
+    }
+    
+    .stat-value-director {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #1f2937;
+        line-height: 1;
+        margin-bottom: 0.25rem;
+    }
+    
+    .stat-label-director {
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Symbol enhancements */
+    .symbol {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    
+    .symbol-label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        border-radius: 8px;
+        width: 100%;
+        height: 100%;
+    }
+    
+    .symbol-30px {
+        width: 30px;
+        height: 30px;
+    }
+    
+    .symbol-35px {
+        width: 35px;
+        height: 35px;
+    }
+    
+    /* Enhanced badges */
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.375rem 0.75rem;
+        border-radius: 6px;
+        font-weight: 500;
+    }
+    
+    /* Enhanced Leave Statistics Styles */
+    .leave-stats-overview {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .overview-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        border: 1px solid #f1f5f9;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .overview-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    }
+    
+    .overview-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        flex-shrink: 0;
+    }
+    
+    .overview-content h4 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin: 0;
+        line-height: 1;
+    }
+    
+    .overview-content p {
+        color: #6b7280;
+        font-weight: 500;
+        margin: 0.25rem 0 0 0;
+        font-size: 0.9rem;
+    }
+    
+    .enhanced-leave-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        overflow: hidden;
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    
+    .enhanced-leave-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+    
+    .leave-card-header {
+        padding: 1.5rem;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .leave-card-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        background: rgba(255,255,255,0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+    
+    .leave-card-title h5 {
+        color: white;
+        margin: 0;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    
+    .total-requests {
+        font-size: 0.85rem;
+        opacity: 0.9;
+        font-weight: 500;
+    }
+    
+    .leave-card-body {
+        padding: 2rem 1.5rem;
+    }
+    
+    .leave-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 1rem;
+        background: #f8fafc;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+    }
+    
+    .stat-item:hover {
+        background: #f1f5f9;
+        transform: scale(1.05);
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+        font-weight: 700;
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+    
+    .stat-text {
+        font-size: 0.8rem;
+        color: #6b7280;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .days-used-section {
+        background-color: #f8fafc;
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        text-align: center;
+    }
+    
+    .days-used-label {
+        font-size: 0.8rem;
+        color: #6b7280;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .days-used-value {
+        display: flex;
+        align-items: baseline;
+        justify-content: center;
+        gap: 0.25rem;
+    }
+    
+    .days-number {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #1f2937;
+    }
+    
+    .days-text {
+        font-size: 0.9rem;
+        color: #6b7280;
+        font-weight: 500;
+    }
+    
+    .approval-rate {
+        margin-top: 1rem;
+    }
+    
+    .rate-label {
+        font-size: 0.8rem;
+        color: #6b7280;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .rate-bar {
+        height: 8px;
+        background: #e5e7eb;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 0.5rem;
+    }
+    
+    .rate-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 1s ease-in-out;
+    }
+    
+    .rate-percentage {
+        text-align: right;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #374151;
+    }
+    
+    /* Responsive improvements */
+    @media (max-width: 768px) {
+        .activity-item {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .activity-icon {
+            margin-right: 0;
+            margin-bottom: 0.5rem;
+        }
+        
+        .activity-header {
+            justify-content: center;
+        }
+        
+        .leave-stats-overview {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .overview-content h4 {
+            font-size: 1.5rem;
+        }
+        
+        .leave-stats-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .leave-stats-overview {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    /* Overview Cards Styling - Matching Screenshot Design */
+    .overview-header-container {
+        background-color: #8b5cf6;
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 10px 30px rgba(139, 92, 246, 0.2);
+        margin-bottom: 2rem;
+    }
+    
+    .overview-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+    
+    .overview-title {
+        color: white;
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    .director-view-badge {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .overview-cards-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+    }
+    
+    .overview-stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        min-height: 120px;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .overview-stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
+    }
+    
+    .card-icon-container {
+        display: flex;
+        justify-content: flex-start;
+        margin-bottom: 1rem;
+    }
+    
+    .card-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.25rem;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .card-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    
+    .card-content .stat-number {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #1f2937;
+        line-height: 1;
+        margin-bottom: 0.5rem;
+    }
+    
+    .card-content .stat-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .card-progress-bar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        animation: progressSlide 1.5s ease-in-out;
+    }
+    
+    .warning-bar {
+        background-color: #f59e0b;
+    }
+    
+    .success-bar {
+        background-color: #10b981;
+    }
+    
+    .danger-bar {
+        background-color: #ef4444;
+    }
+    
+    .primary-bar {
+        background-color: #3b82f6;
+    }
+    
+    /* Responsive Design for Overview Cards */
+    @media (max-width: 1200px) {
+        .overview-cards-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .overview-cards-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .overview-header {
+            flex-direction: column;
+            text-align: center;
+            gap: 1rem;
+        }
+    }
+    
+    /* Enhanced Summary Card Styles */
+    .summary-card-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        margin-bottom: 1rem;
+        border-radius: 12px;
+        color: white;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .summary-card-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    }
+    
+    .summary-card-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.1);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .summary-card-item:hover::before {
+        opacity: 1;
+    }
+    
+    .summary-card-icon {
+        width: 50px;
+        height: 50px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        margin-right: 1rem;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .summary-card-content {
+        flex: 1;
+    }
+    
+    .summary-card-number {
+        font-size: 1.75rem;
+        font-weight: 800;
+        line-height: 1;
+        margin-bottom: 0.25rem;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    
+    .summary-card-label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .summary-card-arrow {
+        width: 35px;
+        height: 35px;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.875rem;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    /* Enhanced View All Button Styling */
+    .view-all-btn {
+        background-color: #3b82f6 !important;
+        color: white !important;
+        font-weight: 600;
+        padding: 0.5rem 1rem !important;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        text-decoration: none !important;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.25rem !important;
+        pointer-events: auto !important;
+        cursor: pointer !important;
+        z-index: 10 !important;
+        position: relative !important;
+        border: none !important;
+    }
+    
+    .view-all-btn:hover {
+        background-color: #2563eb !important;
+        color: white !important;
+        text-decoration: none !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+    
+    /* Fix for sidebar dropdown visibility */
+    .sidebar .nav-item.dropdown {
+        position: relative !important;
+        overflow: visible !important;
+    }
+    
+    .sidebar .dropdown-menu.sidebar-dropdown {
+        position: absolute !important;
+        top: 100% !important;
+        left: 0 !important;
+        right: auto !important;
+        z-index: 1050 !important;
+        display: none !important;
+        min-width: 200px !important;
+        padding: 0.5rem 0 !important;
+        margin: 0 !important;
+        background-color: white !important;
+        border: 1px solid rgba(0,0,0,.15) !important;
+        border-radius: 0.375rem !important;
+        box-shadow: 0 0.5rem 1rem rgba(0,0,0,.175) !important;
+    }
+    
+    .sidebar .nav-item.dropdown.show .dropdown-menu.sidebar-dropdown {
+        display: block !important;
+    }
+    
+    .sidebar .nav-link.dropdown-toggle {
+        cursor: pointer !important;
+        user-select: none !important;
+    }
+    
+    .sidebar .nav-link.dropdown-toggle:after {
+        display: inline-block !important;
+        margin-left: 0.255em !important;
+        vertical-align: 0.255em !important;
+        content: "" !important;
+        border-top: 0.3em solid !important;
+        border-right: 0.3em solid transparent !important;
+        border-bottom: 0 !important;
+        border-left: 0.3em solid transparent !important;
+    }
+    
+    /* Additional dropdown styling for better visibility */
+    .sidebar .dropdown-menu.sidebar-dropdown .dropdown-item {
+        padding: 0.5rem 1rem !important;
+        color: #333 !important;
+        text-decoration: none !important;
+        display: flex !important;
+        align-items: center !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    .sidebar .dropdown-menu.sidebar-dropdown .dropdown-item:hover {
+        background-color: #f8f9fa !important;
+        color: #005d99 !important;
+    }
+    
+    .sidebar .dropdown-menu.sidebar-dropdown .dropdown-item i {
+        margin-right: 0.5rem !important;
+        width: 16px !important;
+        text-align: center !important;
+    }
+    
+    .view-all-btn:active {
+        transform: translateY(0) !important;
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3) !important;
+    }
+    
+    .view-all-btn:focus {
+        outline: 2px solid rgba(59, 130, 246, 0.5) !important;
+        outline-offset: 2px !important;
+    }
+    
+    /* Enhanced padding for Today's Summary */
+    .summary-card-item {
+        margin-bottom: 0.75rem !important;
+    }
+    
+    .summary-card-item:last-child {
+        margin-bottom: 0 !important;
+    }
+    
+    /* Enhanced card toolbar spacing */
+    .card-toolbar {
+        margin-left: auto;
+        padding-left: 1rem;
+    }
+    
+    /* Chart toggle buttons enhancement */
+    .chart-toggle-btn {
+        background: rgba(255, 255, 255, 0.8) !important;
+        color: #374151 !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        font-size: 0.8rem;
+        padding: 0.4rem 0.8rem !important;
+        margin-right: 0.5rem;
+    }
+    
+    .chart-toggle-btn:hover {
+        background: rgba(255, 255, 255, 0.95) !important;
+        color: #111827 !important;
+        transform: translateY(-1px);
+    }
+    
+    .chart-toggle-btn.active {
+        background-color: #8b5cf6 !important;
+        color: white !important;
+        border-color: transparent !important;
+        box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+    }
+    
+    .chart-toggle-btn.active:hover {
+        background-color: #7c3aed !important;
+        color: white !important;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="content-header">
-    <h1 class="page-title">Director Dashboard</h1>
-    <div class="content-header-actions">
-        <a href="{{ url_for('calendar.index') }}" class="btn btn-primary">
-            <i class="fas fa-calendar-alt me-1"></i> Company Calendar
-        </a>
+<div class="container-fluid">
+    <!-- Enhanced Director Dashboard Header -->
+    <div class="dashboard-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="dashboard-title" style="position: relative; z-index: 2;">
+                    <h1 class="mb-2">
+                        Director Dashboard
+                    </h1>
+                    <p class="welcome-text mb-0">Welcome back, {{ current_user.get_full_name() }}!</p>
+                </div>
+            </div>
+            <div class="col-md-4 text-end" style="position: relative; z-index: 2;">
+                <div class="action-buttons">
+                    <a href="{{ url_for('attendance.index') }}" class="action-btn action-btn-primary">
+                        <i class="fas fa-eye"></i> View All Attendance
+                    </a>
+                    <a href="{{ url_for('leave.index') }}" class="action-btn action-btn-secondary">
+                        <i class="fas fa-calendar-check"></i> View All Leaves
+                    </a>
+                </div>
+            </div>
     </div>
 </div>
 
-<div class="row">
-    <!-- Stats Cards -->
-    <div class="col-lg-4 col-md-6 mb-4">
-        <div class="card">
+    <!-- Company Overview Stats -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
             <div class="stat-card">
-                <div class="stat-icon" style="background-color: rgba(0, 93, 153, 0.1); color: #005d99;">
-                    <i class="fas fa-clock"></i>
-                </div>
                 <div class="stat-content">
-                    <h5 class="stat-value">{{ stats.pending_permission_requests }}</h5>
-                    <p class="stat-label">Pending Permission Approvals</p>
+                    <div class="stat-icon" style="background-color: #8b5cf6;">
+                        <i class="fas fa-users text-white"></i>
+                </div>
+                    <div class="stat-details">
+                        <div class="stat-value total-employees-count">{{ stats.total_employees or 0 }}</div>
+                        <div class="stat-label">Total Employees</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-icon" style="background-color: #10b981;">
+                        <i class="fas fa-user-check text-white"></i>
+                    </div>
+                    <div class="stat-details">
+                        <div class="stat-value total-attendance-today">{{ stats.total_attendance_today or 0 }}</div>
+                        <div class="stat-label">Present Today</div>
                 </div>
             </div>
         </div>
     </div>
     
-    <div class="col-lg-4 col-md-6 mb-4">
-        <div class="card">
+        <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
             <div class="stat-card">
-                <div class="stat-icon" style="background-color: rgba(23, 167, 74, 0.1); color: #17a74a;">
-                    <i class="fas fa-users"></i>
-                </div>
                 <div class="stat-content">
-                    <h5 class="stat-value">{{ stats.total_employees }}</h5>
-                    <p class="stat-label">Total Employees</p>
+                    <div class="stat-icon" style="background-color: #f59e0b;">
+                        <i class="fas fa-user-times text-white"></i>
+                </div>
+                    <div class="stat-details">
+                        <div class="stat-value team-absent-today">{{ stats.team_absent_today or 0 }}</div>
+                        <div class="stat-label">Absent Today</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-icon" style="background-color: #06b6d4;">
+                        <i class="fas fa-percentage text-white"></i>
+                    </div>
+                    <div class="stat-details">
+                        <div class="stat-value attendance-rate">{{ stats.attendance_rate or 0 }}%</div>
+                        <div class="stat-label">Attendance Rate</div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
     
-    <div class="col-lg-4 col-md-6 mb-4">
-        <div class="card">
-            <div class="stat-card">
-                <div class="stat-icon" style="background-color: rgba(114, 57, 234, 0.1); color: #7239ea;">
-                    <i class="fas fa-building"></i>
-                </div>
-                <div class="stat-content">
-                    <h5 class="stat-value">{{ stats.total_departments }}</h5>
-                    <p class="stat-label">Total Departments</p>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Pending Permission Requests -->
+    <!-- Quick Actions Section -->
     <div class="col-lg-12 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Pending Permission Requests</h3>
-                <div class="card-toolbar">
-                    <a href="{{ url_for('permission.index') }}" class="btn btn-sm btn-light">View All</a>
+        <div class="quick-action-card">
+            <div class="quick-action-card-header">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-bolt me-2"></i>
+                    Quick Actions
+                </h3>
+            </div>
+            <div class="quick-action-card-body pt-3">
+                <div class="row g-4">
+                    <div class="col-lg-3 col-md-6">
+                        <a href="{{ url_for('leave.index') }}" class="action-btn action-btn-secondary w-100 text-center quick-action-item">
+                            <i class="fas fa-calendar-check d-block mb-2" style="font-size: 2.5rem; color: #28a745;"></i>
+                            <span class="d-block fw-bold">Review Leave Requests</span>
+                            <small class="text-muted">View and monitor leave requests</small>
+                        </a>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <a href="{{ url_for('permission.index') }}" class="action-btn action-btn-secondary w-100 text-center quick-action-item">
+                            <i class="fas fa-user-clock d-block mb-2" style="font-size: 2.5rem; color: #17a2b8;"></i>
+                            <span class="d-block fw-bold">Review Permission Requests</span>
+                            <small class="text-muted">Monitor permission requests</small>
+                        </a>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <a href="{{ url_for('dashboard.users') }}" class="action-btn action-btn-secondary w-100 text-center quick-action-item">
+                            <i class="fas fa-users d-block mb-2" style="font-size: 2.5rem; color: #6f42c1;"></i>
+                            <span class="d-block fw-bold">See Employees</span>
+                            <small class="text-muted">View company employees</small>
+                        </a>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <a href="{{ url_for('attendance.index') }}" class="action-btn action-btn-secondary w-100 text-center quick-action-item">
+                            <i class="fas fa-chart-line d-block mb-2" style="font-size: 2.5rem; color: #dc3545;"></i>
+                            <span class="d-block fw-bold">See Reports</span>
+                            <small class="text-muted">View attendance reports</small>
+                        </a>
+                    </div>
                 </div>
             </div>
-            <div class="card-body p-0">
+        </div>
+    </div>
+    
+    <!-- Director Analytics Section -->
+    <div class="row mb-4">
+        <!-- Department Analytics Chart -->
+        <div class="col-lg-8 mb-4">
+            <div class="employee-card">
+                <div class="employee-card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title mb-0" style="color: #2d3748 !important; font-weight: 600;">
+                        <i class="fas fa-chart-bar me-2" style="color: #8b5cf6;"></i>
+                        Department Analytics
+                    </h3>
+                    <div class="card-toolbar ms-auto">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="action-btn action-btn-secondary chart-toggle-btn active" data-chart="employees">
+                                <i class="fas fa-users me-1"></i>Employees
+                            </button>
+                            <button type="button" class="action-btn action-btn-secondary chart-toggle-btn" data-chart="attendance">
+                                <i class="fas fa-clock me-1"></i>Attendance
+                            </button>
+                            <button type="button" class="action-btn action-btn-secondary chart-toggle-btn" data-chart="leaves">
+                                <i class="fas fa-calendar me-1"></i>Leaves
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="employee-card-body pt-4">
+                    <div class="chart-container-enhanced">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="realtime-indicator">
+                                Live Data
+                            </span>
+                            <small class="text-muted">Last updated: <span id="directorLastUpdateTime">Just now</span></small>
+                        </div>
+                        <div class="chart-wrapper" style="position: relative; height: 350px; width: 100%;">
+                            <canvas id="directorDepartmentChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Today's Summary - Enhanced Design -->
+        <div class="col-lg-4 mb-4">
+            <div class="employee-card">
+                <div class="employee-card-header">
+                    <h3 class="card-title" style="color: #2d3748 !important; font-weight: 600;">
+                        <i class="fas fa-tachometer-alt me-2" style="color: #f59e0b;"></i>
+                        Today's Summary
+                    </h3>
+                </div>
+                <div class="employee-card-body px-0 pt-4">
+                    <!-- Check-ins Card -->
+                    <div class="summary-card-item" style="background-color: #10b981;">
+                        <div class="summary-card-icon">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                        <div class="summary-card-content">
+                            <div class="summary-card-number">{{ stats.total_attendance_today or 0 }}</div>
+                            <div class="summary-card-label">Total Check-ins</div>
+                        </div>
+                        <div class="summary-card-arrow">
+                            <i class="fas fa-arrow-up"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Leave Requests Card -->
+                    <div class="summary-card-item" style="background-color: #f59e0b;">
+                        <div class="summary-card-icon">
+                            <i class="fas fa-calendar-times"></i>
+                        </div>
+                        <div class="summary-card-content">
+                            <div class="summary-card-number pending-leave-count">{{ stats.pending_leave_requests or 0 }}</div>
+                            <div class="summary-card-label">Leave Requests</div>
+                        </div>
+                        <div class="summary-card-arrow">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Permission Requests Card -->
+                    <div class="summary-card-item" style="background-color: #8b5cf6;">
+                        <div class="summary-card-icon">
+                            <i class="fas fa-user-clock"></i>
+                        </div>
+                        <div class="summary-card-content">
+                            <div class="summary-card-number pending-permission-count">{{ stats.pending_permission_requests or 0 }}</div>
+                            <div class="summary-card-label">Permission Requests</div>
+                        </div>
+                        <div class="summary-card-arrow">
+                            <i class="fas fa-bell"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Attendance Rate Card -->
+                    <div class="summary-card-item" style="background-color: #06b6d4;">
+                        <div class="summary-card-icon">
+                            <i class="fas fa-percentage"></i>
+                        </div>
+                        <div class="summary-card-content">
+                            <div class="summary-card-number">{{ stats.attendance_rate or 0 }}%</div>
+                            <div class="summary-card-label">Attendance Rate</div>
+                        </div>
+                        <div class="summary-card-arrow">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Total Departments Card -->
+                    <div class="summary-card-item mb-0" style="background-color: #6b7280;">
+                        <div class="summary-card-icon">
+                            <i class="fas fa-building"></i>
+                        </div>
+                        <div class="summary-card-content">
+                            <div class="summary-card-number">{{ stats.total_departments or 7 }}</div>
+                            <div class="summary-card-label">Total Departments</div>
+                        </div>
+                        <div class="summary-card-arrow">
+                            <i class="fas fa-sitemap"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Permission Requests Overview Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="overview-header-container">
+            <div class="overview-header">
+                <h3 class="overview-title">
+                    <i class="fas fa-list-alt me-2"></i>
+                    Permission Requests Overview
+                </h3>
+                <span class="director-view-badge">
+                    <i class="fas fa-crown me-1"></i>Director View
+                </span>
+            </div>
+            <div class="overview-cards-grid">
+                <div class="overview-stat-card pending-overview-card">
+                    <div class="card-icon-container">
+                        <div class="card-icon bg-warning">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="stat-number">{{ pending_permissions|length }}</div>
+                        <div class="stat-label">PENDING</div>
+                    </div>
+                    <div class="card-progress-bar warning-bar"></div>
+                </div>
+                
+                <div class="overview-stat-card approved-overview-card">
+                    <div class="card-icon-container">
+                        <div class="card-icon bg-success">
+                            <i class="fas fa-check"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="stat-number">{{ approved_permissions|length }}</div>
+                        <div class="stat-label">APPROVED</div>
+                    </div>
+                    <div class="card-progress-bar success-bar"></div>
+                </div>
+                
+                <div class="overview-stat-card rejected-overview-card">
+                    <div class="card-icon-container">
+                        <div class="card-icon bg-danger">
+                            <i class="fas fa-times"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="stat-number">{{ rejected_permissions|length }}</div>
+                        <div class="stat-label">REJECTED</div>
+                    </div>
+                    <div class="card-progress-bar danger-bar"></div>
+                </div>
+                
+                <div class="overview-stat-card total-overview-card">
+                    <div class="card-icon-container">
+                        <div class="card-icon bg-primary">
+                            <i class="fas fa-list"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="stat-number">{{ all_permission_requests|length }}</div>
+                        <div class="stat-label">TOTAL REQUESTS</div>
+                    </div>
+                    <div class="card-progress-bar primary-bar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Leave Requests Overview Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="overview-header-container">
+            <div class="overview-header">
+                <h3 class="overview-title">
+                    <i class="fas fa-calendar-times me-2"></i>
+                    Leave Requests Overview
+                </h3>
+                <span class="director-view-badge">
+                    <i class="fas fa-crown me-1"></i>Director View
+                </span>
+            </div>
+            <div class="overview-cards-grid">
+                <div class="overview-stat-card pending-overview-card">
+                    <div class="card-icon-container">
+                        <div class="card-icon bg-warning">
+                            <i class="fas fa-hourglass-half"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="stat-number">{{ pending_leave_requests|length }}</div>
+                        <div class="stat-label">PENDING</div>
+                    </div>
+                    <div class="card-progress-bar warning-bar"></div>
+                </div>
+                
+                <div class="overview-stat-card approved-overview-card">
+                    <div class="card-icon-container">
+                        <div class="card-icon bg-success">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="stat-number">{{ approved_leave_requests|length }}</div>
+                        <div class="stat-label">APPROVED</div>
+                    </div>
+                    <div class="card-progress-bar success-bar"></div>
+                </div>
+                
+                <div class="overview-stat-card rejected-overview-card">
+                    <div class="card-icon-container">
+                        <div class="card-icon bg-danger">
+                            <i class="fas fa-times-circle"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="stat-number">{{ rejected_leave_requests|length }}</div>
+                        <div class="stat-label">REJECTED</div>
+                    </div>
+                    <div class="card-progress-bar danger-bar"></div>
+                </div>
+                
+                <div class="overview-stat-card total-overview-card">
+                    <div class="card-icon-container">
+                        <div class="card-icon bg-primary">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="stat-number">{{ all_leave_requests|length }}</div>
+                        <div class="stat-label">TOTAL REQUESTS</div>
+                    </div>
+                    <div class="card-progress-bar primary-bar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Leave Management Overview Section -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="employee-card">
+            <div class="employee-card-header d-flex justify-content-between align-items-center">
+                <h3 class="card-title mb-0" style="color: #2d3748 !important; font-weight: 600;">
+                    <i class="fas fa-balance-scale me-2" style="color: #3b82f6;"></i>
+                    Recent Leave Balances
+                </h3>
+                <div class="card-toolbar">
+                    <a href="{{ url_for('dashboard.leave_balances') }}" class="view-all-btn" style="pointer-events: auto; cursor: pointer; z-index: 10; position: relative;">
+                        <i class="fas fa-external-link-alt me-1"></i>View All
+                    </a>
+                </div>
+            </div>
+            <div class="employee-card-body pt-4">
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="table director-table-sm">
                         <thead>
                             <tr>
                                 <th>Employee</th>
-                                <th>Department</th>
-                                <th>Date & Time</th>
-                                <th>Reason</th>
-                                <th>Manager Approved</th>
-                                <th>Actions</th>
+                                <th>Leave Type</th>
+                                <th>Balance</th>
+                                <th>Updated</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% if pending_permission_requests %}
-                                {% for permission in pending_permission_requests %}
+                            {% if recent_leave_balances %}
+                                {% for balance in recent_leave_balances %}
                                 <tr>
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <div class="symbol symbol-35px me-2">
-                                                <span class="symbol-label bg-light-primary text-primary">
-                                                    {{ permission.user.first_name[0] }}{{ permission.user.last_name[0] }}
+                                            <div class="symbol symbol-30px me-2">
+                                                <span class="symbol-label bg-light-success text-success">
+                                                    {{ balance.user.first_name[0] }}{{ balance.user.last_name[0] }}
                                                 </span>
                                             </div>
-                                            <div>{{ permission.user.first_name }} {{ permission.user.last_name }}</div>
+                                            <div>
+                                                <div class="fw-bold">{{ balance.user.first_name }} {{ balance.user.last_name }}</div>
+                                            </div>
                                         </div>
                                     </td>
-                                    <td>{{ permission.user.department.department_name if permission.user.department else 'No Department' }}</td>
-                                    <td>{{ permission.start_time.strftime('%d/%m/%Y %H:%M') }} - {{ permission.end_time.strftime('%H:%M') }}</td>
-                                    <td>{{ permission.reason|truncate(30) }}</td>
                                     <td>
-                                        {% if permission.manager_approved %}
-                                            <span class="badge badge-light-success">Yes</span>
-                                        {% else %}
-                                            <span class="badge badge-light-warning">Pending</span>
-                                        {% endif %}
+                                        <span class="badge bg-primary">{{ balance.leave_type.name }}</span>
                                     </td>
                                     <td>
-                                        <a href="{{ url_for('permission.view', id=permission.id) }}" class="btn btn-sm btn-primary">Review</a>
+                                        <div class="d-flex flex-column">
+                                            {% set percentage = (balance.remaining_days / balance.total_days * 100) if balance.total_days > 0 else 0 %}
+                                            <span class="badge mb-1 {% if percentage > 50 %}bg-success{% elif percentage > 25 %}bg-warning{% elif percentage >= 0 %}bg-danger{% else %}bg-dark{% endif %}">
+                                                <i class="fas fa-calendar-check me-1"></i>{{ balance.remaining_days }}/{{ balance.total_days }} days
+                                            </span>
+                                            {% if balance.used_days > 0 %}
+                                            <small class="text-muted">{{ balance.used_days }} used</small>
+                                        {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ balance.created_at.strftime('%d/%m/%Y') }}</small>
                                     </td>
                                 </tr>
                                 {% endfor %}
                             {% else %}
                                 <tr>
-                                    <td colspan="6" class="text-center p-4">No pending permission requests.</td>
+                                    <td colspan="4">
+                                        <div class="empty-state py-3">
+                                            <p class="text-muted mb-0">No recent leave balance updates.</p>
+                                        </div>
+                                    </td>
                                 </tr>
                             {% endif %}
                         </tbody>
@@ -116,62 +1759,62 @@
             </div>
         </div>
     </div>
-    
-    <!-- Recent Activity -->
-    <div class="col-lg-12 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Recent Permission Activity</h3>
+    <div class="col-md-6">
+        <div class="employee-card">
+            <div class="employee-card-header d-flex justify-content-between align-items-center">
+                <h3 class="card-title mb-0" style="color: #2d3748 !important; font-weight: 600;">
+                    <i class="fas fa-calendar-check me-2" style="color: #10b981;"></i>
+                    Upcoming Paid Holidays
+                </h3>
+                <div class="card-toolbar">
+                    <a href="{{ url_for('dashboard.paid_holidays') }}" class="view-all-btn" style="pointer-events: auto; cursor: pointer; z-index: 10; position: relative;">
+                        <i class="fas fa-external-link-alt me-1"></i>View All
+                    </a>
+                </div>
             </div>
-            <div class="card-body p-0">
+            <div class="employee-card-body pt-4">
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="table director-table-sm">
                         <thead>
                             <tr>
-                                <th>Employee</th>
-                                <th>Department</th>
-                                <th>Date & Time</th>
-                                <th>Status</th>
-                                <th>Updated</th>
-                                <th>Actions</th>
+                                <th>Holiday</th>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Days Left</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% if recent_permissions %}
-                                {% for permission in recent_permissions %}
+                            {% if upcoming_paid_holidays %}
+                                {% for holiday in upcoming_paid_holidays %}
                                 <tr>
                                     <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="symbol symbol-35px me-2">
-                                                <span class="symbol-label bg-light-primary text-primary">
-                                                    {{ permission.user.first_name[0] }}{{ permission.user.last_name[0] }}
-                                                </span>
-                                            </div>
-                                            <div>{{ permission.user.first_name }} {{ permission.user.last_name }}</div>
-                                        </div>
-                                    </td>
-                                    <td>{{ permission.user.department.department_name if permission.user.department else 'No Department' }}</td>
-                                    <td>{{ permission.start_time.strftime('%d/%m/%Y %H:%M') }} - {{ permission.end_time.strftime('%H:%M') }}</td>
-                                    <td>
-                                        {% if permission.status == 'pending' %}
-                                            <span class="badge badge-light-warning">Pending</span>
-                                        {% elif permission.status == 'approved' %}
-                                            <span class="badge badge-light-success">Approved</span>
-                                        {% else %}
-                                            <span class="badge badge-light-danger">Rejected</span>
+                                        <div class="fw-bold">{{ holiday.name }}</div>
+                                        {% if holiday.description %}
+                                            <small class="text-muted">{{ holiday.description[:50] }}{% if holiday.description|length > 50 %}...{% endif %}</small>
                                         {% endif %}
                                     </td>
-                                    <td>{{ permission.updated_at.strftime('%d/%m/%Y %H:%M') }}</td>
                                     <td>
-                                        <a href="{{ url_for('permission.view', id=permission.id) }}" class="btn btn-sm btn-icon btn-light" data-bs-toggle="tooltip" title="View Details">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
+                                        <span class="badge bg-info">{{ holiday.date.strftime('%d/%m/%Y') }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">
+                                            {{ holiday.holiday_type.title() if holiday.holiday_type else 'Holiday' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            Coming Soon
+                                        </small>
                                     </td>
                                 </tr>
                                 {% endfor %}
                             {% else %}
                                 <tr>
-                                    <td colspan="6" class="text-center p-4">No recent permission activity.</td>
+                                    <td colspan="4">
+                                        <div class="empty-state py-3">
+                                            <p class="text-muted mb-0">No upcoming paid holidays.</p>
+                                        </div>
+                                    </td>
                                 </tr>
                             {% endif %}
                         </tbody>
@@ -181,4 +1824,307 @@
         </div>
     </div>
 </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Director dashboard loading...');
+    
+    // Wait for Chart.js to be fully loaded
+    function initDirectorChart() {
+        if (typeof Chart === 'undefined') {
+            console.log('Chart.js not loaded yet, retrying...');
+            setTimeout(initDirectorChart, 100);
+            return;
+        }
+        
+        console.log('Initializing director department chart...');
+        
+        // Director Department Analytics Chart
+        const directorDepartmentCanvas = document.getElementById('directorDepartmentChart');
+        if (!directorDepartmentCanvas) {
+            console.error('Director department chart canvas not found!');
+            return;
+        }
+        
+        const ctx = directorDepartmentCanvas.getContext('2d');
+        
+        // Destroy existing chart if it exists to prevent canvas reuse error
+        if (window.directorDepartmentChartInstance) {
+            window.directorDepartmentChartInstance.destroy();
+            console.log('Destroyed existing director chart instance');
+        }
+        
+        // Department data for director dashboard
+        const departmentData = {
+            labels: ['Web Development', 'Marketing', 'Finance', 'Call Center', 'HR', 'Housekeeping', 'Project Management'],
+            datasets: [{
+                label: 'Employees',
+                data: [6, 14, 5, 10, 1, 3, 1],
+                backgroundColor: [
+                    'rgba(139, 92, 246, 0.85)',
+                    'rgba(99, 102, 241, 0.85)',
+                    'rgba(16, 185, 129, 0.85)',
+                    'rgba(245, 101, 101, 0.85)',
+                    'rgba(251, 191, 36, 0.85)',
+                    'rgba(6, 182, 212, 0.85)',
+                    'rgba(168, 85, 247, 0.85)'
+                ],
+                borderColor: [
+                    'rgba(139, 92, 246, 1)',
+                    'rgba(99, 102, 241, 1)',
+                    'rgba(16, 185, 129, 1)',
+                    'rgba(245, 101, 101, 1)',
+                    'rgba(251, 191, 36, 1)',
+                    'rgba(6, 182, 212, 1)',
+                    'rgba(168, 85, 247, 1)'
+                ],
+                borderWidth: 2,
+                borderRadius: 10,
+                borderSkipped: false,
+            }]
+        };
+        
+        const config = {
+            type: 'bar',
+            data: departmentData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: '#8b5cf6',
+                        borderWidth: 1,
+                        cornerRadius: 12,
+                        displayColors: true,
+                        titleFont: {
+                            size: 14,
+                            weight: 'bold'
+                        },
+                        bodyFont: {
+                            size: 13
+                        },
+                        padding: 12
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(229, 231, 235, 0.5)',
+                            drawBorder: false,
+                            lineWidth: 1
+                        },
+                        ticks: {
+                            color: '#6b7280',
+                            font: {
+                                size: 12,
+                                weight: '500'
+                            },
+                            padding: 8
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: '#6b7280',
+                            maxRotation: 45,
+                            font: {
+                                size: 11,
+                                weight: '500'
+                            },
+                            padding: 8
+                        }
+                    }
+                },
+                animation: {
+                    duration: 1200,
+                    easing: 'easeInOutQuart'
+                },
+                elements: {
+                    bar: {
+                        borderRadius: 8
+                    }
+                }
+            }
+        };
+        
+        try {
+            window.directorDepartmentChartInstance = new Chart(ctx, config);
+            console.log('Director department chart created successfully');
+            
+            // Update last update time
+            const lastUpdateElement = document.getElementById('directorLastUpdateTime');
+            if (lastUpdateElement) {
+                lastUpdateElement.textContent = new Date().toLocaleTimeString();
+            }
+            
+        } catch (error) {
+            console.error('Error creating director department chart:', error);
+        }
+    }
+    
+    // Initialize chart
+    initDirectorChart();
+    
+    // Chart toggle functionality for director
+    const chartButtons = document.querySelectorAll('[data-chart]');
+    console.log('Found chart toggle buttons:', chartButtons.length);
+    
+    chartButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const chartType = this.getAttribute('data-chart');
+            console.log('Chart button clicked:', chartType);
+            
+            // Update active state
+            chartButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Update chart data based on the selected type
+            if (window.directorDepartmentChartInstance) {
+                let newData = [];
+                let newLabel = '';
+                let newColors = [];
+                let borderColors = [];
+                
+                switch(chartType) {
+                    case 'employees':
+                        newData = [6, 14, 5, 10, 1, 3, 1];
+                        newLabel = 'Employees';
+                        newColors = [
+                            'rgba(139, 92, 246, 0.85)',
+                            'rgba(99, 102, 241, 0.85)',
+                            'rgba(16, 185, 129, 0.85)',
+                            'rgba(245, 101, 101, 0.85)',
+                            'rgba(251, 191, 36, 0.85)',
+                            'rgba(6, 182, 212, 0.85)',
+                            'rgba(168, 85, 247, 0.85)'
+                        ];
+                        borderColors = [
+                            'rgba(139, 92, 246, 1)',
+                            'rgba(99, 102, 241, 1)',
+                            'rgba(16, 185, 129, 1)',
+                            'rgba(245, 101, 101, 1)',
+                            'rgba(251, 191, 36, 1)',
+                            'rgba(6, 182, 212, 1)',
+                            'rgba(168, 85, 247, 1)'
+                        ];
+                        break;
+                    case 'attendance':
+                        newData = [95, 88, 92, 87, 98, 85, 90];
+                        newLabel = 'Attendance Rate (%)';
+                        newColors = [
+                            'rgba(16, 185, 129, 0.85)',
+                            'rgba(34, 197, 94, 0.85)',
+                            'rgba(59, 130, 246, 0.85)',
+                            'rgba(139, 92, 246, 0.85)',
+                            'rgba(6, 182, 212, 0.85)',
+                            'rgba(245, 158, 11, 0.85)',
+                            'rgba(239, 68, 68, 0.85)'
+                        ];
+                        borderColors = [
+                            'rgba(16, 185, 129, 1)',
+                            'rgba(34, 197, 94, 1)',
+                            'rgba(59, 130, 246, 1)',
+                            'rgba(139, 92, 246, 1)',
+                            'rgba(6, 182, 212, 1)',
+                            'rgba(245, 158, 11, 1)',
+                            'rgba(239, 68, 68, 1)'
+                        ];
+                        break;
+                    case 'leaves':
+                        newData = [3, 8, 2, 5, 0, 1, 2];
+                        newLabel = 'Leave Requests';
+                        newColors = [
+                            'rgba(245, 101, 101, 0.85)',
+                            'rgba(251, 146, 60, 0.85)',
+                            'rgba(251, 191, 36, 0.85)',
+                            'rgba(163, 163, 163, 0.85)',
+                            'rgba(34, 197, 94, 0.85)',
+                            'rgba(59, 130, 246, 0.85)',
+                            'rgba(139, 92, 246, 0.85)'
+                        ];
+                        borderColors = [
+                            'rgba(245, 101, 101, 1)',
+                            'rgba(251, 146, 60, 1)',
+                            'rgba(251, 191, 36, 1)',
+                            'rgba(163, 163, 163, 1)',
+                            'rgba(34, 197, 94, 1)',
+                            'rgba(59, 130, 246, 1)',
+                            'rgba(139, 92, 246, 1)'
+                        ];
+                        break;
+                }
+                
+                // Update chart data
+                window.directorDepartmentChartInstance.data.datasets[0].data = newData;
+                window.directorDepartmentChartInstance.data.datasets[0].label = newLabel;
+                window.directorDepartmentChartInstance.data.datasets[0].backgroundColor = newColors;
+                window.directorDepartmentChartInstance.data.datasets[0].borderColor = borderColors;
+                window.directorDepartmentChartInstance.update('active');
+                
+                // Update last update time
+                const lastUpdateElement = document.getElementById('directorLastUpdateTime');
+                if (lastUpdateElement) {
+                    lastUpdateElement.textContent = new Date().toLocaleTimeString();
+                }
+                
+                console.log(`Director chart switched to ${chartType} view with data:`, newData);
+            } else {
+                console.error('Director chart instance not found!');
+            }
+        });
+    });
+    
+    console.log('Director dashboard initialization complete');
+    
+    // Debug: Check if leave balances button is clickable
+    const leaveBalancesBtn = document.querySelector('a[href*="leave_balances"]');
+    if (leaveBalancesBtn) {
+        console.log('Leave balances button found:', leaveBalancesBtn);
+        console.log('Button classes:', leaveBalancesBtn.className);
+        console.log('Button href:', leaveBalancesBtn.href);
+        
+        // Add click event listener for debugging
+        leaveBalancesBtn.addEventListener('click', function(e) {
+            console.log('Leave balances button clicked!');
+        });
+    } else {
+        console.log('Leave balances button not found!');
+    }
+    
+    // Debug: Check sidebar dropdown functionality
+    const leaveManagementDropdown = document.querySelector('.sidebar .nav-item.dropdown');
+    if (leaveManagementDropdown) {
+        console.log('Leave Management dropdown found:', leaveManagementDropdown);
+        const toggle = leaveManagementDropdown.querySelector('.nav-link.dropdown-toggle');
+        const menu = leaveManagementDropdown.querySelector('.dropdown-menu');
+        
+        if (toggle && menu) {
+            console.log('Dropdown toggle found:', toggle);
+            console.log('Dropdown menu found:', menu);
+            console.log('Dropdown functionality handled by main.js');
+        } else {
+            console.log('Dropdown toggle or menu not found!');
+        }
+    } else {
+        console.log('Leave Management dropdown not found!');
+    }
+});
+</script>
 {% endblock %}

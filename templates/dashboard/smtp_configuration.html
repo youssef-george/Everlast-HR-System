@@ -1,0 +1,746 @@
+{% extends "layout.html" %}
+
+{% block extra_css %}
+<!-- EMERGENCY TABLE HEADER VISIBILITY FIX FOR SMTP CONFIGURATION PAGE -->
+<style>
+/* Force table headers to be visible with maximum specificity */
+.table thead th,
+.employee-table thead th,
+.enhanced-table thead th,
+table thead th {
+    background: #1e40af !important;
+    background-color: #1e40af !important;
+    background-color: #1e40af !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.6) !important;
+    font-size: 0.9rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    padding: 1rem 0.75rem !important;
+    border: none !important;
+    border-bottom: 2px solid #1e3a8a !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Force all child elements in headers to be white */
+.table thead th *,
+.employee-table thead th *,
+.enhanced-table thead th *,
+table thead th * {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.6) !important;
+    -webkit-text-fill-color: #ffffff !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* Enhanced SMTP Configuration UI */
+.smtp-page-header {
+    background-color: #667eea;
+    color: white;
+    border-radius: 20px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.smtp-page-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+    opacity: 0.1;
+}
+
+.smtp-page-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+}
+
+.smtp-page-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin-bottom: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.smtp-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    border: 1px solid rgba(0,0,0,0.05);
+    margin-bottom: 2rem;
+    overflow: hidden;
+}
+
+.smtp-card-header {
+    background-color: #f8fafc;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.smtp-card-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.smtp-form-group {
+    margin-bottom: 1.5rem;
+}
+
+.smtp-form-label {
+    display: block;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.smtp-form-control {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.smtp-form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    outline: none;
+}
+
+.smtp-checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.smtp-checkbox {
+    width: 18px;
+    height: 18px;
+    accent-color: #667eea;
+}
+
+.smtp-btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.smtp-btn-primary {
+    background-color: #667eea;
+    color: white;
+}
+
+.smtp-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+    color: white;
+}
+
+.smtp-btn-secondary {
+    background-color: #6366f1;
+    color: white;
+}
+
+.smtp-btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.3);
+    color: white;
+}
+
+.smtp-status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.smtp-status-active {
+    background-color: #10b981;
+    color: white;
+}
+
+.smtp-status-inactive {
+    background-color: #6b7280;
+    color: white;
+}
+
+.smtp-info-section {
+    background-color: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.smtp-info-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #0369a1;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.smtp-info-text {
+    color: #0c4a6e;
+    line-height: 1.6;
+    margin-bottom: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .smtp-page-header {
+        padding: 1.5rem;
+        text-align: center;
+    }
+    
+    .smtp-page-title {
+        font-size: 2rem;
+    }
+    
+    .smtp-card-header {
+        padding: 1rem;
+    }
+    
+    .smtp-btn {
+        width: 100%;
+        justify-content: center;
+        margin-bottom: 0.5rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Enhanced Page Header -->
+<div class="smtp-page-header">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h1 class="smtp-page-title">
+                <i class="fas fa-envelope-open-text me-3"></i>
+                SMTP Configuration
+            </h1>
+            <p class="smtp-page-subtitle">
+                Configure email notifications for leave and permission requests
+            </p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            {% if config %}
+            <div class="smtp-status-indicator smtp-status-active">
+                <i class="fas fa-check-circle"></i>
+                Configuration Active
+            </div>
+            {% else %}
+            <div class="smtp-status-indicator smtp-status-inactive">
+                <i class="fas fa-exclamation-circle"></i>
+                No Configuration
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Information Section -->
+<div class="smtp-info-section">
+    <h3 class="smtp-info-title">
+        <i class="fas fa-info-circle"></i>
+        How Email Notifications Work
+    </h3>
+    <p class="smtp-info-text">
+        Once SMTP is configured, the system will automatically send email notifications to all admin users when:
+        <br><strong>• New leave requests are submitted</strong>
+        <br><strong>• New permission requests are submitted</strong>
+        <br><br>
+        The old in-app notification system has been completely removed and replaced with these email notifications.
+        Only admin users will receive these email notifications to reduce spam and focus on decision-makers.
+    </p>
+</div>
+
+
+<!-- SMTP Configuration Form -->
+<div class="row">
+    <div class="col-12">
+        <div class="smtp-card">
+            <div class="smtp-card-header">
+                <h3 class="smtp-card-title">
+                    <i class="fas fa-cog me-2" style="color: #667eea;"></i>
+                    Email Server Configuration
+                </h3>
+            </div>
+            
+            <div class="card-body p-4">
+                {% if current_user.role != 'product_owner' %}
+                <div class="alert alert-info bg-light-info mb-4">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <div>
+                            <h4 class="alert-heading mb-1">View-Only Mode</h4>
+                            <p class="mb-0">You are viewing the email settings in read-only mode. Only Product Owner can modify these settings.</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <form method="POST" action="{{ url_for('dashboard.save_smtp_configuration') }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="smtp-form-group">
+                                <label class="smtp-form-label" for="{{ form.smtp_server.id }}">
+                                    <i class="fas fa-server me-1"></i>
+                                    {{ form.smtp_server.label.text }}
+                                </label>
+                                {% if current_user.role == 'product_owner' %}
+                                    {{ form.smtp_server(class="smtp-form-control") }}
+                                {% else %}
+                                    {{ form.smtp_server(class="smtp-form-control", readonly=true) }}
+                                {% endif %}
+                                <small class="text-muted">e.g., smtp.gmail.com, smtp.outlook.com</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="smtp-form-group">
+                                <label class="smtp-form-label" for="{{ form.smtp_port.id }}">
+                                    <i class="fas fa-plug me-1"></i>
+                                    {{ form.smtp_port.label.text }}
+                                </label>
+                                {% if current_user.role == 'product_owner' %}
+                                    {{ form.smtp_port(class="smtp-form-control") }}
+                                {% else %}
+                                    {{ form.smtp_port(class="smtp-form-control", readonly=true) }}
+                                {% endif %}
+                                <small class="text-muted">Usually 587 (TLS) or 465 (SSL)</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="smtp-form-group">
+                                <label class="smtp-form-label" for="{{ form.smtp_username.id }}">
+                                    <i class="fas fa-user me-1"></i>
+                                    {{ form.smtp_username.label.text }}
+                                </label>
+                                {% if current_user.role == 'product_owner' %}
+                                    {{ form.smtp_username(class="smtp-form-control") }}
+                                {% else %}
+                                    {{ form.smtp_username(class="smtp-form-control", readonly=true) }}
+                                {% endif %}
+                                <small class="text-muted">Usually your email address</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="smtp-form-group">
+                                <label class="smtp-form-label" for="{{ form.smtp_password.id }}">
+                                    <i class="fas fa-lock me-1"></i>
+                                    {{ form.smtp_password.label.text }}
+                                </label>
+                                {% if current_user.role == 'product_owner' %}
+                                    {{ form.smtp_password(class="smtp-form-control") }}
+                                {% else %}
+                                    {{ form.smtp_password(class="smtp-form-control", readonly=true) }}
+                                {% endif %}
+                                <small class="text-muted">Use app password for Gmail/Outlook</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="smtp-form-group">
+                                <label class="smtp-form-label" for="{{ form.sender_name.id }}">
+                                    <i class="fas fa-signature me-1"></i>
+                                    {{ form.sender_name.label.text }}
+                                </label>
+                                {% if current_user.role == 'product_owner' %}
+                                    {{ form.sender_name(class="smtp-form-control") }}
+                                {% else %}
+                                    {{ form.sender_name(class="smtp-form-control", readonly=true) }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="smtp-form-group">
+                                <label class="smtp-form-label" for="{{ form.sender_email.id }}">
+                                    <i class="fas fa-at me-1"></i>
+                                    {{ form.sender_email.label.text }}
+                                </label>
+                                {% if current_user.role == 'product_owner' %}
+                                    {{ form.sender_email(class="smtp-form-control") }}
+                                {% else %}
+                                    {{ form.sender_email(class="smtp-form-control", readonly=true) }}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="smtp-checkbox-group">
+                                {% if current_user.role == 'product_owner' %}
+                                    {{ form.use_tls(class="smtp-checkbox", id="use_tls_checkbox") }}
+                                {% else %}
+                                    {{ form.use_tls(class="smtp-checkbox", id="use_tls_checkbox", disabled=true) }}
+                                {% endif %}
+                                <label for="{{ form.use_tls.id }}" class="smtp-form-label mb-0">
+                                    <i class="fas fa-shield-alt me-1"></i>
+                                    {{ form.use_tls.label.text }}
+                                </label>
+                            </div>
+                            <small class="text-muted">For port 587</small>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="smtp-checkbox-group">
+                                {% if current_user.role == 'product_owner' %}
+                                    {{ form.use_ssl(class="smtp-checkbox", id="use_ssl_checkbox") }}
+                                {% else %}
+                                    {{ form.use_ssl(class="smtp-checkbox", id="use_ssl_checkbox", disabled=true) }}
+                                {% endif %}
+                                <label for="{{ form.use_ssl.id }}" class="smtp-form-label mb-0">
+                                    <i class="fas fa-lock me-1"></i>
+                                    {{ form.use_ssl.label.text }}
+                                </label>
+                            </div>
+                            <small class="text-muted">For port 465</small>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="smtp-checkbox-group">
+                                {{ form.is_active(class="smtp-checkbox") }}
+                                <label for="{{ form.is_active.id }}" class="smtp-form-label mb-0">
+                                    <i class="fas fa-power-off me-1"></i>
+                                    {{ form.is_active.label.text }}
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Auto-configuration for Everlast Wellness -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            {% if current_user.role == 'product_owner' %}
+                                <button type="button" class="btn btn-outline-success btn-sm" onclick="setEverlastConfig()">
+                                    <i class="fas fa-magic me-1"></i>
+                                    Auto-Configure for Everlast Wellness
+                                </button>
+                            {% else %}
+                                <button type="button" class="btn btn-outline-secondary btn-sm" disabled>
+                                    <i class="fas fa-lock me-1"></i>
+                                    Auto-Configure (Product Owner Only)
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Email Notification Settings -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h4 class="smtp-card-title mb-3">
+                                <i class="fas fa-envelope-open-text me-2" style="color: #667eea;"></i>
+                                Email Notification Lists
+                            </h4>
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Configure specific email lists for different modules.</strong> 
+                                Enter comma-separated email addresses for each type of notification. 
+                                Leave empty to use default admin users.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="smtp-form-group">
+                                <label class="smtp-form-label" for="{{ form.leave_notification_emails.id }}">
+                                    <i class="fas fa-calendar-times me-1" style="color: #e74c3c;"></i>
+                                    {{ form.leave_notification_emails.label.text }}
+                                </label>
+                                {{ form.leave_notification_emails(class="smtp-form-control") }}
+                                <small class="text-muted">Emails to notify when employees submit leave requests</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="smtp-form-group">
+                                <label class="smtp-form-label" for="{{ form.permission_notification_emails.id }}">
+                                    <i class="fas fa-clock me-1" style="color: #f39c12;"></i>
+                                    {{ form.permission_notification_emails.label.text }}
+                                </label>
+                                {{ form.permission_notification_emails(class="smtp-form-control") }}
+                                <small class="text-muted">Emails to notify when employees submit permission requests</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="smtp-form-group">
+                                <label class="smtp-form-label" for="{{ form.admin_notification_emails.id }}">
+                                    <i class="fas fa-user-shield me-1" style="color: #6f42c1;"></i>
+                                    {{ form.admin_notification_emails.label.text }}
+                                </label>
+                                {{ form.admin_notification_emails(class="smtp-form-control") }}
+                                <small class="text-muted">General admin notifications and system alerts</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="smtp-form-group">
+                                <label class="smtp-form-label mb-3">Notification Settings</label>
+                                
+                                <div class="smtp-checkbox-group">
+                                    {{ form.notify_leave_requests(class="smtp-checkbox") }}
+                                    <label for="{{ form.notify_leave_requests.id }}" class="smtp-form-label mb-0">
+                                        <i class="fas fa-calendar-check me-1" style="color: #28a745;"></i>
+                                        {{ form.notify_leave_requests.label.text }}
+                                    </label>
+                                </div>
+                                
+                                <div class="smtp-checkbox-group">
+                                    {{ form.notify_permission_requests(class="smtp-checkbox") }}
+                                    <label for="{{ form.notify_permission_requests.id }}" class="smtp-form-label mb-0">
+                                        <i class="fas fa-user-clock me-1" style="color: #17a2b8;"></i>
+                                        {{ form.notify_permission_requests.label.text }}
+                                    </label>
+                                </div>
+                                
+                                <div class="smtp-checkbox-group">
+                                    {{ form.notify_admin_only(class="smtp-checkbox") }}
+                                    <label for="{{ form.notify_admin_only.id }}" class="smtp-form-label mb-0">
+                                        <i class="fas fa-users-cog me-1" style="color: #dc3545;"></i>
+                                        {{ form.notify_admin_only.label.text }}
+                                    </label>
+                                </div>
+                                <small class="text-muted">When enabled, only custom email lists will receive notifications (not all admin users)</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if current_user.role == 'product_owner' %}
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" name="submit" class="smtp-btn smtp-btn-primary">
+                            <i class="fas fa-save"></i>
+                            Save Configuration
+                        </button>
+                        
+                        <button type="submit" name="test_email" formaction="{{ url_for('dashboard.test_smtp_configuration') }}" class="smtp-btn smtp-btn-secondary">
+                            <i class="fas fa-paper-plane"></i>
+                            Test Configuration
+                        </button>
+                    </div>
+                    {% else %}
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="button" class="smtp-btn smtp-btn-secondary" disabled>
+                            <i class="fas fa-lock"></i>
+                            View Only - Contact Product Owner to Edit
+                        </button>
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if config %}
+<!-- Current Configuration Display -->
+<div class="row">
+    <div class="col-12">
+        <div class="smtp-card">
+            <div class="smtp-card-header">
+                <h3 class="smtp-card-title">
+                    <i class="fas fa-eye me-2" style="color: #10b981;"></i>
+                    Current Configuration
+                </h3>
+            </div>
+            
+            <div class="card-body p-4">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-server me-2"></i>Server Configuration</h5>
+                        <p><strong>SMTP Server:</strong> {{ config.smtp_server }}</p>
+                        <p><strong>SMTP Port:</strong> {{ config.smtp_port }}</p>
+                        <p><strong>Username:</strong> {{ config.smtp_username }}</p>
+                        <p><strong>Sender Name:</strong> {{ config.sender_name }}</p>
+                        <p><strong>Sender Email:</strong> {{ config.sender_email }}</p>
+                        <p><strong>Use TLS:</strong> {{ 'Yes' if config.use_tls else 'No' }}</p>
+                        <p><strong>Use SSL:</strong> {{ 'Yes' if config.use_ssl else 'No' }}</p>
+                        <p><strong>Status:</strong> 
+                            {% if config.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h5><i class="fas fa-envelope-open-text me-2"></i>Notification Settings</h5>
+                        
+                        <div class="mb-3">
+                            <p><strong><i class="fas fa-calendar-times me-1" style="color: #e74c3c;"></i>Leave Notifications:</strong> 
+                                {% if config.notify_leave_requests %}
+                                <span class="badge bg-success">Enabled</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Disabled</span>
+                                {% endif %}
+                            </p>
+                            {% if config.leave_notification_emails %}
+                            <small class="text-muted">
+                                <strong>Email List:</strong> {{ config.leave_notification_emails }}
+                            </small>
+                            {% else %}
+                            <small class="text-muted">Using default admin users</small>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <p><strong><i class="fas fa-clock me-1" style="color: #f39c12;"></i>Permission Notifications:</strong> 
+                                {% if config.notify_permission_requests %}
+                                <span class="badge bg-success">Enabled</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Disabled</span>
+                                {% endif %}
+                            </p>
+                            {% if config.permission_notification_emails %}
+                            <small class="text-muted">
+                                <strong>Email List:</strong> {{ config.permission_notification_emails }}
+                            </small>
+                            {% else %}
+                            <small class="text-muted">Using default admin users</small>
+                            {% endif %}
+                        </div>
+                        
+                        {% if config.admin_notification_emails %}
+                        <div class="mb-3">
+                            <p><strong><i class="fas fa-user-shield me-1" style="color: #6f42c1;"></i>Admin Email List:</strong></p>
+                            <small class="text-muted">{{ config.admin_notification_emails }}</small>
+                        </div>
+                        {% endif %}
+                        
+                        <p><strong>Custom Lists Only:</strong> {{ 'Yes' if config.notify_admin_only else 'No' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+function setEverlastConfig() {
+    {% if current_user.role != 'product_owner' %}
+    alert('Only Product Owner can use auto-configuration');
+    return;
+    {% endif %}
+    // Auto-fill Everlast Wellness SMTP settings
+    document.getElementById('smtp_server').value = 'mail.everlastwellness.com';
+    document.getElementById('smtp_port').value = '465';
+    document.getElementById('smtp_username').value = 'erp@everlastwellness.com';
+    document.getElementById('smtp_password').value = 'L$^F3HmP~HVx';
+    document.getElementById('sender_name').value = 'EverLastERP System';
+    document.getElementById('sender_email').value = 'erp@everlastwellness.com';
+    
+    // Set correct encryption for port 465
+    document.getElementById('use_ssl_checkbox').checked = true;
+    document.getElementById('use_tls_checkbox').checked = false;
+    document.getElementById('is_active').checked = true;
+    
+    // Show success message
+    showAutoConfigMessage();
+}
+
+function showAutoConfigMessage() {
+    // Create and show a temporary success message
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-success alert-dismissible fade show mt-3';
+    alertDiv.innerHTML = `
+        <i class="fas fa-check-circle me-2"></i>
+        <strong>Auto-configured!</strong> Your Everlast Wellness SMTP settings have been applied.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Insert after the auto-config button
+    const button = document.querySelector('button[onclick="setEverlastConfig()"]');
+    button.parentNode.insertAdjacentElement('afterend', alertDiv);
+    
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 3000);
+}
+
+// Prevent SSL and TLS being enabled at the same time
+document.addEventListener('DOMContentLoaded', function() {
+    const sslCheckbox = document.getElementById('use_ssl_checkbox');
+    const tlsCheckbox = document.getElementById('use_tls_checkbox');
+    const portField = document.getElementById('smtp_port');
+    
+    if (sslCheckbox && tlsCheckbox) {
+        sslCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                tlsCheckbox.checked = false;
+                if (portField) portField.value = '465';
+            }
+        });
+        
+        tlsCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                sslCheckbox.checked = false;
+                if (portField) portField.value = '587';
+            }
+        });
+    }
+    
+    // Auto-adjust encryption based on port
+    if (portField) {
+        portField.addEventListener('change', function() {
+            const port = parseInt(this.value);
+            if (port === 465) {
+                sslCheckbox.checked = true;
+                tlsCheckbox.checked = false;
+            } else if (port === 587) {
+                tlsCheckbox.checked = true;
+                sslCheckbox.checked = false;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

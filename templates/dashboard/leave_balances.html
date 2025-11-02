@@ -1,0 +1,362 @@
+{% extends "layout.html" %}
+
+{% block extra_css %}
+<!-- EMERGENCY TABLE HEADER VISIBILITY FIX FOR LEAVE BALANCES PAGE -->
+<style>
+/* Force table headers to be visible with maximum specificity */
+.table thead th,
+.employee-table thead th,
+.enhanced-table thead th,
+table thead th {
+    background: #1e40af !important;
+    background-color: #1e40af !important;
+    background-color: #1e40af !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.6) !important;
+    font-size: 0.9rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    padding: 1rem 0.75rem !important;
+    border: none !important;
+    border-bottom: 2px solid #1e3a8a !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Force all child elements in headers to be white */
+.table thead th *,
+.employee-table thead th *,
+.enhanced-table thead th *,
+table thead th * {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.6) !important;
+    -webkit-text-fill-color: #ffffff !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <h1 class="page-title">Leave Balances Management</h1>
+    {% if current_user.role in ['admin', 'product_owner'] %}
+    <div class="ms-auto">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addBalanceModal">
+            <i class="fas fa-plus me-1"></i>Set Leave Balance
+        </button>
+    </div>
+    {% elif current_user.role == 'director' %}
+    <div class="ms-auto">
+        <span class="badge bg-info">View Only Mode</span>
+    </div>
+    {% endif %}
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Employee Leave Balances</h3>
+            </div>
+            <div class="card-body">
+                {% if balances %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Leave Type</th>
+                                <th>Year</th>
+                                <th>Total Days</th>
+                                <th>Used Days</th>
+                                <th>Remaining</th>
+                                {% if current_user.role in ['admin', 'director'] %}
+                                <th>Actions</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for balance in balances %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                                            {{ balance.user.first_name[0] }}{{ balance.user.last_name[0] }}
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold">{{ balance.user.first_name }} {{ balance.user.last_name }}</div>
+                                            <small class="text-muted">{{ balance.user.email }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge" style="background-color: {{ balance.leave_type.color }}; color: white;">
+                                        {{ balance.leave_type.name }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ balance.year }}</span>
+                                </td>
+                                <td>
+                                    <span class="fw-bold">{{ balance.total_days }}</span>
+                                </td>
+                                <td>
+                                    <span class="text-warning">{{ balance.used_days }}</span>
+                                </td>
+                                <td>
+                                    {% if balance.remaining_days > 0 %}
+                                        <span class="text-success fw-bold">{{ balance.remaining_days }}</span>
+                                    {% else %}
+                                        <span class="text-danger fw-bold">{{ balance.remaining_days }}</span>
+                                    {% endif %}
+                                    {% if balance.manual_remaining_days is not none %}
+                                        <small class="text-muted d-block">(Manual)</small>
+                                    {% endif %}
+                                </td>
+                                {% if current_user.role in ['admin', 'product_owner'] %}
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                onclick="editBalance({{ balance.id }}, '{{ balance.user.first_name }} {{ balance.user.last_name }}', '{{ balance.leave_type.name }}', {{ balance.total_days }}, {{ balance.used_days }}, {{ balance.remaining_days }}, {{ balance.manual_remaining_days if balance.manual_remaining_days is not none else 'null' }}, {{ balance.year }})">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                onclick="deleteBalance({{ balance.id }}, '{{ balance.user.first_name }} {{ balance.user.last_name }}', '{{ balance.leave_type.name }}')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                                {% elif current_user.role == 'director' %}
+                                <td>
+                                    <span class="text-muted">View Only</span>
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-balance-scale fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No leave balances found</h5>
+                    <p class="text-muted">Set leave balances for employees to get started.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Balance Modal -->
+<div class="modal fade" id="addBalanceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Set Leave Balance</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('dashboard.create_leave_balance') }}">
+                <div class="modal-body">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.user_id.label(class="form-label") }}
+                        {{ form.user_id(class="form-select") }}
+                        {% if form.user_id.errors %}
+                            <div class="text-danger">
+                                {% for error in form.user_id.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.leave_type_id.label(class="form-label") }}
+                        {{ form.leave_type_id(class="form-select") }}
+                        {% if form.leave_type_id.errors %}
+                            <div class="text-danger">
+                                {% for error in form.leave_type_id.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                {{ form.total_days.label(class="form-label") }}
+                                {{ form.total_days(class="form-control", min="0") }}
+                                {% if form.total_days.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.total_days.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                {{ form.used_days.label(class="form-label") }}
+                                {{ form.used_days(class="form-control", min="0") }}
+                                {% if form.used_days.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.used_days.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                {{ form.year.label(class="form-label") }}
+                                {{ form.year(class="form-control", min="2020", max="2030") }}
+                                {% if form.year.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.year.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.manual_remaining_days.label(class="form-label") }}
+                        {{ form.manual_remaining_days(class="form-control", min="0", placeholder="Leave empty for automatic calculation") }}
+                        <div class="form-text">{{ form.manual_remaining_days.description }}</div>
+                        {% if form.manual_remaining_days.errors %}
+                            <div class="text-danger">
+                                {% for error in form.manual_remaining_days.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Balance Modal -->
+<div class="modal fade" id="editBalanceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Leave Balance</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="editBalanceForm">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Employee</label>
+                        <input type="text" class="form-control" id="edit_employee" readonly>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Leave Type</label>
+                        <input type="text" class="form-control" id="edit_leave_type" readonly>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="edit_total_days" class="form-label">Total Days</label>
+                                <input type="number" class="form-control" id="edit_total_days" name="total_days" min="0" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="edit_used_days" class="form-label">Used Days</label>
+                                <input type="number" class="form-control" id="edit_used_days" name="used_days" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="edit_year" class="form-label">Year</label>
+                                <input type="number" class="form-control" id="edit_year" name="year" min="2020" max="2030" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="edit_manual_remaining_days" class="form-label">Manual Remaining Days (Override)</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="edit_manual_remaining_days" name="manual_remaining_days" min="0" placeholder="Leave empty for automatic calculation">
+                            <button type="button" class="btn btn-outline-secondary" onclick="clearManualOverride()">
+                                <i class="fas fa-times"></i> Clear Override
+                            </button>
+                        </div>
+                        <div class="form-text">Leave empty for automatic calculation (Total Days - Used Days)</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Balance</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function editBalance(id, employee, leaveType, totalDays, usedDays, remainingDays, manualRemainingDays, year) {
+    document.getElementById('editBalanceForm').action = `/dashboard/leave-balances/${id}/edit`;
+    document.getElementById('edit_employee').value = employee;
+    document.getElementById('edit_leave_type').value = leaveType;
+    document.getElementById('edit_total_days').value = totalDays;
+    document.getElementById('edit_used_days').value = usedDays || 0;
+    document.getElementById('edit_manual_remaining_days').value = manualRemainingDays || '';
+    document.getElementById('edit_year').value = year;
+    
+    new bootstrap.Modal(document.getElementById('editBalanceModal')).show();
+}
+
+function clearManualOverride() {
+    document.getElementById('edit_manual_remaining_days').value = '';
+}
+
+function deleteBalance(id, employee, leaveType) {
+    if (confirm(`Are you sure you want to delete the leave balance for ${employee} - ${leaveType}?`)) {
+        // Get CSRF token from meta tag
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        
+        fetch(`/dashboard/leave-balances/${id}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': csrfToken
+            },
+            body: `csrf_token=${csrfToken}`
+        })
+        .then(response => {
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert('Error deleting leave balance');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting leave balance');
+        });
+    }
+}
+</script>
+{% endblock %}

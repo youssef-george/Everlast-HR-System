@@ -1,8 +1,8 @@
 from datetime import datetime, date, timedelta
 from functools import wraps
-from flask import flash, redirect, url_for, abort
+from flask import flash, redirect, url_for, abort, request
 from flask_login import current_user
-from models import LeaveRequest, PermissionRequest, Notification, User
+from models import LeaveRequest, PermissionRequest, User, SMTPConfiguration
 from extensions import db
 from zk import ZK, const
 import logging
@@ -15,20 +15,50 @@ def role_required(*roles):
         def decorated_function(*args, **kwargs):
             if not current_user.is_authenticated:
                 return redirect(url_for('auth.login'))
-            if current_user.role not in roles:
-                flash('You do not have permission to access this page.', 'danger')
+            
+            # Flatten roles if they are passed as lists
+            allowed_roles = []
+            for role in roles:
+                if isinstance(role, (list, tuple)):
+                    allowed_roles.extend(role)
+                else:
+                    allowed_roles.append(role)
+            
+            if current_user.role not in allowed_roles:
+                # Check if this message was already flashed recently
+                from flask import session
+                import time
+                
+                permission_key = f'permission_denied_{request.endpoint}'
+                current_time = time.time()
+                
+                # Clean up old permission denial records (older than 5 minutes)
+                keys_to_remove = []
+                for key in session.keys():
+                    if key.startswith('permission_denied_') and isinstance(session[key], (int, float)):
+                        if current_time - session[key] > 300:  # 5 minutes
+                            keys_to_remove.append(key)
+                
+                for key in keys_to_remove:
+                    session.pop(key, None)
+                
+                # Only flash message if we haven't shown it recently
+                if permission_key not in session or current_time - session.get(permission_key, 0) > 300:
+                    flash('You do not have permission to access this page.', 'danger')
+                    session[permission_key] = current_time
+                
                 abort(403)
             return f(*args, **kwargs)
         return decorated_function
     return decorator
 
 def admin_required(f):
-    """Decorator that checks if the current user is an admin."""
+    """Decorator that checks if the current user is an admin or product owner."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             return redirect(url_for('auth.login'))
-        if current_user.role != 'admin':
+        if current_user.role not in ['admin', 'product_owner']:
             flash('You do not have administrative privileges to access this page.', 'danger')
             abort(403)
         return f(*args, **kwargs)
@@ -88,18 +118,6 @@ def get_permission_count(user_id, period='monthly'):
     
     return permissions
 
-def create_notification(user_id, message, notification_type, reference_id=None, reference_type=None):
-    """Create a notification for a user."""
-    notification = Notification(
-        user_id=user_id,
-        message=message,
-        notification_type=notification_type,
-        reference_id=reference_id,
-        reference_type=reference_type
-    )
-    db.session.add(notification)
-    db.session.commit()
-    return notification
 
 def get_user_managers(user):
     """Get the managers for a user (direct manager, admin, and director), with department-specific filtering."""
@@ -144,8 +162,8 @@ def get_user_managers(user):
                     managers['direct_manager'] = manager
                     break
     
-    # Get all admin users
-    all_admins = User.query.filter_by(role='admin', status='active').all()
+    # Get all admin and product owner users
+    all_admins = User.query.filter(User.role.in_(['admin', 'product_owner']), User.status == 'active').all()
     managers['admin_managers'] = all_admins
     
     # Filter admins by department, if applicable
@@ -172,8 +190,8 @@ def get_employees_for_manager(manager_id):
     
     employees = []
     
-    # Special case for admin users - they should see all employees
-    if manager.role == 'admin':
+    # Special case for admin and product owner users - they should see all employees
+    if manager.role in ['admin', 'product_owner']:
         # Return all active employees in the system
         return User.query.filter(User.status == 'active', User.id != manager_id).all()
     
@@ -210,10 +228,8 @@ def leave_request_to_dict(leave_request):
         'created_at': leave_request.created_at.strftime('%Y-%m-%d %H:%M:%S'),
         'manager_status': leave_request.manager_status,
         'admin_status': leave_request.admin_status,
-        'general_manager_status': leave_request.general_manager_status,
         'manager_comment': leave_request.manager_comment,
-        'admin_comment': leave_request.admin_comment,
-        'general_manager_comment': leave_request.general_manager_comment
+        'admin_comment': leave_request.admin_comment
     }
 
 def permission_request_to_dict(permission_request):
@@ -225,14 +241,8 @@ def permission_request_to_dict(permission_request):
         'status': permission_request.status,
         'reason': permission_request.reason,
         'created_at': permission_request.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-        'manager_status': permission_request.manager_status,
-        'director_status': permission_request.director_status,
         'admin_status': permission_request.admin_status,
-        'manager_comment': permission_request.manager_comment,
-        'director_comment': permission_request.director_comment,
         'admin_comment': permission_request.admin_comment,
-        'manager_updated_at': permission_request.manager_updated_at.strftime('%Y-%m-%d %H:%M:%S') if permission_request.manager_updated_at else None,
-        'director_updated_at': permission_request.director_updated_at.strftime('%Y-%m-%d %H:%M:%S') if permission_request.director_updated_at else None,
         'admin_updated_at': permission_request.admin_updated_at.strftime('%Y-%m-%d %H:%M:%S') if permission_request.admin_updated_at else None
     }
 
@@ -246,7 +256,8 @@ def get_dashboard_stats(user):
         'rejected_leave_requests': 0,
         'rejected_permission_requests': 0,
         'total_employees': 0,
-        'total_departments': 0
+        'total_departments': 0,
+        'leave_balances': []
     }
     
     if user.role == 'employee':
@@ -290,34 +301,48 @@ def get_dashboard_stats(user):
             stats['pending_permission_requests'] = PermissionRequest.query.filter(
                 PermissionRequest.user_id.in_(employee_ids),
                 PermissionRequest.status == 'pending',
-                PermissionRequest.manager_status == 'pending'
+                PermissionRequest.admin_status == 'pending'
             ).count()
             
+            # Get approved requests from manager's team
+            stats['approved_leave_requests'] = LeaveRequest.query.filter(
+                LeaveRequest.user_id.in_(employee_ids),
+                LeaveRequest.status == 'approved'
+            ).count()
+            
+            stats['approved_permission_requests'] = PermissionRequest.query.filter(
+                PermissionRequest.user_id.in_(employee_ids),
+                PermissionRequest.status == 'approved'
+            ).count()
+            
+            # Get team attendance statistics for today
+            from models import DailyAttendance
+            from datetime import date
+            today = date.today()
+            
+            # Count team members present today
+            stats['team_present_today'] = DailyAttendance.query.filter(
+                DailyAttendance.date == today,
+                DailyAttendance.user_id.in_(employee_ids),
+                DailyAttendance.status.in_(['present', 'half-day', 'in_office'])
+            ).count()
+            
+            # Count team members absent today
+            stats['team_absent_today'] = len(employee_ids) - stats['team_present_today']
+            
             stats['total_employees'] = len(employee_ids)
+        else:
+            # If manager has no employees, set defaults
+            stats['team_present_today'] = 0
+            stats['team_absent_today'] = 0
         
-    elif user.role == 'director':
-        # Director sees permission requests that need director approval
-        stats['pending_permission_requests'] = PermissionRequest.query.filter(
-            PermissionRequest.status == 'pending',
-            PermissionRequest.manager_status == 'approved',
-            PermissionRequest.director_status == 'pending'
-        ).count()
         
-    elif user.role == 'admin':
-        # Admin sees requests that need admin approval
-        stats['pending_leave_requests'] = LeaveRequest.query.filter(
-            LeaveRequest.status == 'pending',
-            LeaveRequest.manager_status == 'approved',
-            LeaveRequest.admin_status == 'pending'
-        ).count()
+    elif user.role in ['admin', 'product_owner']:
+        # Admin sees all pending requests (simplified for better UX)
+        stats['pending_leave_requests'] = LeaveRequest.query.filter_by(status='pending').count()
         
-        # Pending permission requests that need admin approval
-        stats['pending_permission_requests'] = PermissionRequest.query.filter(
-            PermissionRequest.status == 'pending',
-            PermissionRequest.manager_status == 'approved',
-            PermissionRequest.director_status == 'approved',
-            PermissionRequest.admin_status == 'pending'
-        ).count()
+        # All pending permission requests
+        stats['pending_permission_requests'] = PermissionRequest.query.filter_by(status='pending').count()
         
         # All approved leave requests
         stats['approved_leave_requests'] = LeaveRequest.query.filter_by(status='approved').count()
@@ -331,32 +356,154 @@ def get_dashboard_stats(user):
         # All rejected permission requests
         stats['rejected_permission_requests'] = PermissionRequest.query.filter_by(status='rejected').count()
         
-        # Count all employees
-        stats['total_employees'] = User.query.filter(User.status == 'active', User.role != 'admin').count()
-        
-        # Count all departments
-        stats['total_departments'] = db.session.query(db.func.count(db.distinct(User.department_id))).scalar()
-    
-    elif user.role == 'general_manager':
-        # General Manager sees requests that need their approval
-        stats['pending_leave_requests'] = LeaveRequest.query.filter(
-            LeaveRequest.status == 'pending',
-            LeaveRequest.manager_status == 'approved',
-            LeaveRequest.admin_status == 'approved',
-            LeaveRequest.general_manager_status == 'pending'
+        # Count all employees (excluding admins) with fingerprint numbers
+        stats['total_employees'] = User.query.filter(
+            User.status == 'active', 
+            User.role.notin_(['admin', 'product_owner']),
+            User.fingerprint_number != None,
+            User.fingerprint_number != ''
         ).count()
+        
+        # Count all departments (only those with employees)
+        from models import Department
+        stats['total_departments'] = Department.query.count()
+        
+        # Add attendance statistics for today using AttendanceLog
+        from models import AttendanceLog
+        from datetime import date, datetime
+        today = date.today()
+        
+        # Count employees present today using AttendanceLog (any log = present)
+        from models import AttendanceLog
+        from datetime import datetime
+        
+        # Get users who have ANY attendance log today (check-in OR check-out)
+        start_datetime = datetime.combine(today, datetime.min.time())
+        end_datetime = datetime.combine(today, datetime.max.time())
+        
+        present_users = db.session.query(AttendanceLog.user_id).join(User).filter(
+            AttendanceLog.timestamp.between(start_datetime, end_datetime),
+            User.fingerprint_number != None,
+            User.fingerprint_number != '',
+            User.status == 'active',
+            User.role.notin_(['admin', 'product_owner'])
+        ).distinct().count()
+        
+        stats['total_attendance_today'] = present_users
+        
+        # Count employees absent today (only those with fingerprint numbers)
+        total_active_employees_with_fingerprint = User.query.filter(
+            User.status == 'active', 
+            User.role.notin_(['admin', 'product_owner']),
+            User.fingerprint_number != None,
+            User.fingerprint_number != ''
+        ).count()
+        
+        stats['team_absent_today'] = total_active_employees_with_fingerprint - stats['total_attendance_today']
+        
+        # Calculate attendance rate
+        if total_active_employees_with_fingerprint > 0:
+            stats['attendance_rate'] = round((stats['total_attendance_today'] / total_active_employees_with_fingerprint) * 100, 1)
+        else:
+            stats['attendance_rate'] = 0
+    
+    elif user.role == 'director':
+        # Director sees all company-wide stats (same as admin but view-only)
+        stats['pending_leave_requests'] = LeaveRequest.query.filter_by(status='pending').count()
+        
+        # All pending permission requests
+        stats['pending_permission_requests'] = PermissionRequest.query.filter_by(status='pending').count()
         
         # All approved leave requests
         stats['approved_leave_requests'] = LeaveRequest.query.filter_by(status='approved').count()
         
+        # All approved permission requests
+        stats['approved_permission_requests'] = PermissionRequest.query.filter_by(status='approved').count()
+        
         # All rejected leave requests
         stats['rejected_leave_requests'] = LeaveRequest.query.filter_by(status='rejected').count()
         
-        # Count all employees
-        stats['total_employees'] = User.query.filter(User.status == 'active').count()
+        # All rejected permission requests
+        stats['rejected_permission_requests'] = PermissionRequest.query.filter_by(status='rejected').count()
+        
+        # Count all employees (excluding admins and directors) with fingerprint numbers
+        stats['total_employees'] = User.query.filter(
+            User.status == 'active', 
+            User.role.notin_(['admin', 'director']),
+            User.fingerprint_number != None,
+            User.fingerprint_number != ''
+        ).count()
         
         # Count all departments
-        stats['total_departments'] = db.session.query(db.func.count(db.distinct(User.department_id))).scalar()
+        from models import Department
+        stats['total_departments'] = Department.query.count()
+        
+        # Add attendance statistics for today using AttendanceLog
+        from models import AttendanceLog
+        from datetime import date, datetime
+        today = date.today()
+        
+        # Count employees present today using AttendanceLog (any log = present)
+        from models import AttendanceLog
+        from datetime import datetime
+        
+        # Get users who have ANY attendance log today (check-in OR check-out)
+        start_datetime = datetime.combine(today, datetime.min.time())
+        end_datetime = datetime.combine(today, datetime.max.time())
+        
+        present_users = db.session.query(AttendanceLog.user_id).join(User).filter(
+            AttendanceLog.timestamp.between(start_datetime, end_datetime),
+            User.fingerprint_number != None,
+            User.fingerprint_number != '',
+            User.status == 'active',
+            User.role.notin_(['admin', 'director'])
+        ).distinct().count()
+        
+        stats['total_attendance_today'] = present_users
+        
+        # Count employees absent today (only those with fingerprint numbers)
+        total_active_employees_with_fingerprint = User.query.filter(
+            User.status == 'active', 
+            User.role.notin_(['admin', 'director']),
+            User.fingerprint_number != None,
+            User.fingerprint_number != ''
+        ).count()
+        
+        stats['team_absent_today'] = total_active_employees_with_fingerprint - stats['total_attendance_today']
+        
+        # Calculate attendance rate
+        if total_active_employees_with_fingerprint > 0:
+            stats['attendance_rate'] = round((stats['total_attendance_today'] / total_active_employees_with_fingerprint) * 100, 1)
+        else:
+            stats['attendance_rate'] = 0
+    
+    # Add leave balance information for all roles
+    from models import LeaveBalance, LeaveType
+    from datetime import datetime
+    
+    current_year = datetime.now().year
+    if user.role in ['admin', 'director']:
+        # Admins and directors see all leave balances
+        leave_balances = LeaveBalance.query.join(LeaveType).filter(
+            LeaveBalance.year == current_year
+        ).all()
+    else:
+        # Employees and managers see only their own balances
+        leave_balances = LeaveBalance.query.join(LeaveType).filter(
+            LeaveBalance.user_id == user.id,
+            LeaveBalance.year == current_year
+        ).all()
+    
+    stats['leave_balances'] = []
+    for balance in leave_balances:
+        stats['leave_balances'].append({
+            'leave_type_name': balance.leave_type.name,
+            'total_days': balance.total_days,
+            'used_days': balance.used_days,
+            'remaining_days': balance.remaining_days,
+            'is_negative': balance.remaining_days < 0,
+            'color': balance.leave_type.color
+        })
     
     return stats
 
@@ -424,3 +571,146 @@ def sync_users_from_device(ip="192.168.11.2", port=4370):
     finally:
         if conn:
             conn.disconnect()
+
+def format_hours_minutes(hours):
+    """Convert decimal hours to 'Xh Ym' format."""
+    if hours is None or hours == 0:
+        return "0h 0m"
+    
+    # Handle negative hours
+    is_negative = hours < 0
+    hours = abs(hours)
+    
+    # Extract hours and minutes
+    whole_hours = int(hours)
+    minutes = int((hours - whole_hours) * 60)
+    
+    # Format the result
+    if whole_hours > 0 and minutes > 0:
+        result = f"{whole_hours}h {minutes}m"
+    elif whole_hours > 0:
+        result = f"{whole_hours}h 0m"
+    elif minutes > 0:
+        result = f"0h {minutes}m"
+    else:
+        result = "0h 0m"
+    
+    # Add negative sign if needed
+    if is_negative:
+        result = f"-{result}"
+    
+    return result
+
+def send_admin_email_notification(subject, message, request_type=None, request_id=None):
+    """Send email notifications based on module-specific email lists for leave/permission requests."""
+    try:
+        # Get active SMTP configuration
+        smtp_config = SMTPConfiguration.query.filter_by(is_active=True).first()
+        if not smtp_config:
+            logging.warning("No active SMTP configuration found. Email notification not sent.")
+            return False
+        
+        # Determine which emails to send to based on request type
+        recipient_emails = []
+        
+        if request_type == 'leave':
+            if not smtp_config.notify_leave_requests:
+                logging.info("Leave request notifications are disabled. Email not sent.")
+                return False
+            recipient_emails = smtp_config.get_leave_emails()
+        elif request_type == 'permission':
+            if not smtp_config.notify_permission_requests:
+                logging.info("Permission request notifications are disabled. Email not sent.")
+                return False
+            recipient_emails = smtp_config.get_permission_emails()
+        else:
+            # For general admin notifications
+            recipient_emails = smtp_config.get_admin_emails()
+        
+        if not recipient_emails:
+            logging.warning(f"No recipient emails found for {request_type} notifications. Email not sent.")
+            return False
+        
+        # Import email libraries
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        
+        # Connect to SMTP server
+        if smtp_config.use_ssl:
+            server = smtplib.SMTP_SSL(smtp_config.smtp_server, smtp_config.smtp_port)
+        else:
+            server = smtplib.SMTP(smtp_config.smtp_server, smtp_config.smtp_port)
+            if smtp_config.use_tls:
+                server.starttls()
+        
+        try:
+            server.login(smtp_config.smtp_username, smtp_config.smtp_password)
+        except Exception as login_error:
+            logging.error(f"SMTP login failed: {str(login_error)}")
+            server.quit()
+            return False
+        
+        # Send email to each recipient
+        for recipient_email in recipient_emails:
+            try:
+                # Try to get the user's name if they exist in the system
+                user = User.query.filter_by(email=recipient_email).first()
+                recipient_name = user.get_full_name() if user else recipient_email.split('@')[0].title()
+                
+                msg = MIMEMultipart()
+                msg['From'] = f"{smtp_config.sender_name} <{smtp_config.sender_email}>"
+                msg['To'] = recipient_email
+                msg['Subject'] = subject
+                
+                # Create HTML email body
+                html_body = f"""
+                <html>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                            <h2 style="margin: 0; font-size: 24px;">
+                                <span style="margin-right: 10px;">📧</span>
+                                EverLastERP Notification
+                            </h2>
+                        </div>
+                        
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea;">
+                            <h3 style="color: #667eea; margin-top: 0;">Hello {recipient_name},</h3>
+                            <p>{message}</p>
+                            
+                            {f'<p><strong>Request Type:</strong> {request_type.title()}</p>' if request_type else ''}
+                            {f'<p><strong>Request ID:</strong> #{request_id}</p>' if request_id else ''}
+                            
+                            <div style="margin: 20px 0; padding: 15px; background: #e3f2fd; border-radius: 6px;">
+                                <p style="margin: 0; font-size: 14px; color: #1565c0;">
+                                    <strong>Action Required:</strong> Please log in to the EverLastERP system to review and process this request.
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; text-align: center;">
+                            <p style="margin: 0; font-size: 12px; color: #666;">
+                                This is an automated message from EverLastERP System.<br>
+                                Please do not reply to this email.
+                            </p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """
+                
+                msg.attach(MIMEText(html_body, 'html'))
+                server.send_message(msg)
+                logging.info(f"Email notification sent to: {recipient_email}")
+                
+            except Exception as e:
+                logging.error(f"Failed to send email to {recipient_email}: {str(e)}")
+                continue
+        
+        server.quit()
+        return True
+        
+    except Exception as e:
+        logging.error(f"Failed to send admin email notifications: {str(e)}")
+        return False

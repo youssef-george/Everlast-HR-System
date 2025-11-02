@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}View Attachment - {{ attachment.display_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="fas fa-file me-2"></i>{{ attachment.display_name }}
+                    </h2>
+                    <p class="text-muted mb-0">{{ attachment.file_name }}</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('dashboard.download_attachment', attachment_id=attachment.id) }}" 
+                       class="btn btn-primary">
+                        <i class="fas fa-download me-1"></i>Download
+                    </a>
+                    <a href="{{ url_for('dashboard.edit_user', user_id=attachment.user_id) }}" 
+                       class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Back to User
+                    </a>
+                </div>
+            </div>
+
+            <!-- File Info -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="fw-bold">File Information</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Display Name:</strong></td>
+                                    <td>{{ attachment.display_name }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>File Name:</strong></td>
+                                    <td>{{ attachment.file_name }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>File Type:</strong></td>
+                                    <td>
+                                        <span class="badge bg-info">{{ file_ext.upper() }}</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>File Size:</strong></td>
+                                    <td>
+                                        {% if attachment.file_size %}
+                                        {{ "%.1f"|format(attachment.file_size / 1024) }} KB
+                                        {% else %}
+                                        Unknown
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="fw-bold">Upload Information</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Uploaded:</strong></td>
+                                    <td>{{ attachment.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Uploaded By:</strong></td>
+                                    <td>{{ attachment.uploader.first_name }} {{ attachment.uploader.last_name }}</td>
+                                </tr>
+                                {% if attachment.description %}
+                                <tr>
+                                    <td><strong>Description:</strong></td>
+                                    <td>{{ attachment.description }}</td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- File Preview -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-eye me-1"></i>File Preview
+                    </h6>
+                </div>
+                <div class="card-body text-center">
+                    {% if file_ext in ['.pdf'] %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        This file type cannot be previewed in the browser. Please download the file to view it.
+                    </div>
+                    <div class="mt-3">
+                        <a href="{{ url_for('dashboard.download_attachment', attachment_id=attachment.id) }}" 
+                           class="btn btn-primary btn-lg">
+                            <i class="fas fa-download me-2"></i>Download {{ attachment.file_name }}
+                        </a>
+                    </div>
+                    {% elif file_ext in ['.txt', '.csv', '.json', '.xml', '.html', '.css', '.js'] %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Text files cannot be safely previewed in the browser. Please download the file to view it.
+                    </div>
+                    <div class="mt-3">
+                        <a href="{{ url_for('dashboard.download_attachment', attachment_id=attachment.id) }}" 
+                           class="btn btn-primary btn-lg">
+                            <i class="fas fa-download me-2"></i>Download {{ attachment.file_name }}
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        This file type ({{ file_ext.upper() }}) cannot be previewed in the browser. Please download the file to view it.
+                    </div>
+                    <div class="mt-3">
+                        <a href="{{ url_for('dashboard.download_attachment', attachment_id=attachment.id) }}" 
+                           class="btn btn-primary btn-lg">
+                            <i class="fas fa-download me-2"></i>Download {{ attachment.file_name }}
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

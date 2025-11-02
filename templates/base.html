@@ -10,6 +10,7 @@
     <!-- Core CSS -->
     <link href="{{ url_for('static', filename='css/metronic.css') }}" rel="stylesheet" />
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet" />
+    <link href="{{ url_for('static', filename='css/employee-ui.css') }}" rel="stylesheet" />
     
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
@@ -20,7 +21,7 @@
     {% block extra_css %}{% endblock %}
 </head>
 
-<body class="sb-nav-fixed">
+<body class="sb-nav-fixed" data-user-role="{{ current_user.role if current_user.is_authenticated else 'guest' }}">
     <!-- Top Navigation -->
     <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
         <a class="navbar-brand ps-3" href="{{ url_for('dashboard.index') }}">Everlast ERP</a>
@@ -62,8 +63,8 @@
     <!-- Sidebar and Content -->
     <div id="layoutSidenav">
         <!-- Sidebar -->
-        <nav class="sb-sidenav sb-sidenav-dark" id="layoutSidenav_nav">
-            <div class="sb-sidenav-menu">
+        <nav class="sb-sidenav sb-sidenav-dark" id="layoutSidenav_nav" style="position: fixed; top: 0; bottom: 0; left: 0; z-index: 100; display: flex; flex-direction: column; height: 100vh; overflow: hidden;">
+            <div class="sb-sidenav-menu" style="flex: 1; overflow-y: auto; overflow-x: hidden;">
                 <div class="nav">
                     <!-- Dashboard -->
                     <a class="nav-link" href="{{ url_for('dashboard.index') }}">
@@ -77,6 +78,10 @@
                     <a class="nav-link" href="{{ url_for('permission.index') }}">
                         <i class="fas fa-door-open"></i> Permission
                     </a>
+                    <!-- Attendance -->
+                    <a class="nav-link" href="{{ url_for('attendance.index') }}">
+                        <i class="fas fa-clipboard-list"></i> Attendance
+                    </a>
                     {% if current_user.is_admin() %}
                     <div class="sb-sidenav-menu-heading">Admin</div>
                     <a class="nav-link" href="{{ url_for('dashboard.users') }}">
@@ -85,34 +90,76 @@
                     <a class="nav-link" href="{{ url_for('departments.index') }}">
                         <i class="fas fa-building"></i> Departments
                     </a>
+                    {% if current_user.role in ['admin', 'product_owner'] %}
                     <a class="nav-link" href="{{ url_for('attendance.device_settings') }}">
                         <i class="fas fa-fingerprint"></i> Device Settings
                     </a>
                     {% endif %}
-                    {% if current_user.is_general_manager() %}
-                    <div class="sb-sidenav-menu-heading">General Manager</div>
+                    {% endif %}
+                    
+                    {% if current_user.role in ['admin', 'manager', 'director'] %}
                     <a class="nav-link" href="{{ url_for('leave.index') }}">
                         <i class="fas fa-check-circle"></i> Leave Approvals
                     </a>
                     {% endif %}
+                    
+                    {% if current_user.role in ['admin', 'manager', 'director'] %}
+                    <a class="nav-link" href="{{ url_for('dashboard.leave_balances') }}">
+                        <i class="fas fa-balance-scale"></i> Leave Balances
+                    </a>
+                    {% endif %}
                 </div>
             </div>
-            <div class="sb-sidenav-footer">
+            
+            <!-- Leave Balance Widget -->
+            <div class="leave-balance-widget" style="padding: 1rem; border-top: 1px solid var(--border-color); background-color: var(--card-bg); flex-shrink: 0; display: block !important; visibility: visible !important;">
+                <div class="small text-muted mb-2 fw-bold">
+                    <i class="fas fa-balance-scale me-1"></i> My Leave Balance
+                </div>
+                <div id="leave-balance-content">
+                    <div class="text-center">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sb-sidenav-footer" style="flex-shrink: 0;">
                 <div class="small">Logged in as:</div>
                 {{ current_user.first_name }} {{ current_user.last_name }}
             </div>
         </nav>
         <!-- Main Content -->
-        <div id="layoutSidenav_content">
+        <div id="layoutSidenav_content" style="margin-left: 250px; transition: margin-left 0.3s ease;">
             <main>
                 <!-- Flash Messages -->
                 {% with messages = get_flashed_messages(with_categories=true) %}
                     {% if messages %}
+                        {% set unique_messages = [] %}
                         {% for category, message in messages %}
-                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
+                            {% if (category, message) not in unique_messages %}
+                                {% set _ = unique_messages.append((category, message)) %}
+                                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show flash-message" role="alert" data-message="{{ message|e }}">
+                                    <div class="d-flex align-items-start">
+                                        <div class="flex-shrink-0 me-2">
+                                            {% if category == 'danger' or category == 'error' %}
+                                                <i class="fas fa-exclamation-triangle"></i>
+                                            {% elif category == 'success' %}
+                                                <i class="fas fa-check-circle"></i>
+                                            {% elif category == 'warning' %}
+                                                <i class="fas fa-exclamation-circle"></i>
+                                            {% elif category == 'info' %}
+                                                <i class="fas fa-info-circle"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            {{ message }}
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endif %}
                         {% endfor %}
                     {% endif %}
                 {% endwith %}
@@ -134,7 +181,11 @@
 
     <!-- Core JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/auto-fetch.js') }}"></script>
     
     <!-- jQuery and Toastr -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -150,54 +201,344 @@
     };
     </script>
 
-    <!-- Initialize Notifications -->
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Update notifications every minute
-        function updateNotifications() {
-            fetch('/notifications/unread_count')
-                .then(response => response.json())
-                .then(data => {
-                    const badge = document.getElementById('notificationCount');
-                    if (data.count > 0) {
-                        badge.textContent = data.count;
-                        badge.style.display = 'inline';
-                    } else {
-                        badge.style.display = 'none';
-                    }
-                });
-
-            fetch('/notifications/get_recent')
-                .then(response => response.json())
-                .then(data => {
-                    const list = document.getElementById('notificationList');
-                    list.innerHTML = '';
-                    
-                    if (data.notifications.length === 0) {
-                        list.innerHTML = '<li><a class="dropdown-item" href="#">No new notifications</a></li>';
-                    } else {
-                        data.notifications.forEach(notification => {
-                            const item = document.createElement('li');
-                            item.innerHTML = `
-                                <a class="dropdown-item" href="#">
-                                    <small class="text-muted">${notification.created_at}</small><br>
-                                    ${notification.message}
-                                </a>`;
-                            list.appendChild(item);
-                        });
-                    }
-                });
-        }
-
-        // Initial update
-        updateNotifications();
-        
-        // Update every minute
-        setInterval(updateNotifications, 60000);
-    });
-    </script>
+    <!-- Notification system removed - replaced with SMTP email notifications for admins -->
 
     {% block scripts %}{% endblock %}
+    
+    <!-- Flash Message and Auto-Sync Alert Cleanup -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Clear any lingering auto-sync error notifications
+        function clearAutoSyncAlerts() {
+            const autoSyncAlerts = document.querySelectorAll('.auto-sync-alert');
+            autoSyncAlerts.forEach(alert => alert.remove());
+        }
+        
+        // Handle flash message deduplication and cleanup
+        function handleFlashMessages() {
+            const flashMessages = document.querySelectorAll('.flash-message');
+            const seenMessages = new Set();
+            
+            flashMessages.forEach(alert => {
+                const message = alert.getAttribute('data-message');
+                if (seenMessages.has(message)) {
+                    // Remove duplicate message
+                    alert.remove();
+                } else {
+                    seenMessages.add(message);
+                    
+                    // Auto-dismiss permission error messages after 8 seconds
+                    if (message && message.toLowerCase().includes('permission')) {
+                        setTimeout(() => {
+                            if (alert.parentNode) {
+                                alert.remove();
+                            }
+                        }, 8000);
+                    }
+                }
+            });
+        }
+        
+        // Clear immediately and after a short delay
+        clearAutoSyncAlerts();
+        handleFlashMessages();
+        setTimeout(() => {
+            clearAutoSyncAlerts();
+            handleFlashMessages();
+        }, 1000);
+        
+        // Also handle flash messages that might be added dynamically
+        if (typeof MutationObserver !== 'undefined') {
+        const observer = new MutationObserver(function(mutations) {
+            try {
+                mutations.forEach(function(mutation) {
+                    try {
+                        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                            const hasFlashMessages = Array.from(mutation.addedNodes).some(function(node) {
+                                try {
+                                    return node && node.nodeType === 1 && (
+                                        (node.classList && node.classList.contains('flash-message')) ||
+                                        (node.querySelector && node.querySelector('.flash-message'))
+                                    );
+                                } catch (e) {
+                                    // Ignore errors from invalid nodes (external scripts)
+                                    return false;
+                                }
+                            });
+                            
+                            if (hasFlashMessages) {
+                                setTimeout(handleFlashMessages, 100);
+                            }
+                        }
+                    } catch (e) {
+                        // Silently ignore errors from individual mutations
+                        // This prevents external scripts from breaking our observer
+                    }
+                });
+            } catch (e) {
+                // Silently ignore any errors in the observer callback
+                // This prevents the entire observer from failing due to external scripts
+            }
+        });
+        
+        // Ensure document.body exists and is a valid Node before observing
+        if (document.body && document.body.nodeType === 1) {
+            try {
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                });
+            } catch (e) {
+                console.warn('MutationObserver: Failed to observe document.body:', e.message);
+            }
+        } else {
+            console.warn('MutationObserver: document.body not available or not a valid Node');
+        }
+        } else {
+            console.warn('MutationObserver not supported in this browser');
+        }
+    });
+    </script>
+    
+    <!-- Global Loader Script -->
+    <script src="{{ url_for('static', filename='js/global-loader.js') }}"></script>
+    
+    <!-- Connection Monitor Script -->
+    <script src="{{ url_for('static', filename='js/connection-monitor.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dashboard-enhancements.js') }}"></script>
+    
+    <!-- Ensure table headers are white -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        function ensureWhiteTableHeaders() {
+            // Select all table header cells with comprehensive selectors
+            const headerCells = document.querySelectorAll(`
+                thead th,
+                .table thead th,
+                .employee-table thead th,
+                .enhanced-table thead th,
+                .attendance-table thead th,
+                #todaysAttendanceTable thead th,
+                #historicalAttendanceTable thead th,
+                .table-responsive table thead th,
+                .card table thead th,
+                .employee-card table thead th,
+                .employee-card-body table thead th
+            `);
+            
+            // Select all content inside table headers
+            const headerContent = document.querySelectorAll(`
+                thead th *,
+                .table thead th *,
+                .employee-table thead th *,
+                .enhanced-table thead th *,
+                .attendance-table thead th *,
+                #todaysAttendanceTable thead th *,
+                #historicalAttendanceTable thead th *,
+                .table-responsive table thead th *,
+                .card table thead th *,
+                .employee-card table thead th *,
+                .employee-card-body table thead th *
+            `);
+            
+            // Apply enhanced styling to table header cells
+            headerCells.forEach(function(header) {
+                // High contrast blue gradient background
+                header.style.setProperty('background', 'linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%)', 'important');
+                
+                // Bold white text with shadow for maximum readability
+                header.style.setProperty('color', '#ffffff', 'important');
+                header.style.setProperty('font-weight', '700', 'important');
+                header.style.setProperty('text-shadow', '0 1px 3px rgba(0,0,0,0.4)', 'important');
+                
+                // Better typography
+                header.style.setProperty('font-size', '0.95rem', 'important');
+                header.style.setProperty('letter-spacing', '0.5px', 'important');
+                header.style.setProperty('text-transform', 'uppercase', 'important');
+                
+                // Proper spacing and borders
+                header.style.setProperty('padding', '1rem 0.75rem', 'important');
+                header.style.setProperty('border', 'none', 'important');
+                header.style.setProperty('border-bottom', '2px solid rgba(255,255,255,0.2)', 'important');
+                
+                // Ensure visibility
+                header.style.setProperty('opacity', '1', 'important');
+                header.style.setProperty('visibility', 'visible', 'important');
+            });
+            
+            // Apply white color to all content inside headers
+            headerContent.forEach(function(content) {
+                content.style.setProperty('color', '#ffffff', 'important');
+                content.style.setProperty('text-shadow', '0 1px 3px rgba(0,0,0,0.4)', 'important');
+            });
+        }
+        
+        // Run immediately
+        ensureWhiteTableHeaders();
+        
+        // Run again after a short delay to catch dynamically loaded content
+        setTimeout(ensureWhiteTableHeaders, 500);
+        
+        // Run whenever new content is added to the page
+        if (typeof MutationObserver !== 'undefined') {
+            const tableObserver = new MutationObserver(function(mutations) {
+                try {
+                    mutations.forEach(function(mutation) {
+                        try {
+                            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                                // Check if any table elements were added
+                                const hasTableElements = Array.from(mutation.addedNodes).some(function(node) {
+                                    try {
+                                        return node && node.nodeType === 1 && (
+                                            node.tagName === 'TABLE' || 
+                                            node.tagName === 'THEAD' || 
+                                            node.tagName === 'TH' ||
+                                            (node.querySelector && node.querySelector('table, thead, th'))
+                                        );
+                                    } catch (e) {
+                                        // Ignore errors from invalid nodes (external scripts)
+                                        return false;
+                                    }
+                                });
+                                
+                                if (hasTableElements) {
+                                    setTimeout(ensureWhiteTableHeaders, 100);
+                                }
+                            }
+                        } catch (e) {
+                            // Silently ignore errors from individual mutations
+                        }
+                    });
+                } catch (e) {
+                    // Silently ignore any errors in the observer callback
+                }
+            });
+        
+            // Ensure document.body exists and is a valid Node before observing
+            if (document.body && document.body.nodeType === 1) {
+                try {
+                    tableObserver.observe(document.body, {
+                        childList: true,
+                        subtree: true
+                    });
+                } catch (e) {
+                    console.warn('Table MutationObserver: Failed to observe document.body:', e.message);
+                }
+            } else {
+                console.warn('Table MutationObserver: document.body not available or not a valid Node');
+            }
+        } else {
+            console.warn('MutationObserver not supported in this browser');
+        }
+        
+        // Global error handler for external script MutationObserver errors
+        window.addEventListener('error', function(event) {
+            if (event.message && event.message.includes('MutationObserver') && event.message.includes('parameter 1 is not of type')) {
+                console.warn('External script MutationObserver error caught and suppressed:', event.message);
+                event.preventDefault();
+                return true;
+            }
+        });
+        
+        // Override MutationObserver constructor to add error handling for external scripts
+        if (typeof MutationObserver !== 'undefined') {
+            const OriginalMutationObserver = window.MutationObserver;
+            window.MutationObserver = function(callback) {
+                return new OriginalMutationObserver(function(mutations, observer) {
+                    try {
+                        return callback(mutations, observer);
+                    } catch (e) {
+                        console.warn('MutationObserver callback error caught and suppressed:', e.message);
+                    }
+                });
+            };
+            
+            // Override observe method to validate nodes
+            const originalObserve = OriginalMutationObserver.prototype.observe;
+            OriginalMutationObserver.prototype.observe = function(target, options) {
+                try {
+                    if (!target || typeof target.nodeType === 'undefined' || target.nodeType !== Node.ELEMENT_NODE) {
+                        console.warn('MutationObserver: Invalid target node, skipping observation');
+                        return;
+                    }
+                    return originalObserve.call(this, target, options);
+                } catch (e) {
+                    console.warn('MutationObserver.observe error caught and suppressed:', e.message);
+                }
+            };
+        }
+    });
+    </script>
+    
+    <!-- Leave Balance Widget Script -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Leave Balance Widget: Starting to load...');
+        
+        // Check if the widget element exists
+        const widget = document.querySelector('.leave-balance-widget');
+        const content = document.getElementById('leave-balance-content');
+        
+        if (!widget) {
+            console.error('Leave Balance Widget: Widget element not found!');
+            return;
+        }
+        
+        if (!content) {
+            console.error('Leave Balance Widget: Content element not found!');
+            return;
+        }
+        
+        console.log('Leave Balance Widget: Elements found, fetching data...');
+        
+        // Load leave balance data for sidebar widget
+        fetch('/dashboard/my-leave-balance')
+            .then(response => {
+                console.log('Leave Balance Widget: API response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Leave Balance Widget: API data received:', data);
+                
+                if (data.status === 'success' && data.balances.length > 0) {
+                    let html = '';
+                    data.balances.forEach(balance => {
+                        const remainingClass = balance.remaining_days < 0 ? 'text-danger' : 
+                                            balance.remaining_days < 5 ? 'text-warning' : 'text-success';
+                        const badgeClass = balance.remaining_days < 0 ? 'bg-danger' : 
+                                        balance.remaining_days < 5 ? 'bg-warning' : 'bg-success';
+                        html += `
+                            <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded" style="background-color: rgba(0,0,0,0.05);">
+                                <span class="small text-muted fw-medium">${balance.leave_type}</span>
+                                <span class="badge ${badgeClass} text-white small">${balance.remaining_days}</span>
+                            </div>
+                        `;
+                    });
+                    content.innerHTML = html;
+                    console.log('Leave Balance Widget: Data loaded successfully');
+                } else {
+                    content.innerHTML = `
+                        <div class="text-center text-muted small p-2">
+                            <i class="fas fa-info-circle mb-1"></i><br>
+                            No leave balances configured
+                        </div>
+                    `;
+                    console.log('Leave Balance Widget: No balances found');
+                }
+            })
+            .catch(error => {
+                console.error('Leave Balance Widget: Error loading data:', error);
+                const content = document.getElementById('leave-balance-content');
+                content.innerHTML = `
+                    <div class="text-center text-muted small p-2">
+                        <i class="fas fa-exclamation-triangle mb-1"></i><br>
+                        Unable to load leave balance
+                    </div>
+                `;
+            });
+    });
+    </script>
+    
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Sidebar toggle for Metronic/StartBootstrap

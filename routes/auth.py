@@ -63,7 +63,7 @@ def logout():
 @login_required
 def register():
     # Only admins can register new users
-    if current_user.role != 'admin':
+    if current_user.role not in ['admin', 'product_owner']:
         flash('You do not have permission to register new users.', 'danger')
         return redirect(url_for('dashboard.index'))
     
@@ -93,11 +93,42 @@ def register():
                 role=form.role.data,
                 department_id=form.department_id.data if form.department_id.data != 0 else None,
                 status='active',
-                joining_date=form.joining_date.data if form.joining_date.data else None
+                joining_date=form.joining_date.data if form.joining_date.data else None,
+                # Additional data fields
+                date_of_birth=form.date_of_birth.data if form.date_of_birth.data else None,
+                phone_number=form.phone_number.data if form.phone_number.data else None,
+                alternate_phone_number=form.alternate_phone_number.data if form.alternate_phone_number.data else None,
+                position=form.position.data if form.position.data else None,
+                salary=form.salary.data if form.salary.data else None,
+                currency=form.currency.data if form.currency.data else 'USD'
             )
             
             db.session.add(new_user)
             db.session.commit()
+
+            # Initialize leave balances for the new active user
+            current_year = datetime.now().year
+            leave_types = models.LeaveType.query.all()
+            for lt in leave_types:
+                # Check if a LeaveBalance already exists for this user, leave type, and year
+                existing_balance = models.LeaveBalance.query.filter_by(
+                    user_id=new_user.id,
+                    leave_type_id=lt.id,
+                    year=current_year
+                ).first()
+                
+                if not existing_balance:
+                    new_balance = models.LeaveBalance(
+                        user_id=new_user.id,
+                        leave_type_id=lt.id,
+                        year=current_year,
+                        total_days=0,  # Initialize with 0 total days
+                        used_days=0,
+                        remaining_days=0
+                    )
+                    db.session.add(new_balance)
+            db.session.commit() # Commit the new leave balances
+
             flash('User registered successfully!', 'success')
             return redirect(url_for('dashboard.users'))
             

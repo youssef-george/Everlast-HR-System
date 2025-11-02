@@ -71,12 +71,12 @@
                 
                 <div class="row mb-3">
                     <label class="col-sm-3 fw-bold">Created On:</label>
-                    <div class="col-sm-9">{{ leave_request.created_at.strftime('%d/%m/%Y %H:%M') }}</div>
+                    <div class="col-sm-9">{{ leave_request.created_at.strftime('%d/%m/%Y %I:%M %p') }}</div>
                 </div>
                 
                 <div class="row mb-3">
                     <label class="col-sm-3 fw-bold">Last Updated:</label>
-                    <div class="col-sm-9">{{ leave_request.updated_at.strftime('%d/%m/%Y %H:%M') }}</div>
+                    <div class="col-sm-9">{{ leave_request.updated_at.strftime('%d/%m/%Y %I:%M %p') }}</div>
                 </div>
                 
                 {% if leave_request.comment %}
@@ -165,40 +165,6 @@
                         </div>
                     </div>
                     
-                    <!-- Step 3: General Manager Approval -->
-                    <div class="d-flex align-items-center">
-                        <div class="symbol symbol-40px me-3 position-relative">
-                            <div class="symbol-label bg-light-primary">
-                                <i class="fas fa-user-cog text-primary"></i>
-                            </div>
-                            {% if leave_request.general_manager_status == 'approved' %}
-                                <div class="position-absolute bottom-0 end-0 bg-success rounded-circle p-1">
-                                    <i class="fas fa-check text-white" style="font-size: 10px;"></i>
-                                </div>
-                            {% elif leave_request.general_manager_status == 'rejected' %}
-                                <div class="position-absolute bottom-0 end-0 bg-danger rounded-circle p-1">
-                                    <i class="fas fa-times text-white" style="font-size: 10px;"></i>
-                                </div>
-                            {% endif %}
-                        </div>
-                        <div class="d-flex flex-column flex-grow-1">
-                            <span class="fw-bold mb-1">General Manager Approval</span>
-                            <span class="text-muted">
-                                {% if leave_request.general_manager_status == 'approved' %}
-                                    <span class="text-success">Approved</span>
-                                {% elif leave_request.general_manager_status == 'rejected' %}
-                                    <span class="text-danger">Rejected</span>
-                                {% elif leave_request.admin_status == 'approved' %}
-                                    <span class="text-warning">Pending</span>
-                                {% else %}
-                                    <span class="text-muted">Awaiting Previous Approvals</span>
-                                {% endif %}
-                            </span>
-                            {% if leave_request.general_manager_comment %}
-                                <small class="text-muted mt-1">Comment: {{ leave_request.general_manager_comment }}</small>
-                            {% endif %}
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

@@ -1,44 +1,525 @@
 {% extends "layout.html" %}
 
+{% block extra_css %}
+<!-- EMERGENCY TABLE HEADER VISIBILITY FIX FOR PERMISSION REQUESTS -->
+<style>
+/* Force table headers to be visible with maximum specificity */
+.table thead th,
+.employee-table thead th,
+.enhanced-table thead th,
+table thead th {
+    background: #1e40af !important;
+    background-color: #1e40af !important;
+    background-image: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.6) !important;
+    font-size: 0.9rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    padding: 1rem 0.75rem !important;
+    border: none !important;
+    border-bottom: 2px solid #1e3a8a !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Force all child elements in headers to be white */
+.table thead th *,
+.employee-table thead th *,
+.enhanced-table thead th *,
+table thead th * {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.6) !important;
+    -webkit-text-fill-color: #ffffff !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+</style>
+<style>
+    /* Enhanced Employee Permission Requests UI */
+    .employee-page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    .employee-page-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+    }
+    
+    .employee-page-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin-bottom: 0;
+    }
+    
+    .employee-action-buttons {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    
+    .employee-btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .employee-btn-primary {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .employee-btn-primary:hover {
+        background: rgba(255, 255, 255, 0.3);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+    }
+    
+    .employee-btn-secondary {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .employee-btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .employee-btn.active {
+        background: rgba(255, 255, 255, 0.3);
+        color: white;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    .employee-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        border: none;
+        overflow: hidden;
+    }
+    
+    .employee-card-header {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        border-bottom: 1px solid #e2e8f0;
+        padding: 1.5rem 2rem;
+    }
+    
+    .employee-card-body {
+        padding: 2rem;
+    }
+    
+    .employee-form-control {
+        border-radius: 12px;
+        border: 2px solid #e2e8f0;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+    
+    .employee-form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .employee-table {
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+    
+    .employee-table thead {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .employee-table thead th {
+        border: none;
+        padding: 1rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 0.85rem;
+    }
+    
+    .employee-table tbody tr {
+        transition: all 0.3s ease;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    
+    .employee-table tbody tr:hover {
+        background: #f8fafc;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+    
+    .employee-table tbody td {
+        padding: 1rem;
+        border: none;
+        vertical-align: middle;
+    }
+    
+    .employee-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .employee-badge-pending {
+        background: #fef3c7;
+        color: #d97706;
+    }
+    
+    .employee-badge-approved {
+        background: #d1fae5;
+        color: #059669;
+    }
+    
+    .employee-badge-rejected {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+    
+    .employee-empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #64748b;
+    }
+    
+    .employee-empty-state i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+    
+    .employee-empty-state h5 {
+        color: #475569;
+        margin-bottom: 0.5rem;
+    }
+    
+    .employee-empty-state p {
+        margin-bottom: 0;
+    }
+    
+    @media (max-width: 768px) {
+        .employee-page-header {
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .employee-page-title {
+            font-size: 2rem;
+        }
+        
+        .employee-action-buttons {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .employee-btn {
+            justify-content: center;
+        }
+    }
+    
+    /* Director Enhanced Statistics Cards */
+    .director-stats-container {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 20px 40px rgba(102, 126, 234, 0.15);
+        border: none;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .director-stats-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+        pointer-events: none;
+    }
+    
+    .director-stats-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        position: relative;
+        z-index: 2;
+    }
+    
+    .director-stats-title {
+        color: white;
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    .director-badge {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    
+    .director-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        position: relative;
+        z-index: 2;
+    }
+    
+    .director-stat-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .director-stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+    }
+    
+    .director-stat-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    }
+    
+    .pending-card::before { background: linear-gradient(90deg, #f59e0b, #f97316); }
+    .approved-card::before { background: linear-gradient(90deg, #10b981, #059669); }
+    .rejected-card::before { background: linear-gradient(90deg, #ef4444, #dc2626); }
+    .total-card::before { background: linear-gradient(90deg, #3b82f6, #2563eb); }
+    
+    .stat-content {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+    
+    .pending-card .stat-icon { background: linear-gradient(135deg, #f59e0b, #f97316); }
+    .approved-card .stat-icon { background: linear-gradient(135deg, #10b981, #059669); }
+    .rejected-card .stat-icon { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    .total-card .stat-icon { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    
+    .stat-info {
+        flex: 1;
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #1f2937;
+        line-height: 1;
+        margin-bottom: 0.25rem;
+        background: linear-gradient(135deg, #1f2937, #374151);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .stat-label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .stat-progress {
+        height: 6px;
+        background: rgba(0, 0, 0, 0.05);
+        border-radius: 3px;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .progress-bar {
+        height: 100%;
+        border-radius: 3px;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        width: 100%;
+        animation: progressSlide 2s ease-in-out;
+    }
+    
+    .pending-progress { background: linear-gradient(90deg, #f59e0b, #f97316); }
+    .approved-progress { background: linear-gradient(90deg, #10b981, #059669); }
+    .rejected-progress { background: linear-gradient(90deg, #ef4444, #dc2626); }
+    .total-progress { background: linear-gradient(90deg, #3b82f6, #2563eb); }
+    
+    @keyframes progressSlide {
+        0% { width: 0%; }
+        100% { width: 100%; }
+    }
+    
+    /* Enhanced Table Styling for Director */
+    .director-table-container {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+        border: none;
+    }
+    
+    .director-table-header {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        border-bottom: 2px solid #e2e8f0;
+        padding: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .director-table-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .director-table-actions {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .director-table-count {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="content-header">
-    <h1 class="page-title">{{ title }}</h1>
-    <div class="content-header-actions">
-        {% if current_user.role == 'manager' %}
-            <!-- Manager-specific view control -->
-            <div class="btn-group me-3">
-                <a href="{{ url_for('permission.index') }}" class="menu-link px-2">
-                    <i class="fas fa-user me-1"></i> My Requests
-                </a>
-                <a href="{{ url_for('permission.index', view='team') }}" class="btn btn-light {{ 'active' if view_type == 'team' or not view_type else '' }}">
-                    <i class="fas fa-users me-1"></i> Team Requests
-                </a>
-            </div>
-        {% endif %}
-        
-        <a href="{{ url_for('permission.create') }}" class="btn btn-primary">
-            <i class="fas fa-plus-circle me-1"></i> New Permission Request
-        </a>
-        
-        {% if current_user.role == 'admin' %}
-        <a href="{{ url_for('permission.admin_create') }}" class="btn btn-info ms-2">
-            <i class="fas fa-user-plus me-1"></i> Create for Employee
-        </a>
-        {% endif %}
+<div class="employee-page-header">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center">
+        <div>
+            <h1 class="employee-page-title">
+                <i class="fas fa-door-open me-3"></i>
+                {{ title }}
+            </h1>
+            {% if current_user.role == 'director' %}
+                <p class="employee-page-subtitle">View and monitor all company permission requests</p>
+            {% else %}
+                <p class="employee-page-subtitle">Manage your permission requests and track their status</p>
+            {% endif %}
+        </div>
+        <div class="employee-action-buttons">
+            {% if current_user.role in ['admin', 'product_owner'] %}
+                <!-- Admin view control -->
+                <div class="btn-group">
+                    <a href="{{ url_for('permission.index') }}" class="employee-btn employee-btn-secondary {{ 'active' if view_type == 'my' or not view_type else '' }}">
+                        <i class="fas fa-user"></i> My Requests
+                    </a>
+                    <a href="{{ url_for('permission.index', view='team') }}" class="employee-btn employee-btn-secondary {{ 'active' if view_type == 'team' else '' }}">
+                        <i class="fas fa-users"></i> Team Requests
+                    </a>
+                </div>
+            {% elif current_user.role == 'director' %}
+                <!-- Director view - shows all requests by default -->
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-info me-3">
+                        <i class="fas fa-crown me-1"></i>Director View - All Company Requests
+                    </span>
+                </div>
+            {% endif %}
+            
+            <a href="{{ url_for('permission.create') }}" class="employee-btn employee-btn-primary">
+                <i class="fas fa-plus-circle"></i> New Permission Request
+            </a>
+            
+            {% if current_user.role in ['admin', 'product_owner'] %}
+            <a href="{{ url_for('permission.admin_create') }}" class="employee-btn employee-btn-secondary">
+                <i class="fas fa-user-plus"></i> Create for Employee
+            </a>
+            {% endif %}
+        </div>
     </div>
 </div>
 
 <div class="row mb-4">
     <div class="col-lg-12">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Filter Options</h3>
+        <div class="employee-card">
+            <div class="employee-card-header">
+                <h3 class="card-title mb-0">Filter Options</h3>
             </div>
-            <div class="card-body">
+            <div class="employee-card-body">
                 <div class="row">
                     <div class="col-md-3 mb-3">
                         <label class="form-label">Status</label>
-                        <select id="status-filter" class="form-select">
+                        <select id="status-filter" class="form-select employee-form-control">
                             <option value="all">All</option>
                             <option value="pending">Pending</option>
                             <option value="approved">Approved</option>
@@ -46,7 +527,7 @@
                         </select>
                     </div>
                     
-                    {% if current_user.role in ['manager', 'admin', 'director'] %}
+                    {% if current_user.role in ['admin', 'director'] %}
                     <div class="col-md-3 mb-3">
                         <label class="form-label">Department</label>
                         <select id="department-filter" class="form-select">
@@ -78,8 +559,113 @@
     </div>
 </div>
 
+{% if current_user.role == 'director' %}
+<!-- Director Statistics Summary -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="director-stats-container">
+            <div class="director-stats-header">
+                <h3 class="director-stats-title">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Permission Requests Overview
+                </h3>
+                <span class="director-badge">
+                    <i class="fas fa-crown me-1"></i>Director View
+                </span>
+            </div>
+            <div class="director-stats-grid">
+                <div class="director-stat-card pending-card">
+                    <div class="stat-content">
+                        <div class="stat-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-number">{{ permission_requests|selectattr("status", "equalto", "pending")|list|length }}</div>
+                            <div class="stat-label">Pending</div>
+                        </div>
+                    </div>
+                    <div class="stat-progress">
+                        <div class="progress-bar pending-progress"></div>
+                    </div>
+                </div>
+                
+                <div class="director-stat-card approved-card">
+                    <div class="stat-content">
+                        <div class="stat-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-number">{{ permission_requests|selectattr("status", "equalto", "approved")|list|length }}</div>
+                            <div class="stat-label">Approved</div>
+                        </div>
+                    </div>
+                    <div class="stat-progress">
+                        <div class="progress-bar approved-progress"></div>
+                    </div>
+                </div>
+                
+                <div class="director-stat-card rejected-card">
+                    <div class="stat-content">
+                        <div class="stat-icon">
+                            <i class="fas fa-times-circle"></i>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-number">{{ permission_requests|selectattr("status", "equalto", "rejected")|list|length }}</div>
+                            <div class="stat-label">Rejected</div>
+                        </div>
+                    </div>
+                    <div class="stat-progress">
+                        <div class="progress-bar rejected-progress"></div>
+                    </div>
+                </div>
+                
+                <div class="director-stat-card total-card">
+                    <div class="stat-content">
+                        <div class="stat-icon">
+                            <i class="fas fa-list-alt"></i>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-number">{{ permission_requests|length }}</div>
+                            <div class="stat-label">Total Requests</div>
+                        </div>
+                    </div>
+                    <div class="stat-progress">
+                        <div class="progress-bar total-progress"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="row">
     <div class="col-lg-12">
+        {% if current_user.role == 'director' %}
+        <div class="director-table-container">
+            <div class="director-table-header">
+                <h3 class="director-table-title">
+                    <i class="fas fa-table text-primary"></i>
+                    Permission Request List
+                </h3>
+                <div class="director-table-actions">
+                    <span class="director-table-count">{{ permission_requests|length }} Total Records</span>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-download me-1"></i> Export
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" id="export-csv">
+                                <i class="fas fa-file-csv me-2"></i>Export to CSV
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" id="export-pdf">
+                                <i class="fas fa-file-pdf me-2"></i>Export to PDF
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        {% else %}
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">Permission Request List</h3>
@@ -96,12 +682,13 @@
                     </div>
                 </div>
             </div>
-            <div class="card-body p-0">
+        {% endif %}
+            <div class="employee-card-body">
                 <div class="table-responsive">
-                    <table class="table table-hover" id="permission-requests-table">
+                    <table class="table employee-table" id="permission-requests-table">
                         <thead>
                             <tr>
-                                {% if current_user.role in ['manager', 'admin', 'director'] %}
+                                {% if current_user.role in ['admin', 'director'] %}
                                 <th>Employee</th>
                                 <th>Department</th>
                                 {% endif %}
@@ -119,7 +706,7 @@
                             {% if permission_requests %}
                                 {% for permission in permission_requests %}
                                 <tr data-status="{{ permission.status }}" data-department="{{ permission.user.department_id if permission.user.department_id else 'none' }}">
-                                    {% if current_user.role in ['manager', 'admin', 'director'] %}
+                                    {% if current_user.role in ['admin', 'director'] %}
                                     <td>
                                         <div class="d-flex align-items-center">
                                             <div class="symbol symbol-35px me-2">
@@ -133,7 +720,7 @@
                                     <td>{{ permission.user.department.department_name if permission.user.department else 'No Department' }}</td>
                                     {% endif %}
                                     <td>{{ permission.start_time.strftime('%d/%m/%Y') }}</td>
-                                    <td>{{ permission.start_time.strftime('%H:%M') }} - {{ permission.end_time.strftime('%H:%M') }}</td>
+                                    <td>{{ permission.start_time.strftime('%I:%M %p') }} - {{ permission.end_time.strftime('%I:%M %p') }}</td>
                                     <td>
                                         {% set duration_seconds = (permission.end_time - permission.start_time).total_seconds() %}
                                         {% set hours = (duration_seconds // 3600)|int %}
@@ -143,37 +730,21 @@
                                     <td>{{ permission.reason|truncate(30) }}</td>
                                     <td>
                                         {% if permission.status == 'pending' %}
-                                            <span class="badge badge-light-warning">Pending</span>
+                                            <span class="employee-badge employee-badge-pending">Pending</span>
                                         {% elif permission.status == 'approved' %}
-                                            <span class="badge badge-light-success">Approved</span>
+                                            <span class="employee-badge employee-badge-approved">Approved</span>
                                         {% else %}
-                                            <span class="badge badge-light-danger">Rejected</span>
+                                            <span class="employee-badge employee-badge-rejected">Rejected</span>
                                         {% endif %}
                                     </td>
                                     <td class="approval-column">
                                         <div class="d-flex flex-column">
-                                            <div class="mb-1">
-                                                <span class="fw-bold me-1">Manager:</span>
-                                                {% if permission.manager_approved %}
-                                                    <span class="badge badge-light-success">✓</span>
-                                                {% else %}
-                                                    <span class="badge badge-light-warning">Pending</span>
-                                                {% endif %}
-                                            </div>
-                                            <div class="mb-1">
-                                                <span class="fw-bold me-1">Director:</span>
-                                                {% if permission.director_approved %}
-                                                    <span class="badge badge-light-success">✓</span>
-                                                {% else %}
-                                                    <span class="badge badge-light-warning">Pending</span>
-                                                {% endif %}
-                                            </div>
                                             <div>
                                                 <span class="fw-bold me-1">Admin:</span>
-                                                {% if permission.admin_approved %}
-                                                    <span class="badge badge-light-success">✓</span>
+                                                {% if permission.admin_status == 'approved' %}
+                                                    <span class="employee-badge employee-badge-approved">✓</span>
                                                 {% else %}
-                                                    <span class="badge badge-light-warning">Pending</span>
+                                                    <span class="employee-badge employee-badge-pending">Pending</span>
                                                 {% endif %}
                                             </div>
                                         </div>
@@ -188,7 +759,7 @@
                                                 <i class="fas fa-edit"></i>
                                             </a>
                                             <form method="POST" action="{{ url_for('permission.delete', id=permission.id) }}" class="d-inline" data-confirm="Are you sure you want to delete this permission request?">
-                                                {{ csrf_token() }}
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <button type="submit" class="btn btn-sm btn-icon btn-light-danger" data-bs-toggle="tooltip" title="Delete">
                                                     <i class="fas fa-trash"></i>
                                                 </button>

@@ -53,11 +53,15 @@ body {
     border-right: 1px solid var(--border-color);
     position: fixed;
     top: 0;
-    bottom: 0;
     left: 0;
     z-index: 100;
     transition: all 0.3s ease;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
 }
 
 .sidebar.collapsed {
@@ -69,9 +73,12 @@ body {
     margin-left: var(--sidebar-width);
     transition: all 0.3s ease;
     padding: 20px;
+    width: auto;
 }
 
-.sidebar.collapsed + .content-wrapper {
+/* When sidebar is collapsed, move the content regardless of intermediate elements */
+.sidebar.collapsed ~ .content-wrapper,
+.sidebar.collapsed ~ #content-wrapper {
     margin-left: var(--sidebar-collapsed-width);
 }
 
@@ -80,6 +87,36 @@ body {
     align-items: center;
     padding: 1.5rem;
     border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+    min-height: 80px;
+}
+
+.sidebar-nav-container {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+}
+
+.sidebar-nav-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar-nav-container::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 3px;
+}
+
+.sidebar-nav-container::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+    transition: background-color 0.3s ease;
+}
+
+.sidebar-nav-container::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.4);
 }
 
 .logo {
@@ -106,6 +143,9 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
 }
 
 .sidebar-toggle:hover {
@@ -116,6 +156,71 @@ body {
     padding: 1rem 0;
     list-style: none;
     margin: 0;
+    padding-bottom: 1rem;
+}
+
+
+/* Enhanced scrollbar styling for better UX */
+.nav-menu {
+    scroll-behavior: smooth;
+    position: relative;
+}
+
+/* Add subtle shadow indicators for scrollable content */
+.sidebar-nav-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.1), transparent);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 1;
+}
+
+.sidebar-nav-container::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background: linear-gradient(to top, rgba(0,0,0,0.1), transparent);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 1;
+}
+
+/* Show scroll indicators when content overflows */
+.sidebar-nav-container.scrollable-top::before {
+    opacity: 1;
+}
+
+.sidebar-nav-container.scrollable-bottom::after {
+    opacity: 1;
+}
+
+.nav-menu::-webkit-scrollbar {
+    width: 6px;
+}
+
+.nav-menu::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 3px;
+}
+
+.nav-menu::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+    transition: background-color 0.3s ease;
+}
+
+.nav-menu::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.4);
 }
 
 .nav-item {
@@ -176,13 +281,46 @@ body {
 
 .sidebar.collapsed .sidebar-header {
     justify-content: center;
-    padding: 1.5rem 0;
+    padding: 0.75rem 0;
 }
+
+.sidebar.collapsed .sidebar-toggle {
+    margin-left: 0;
+    position: static;
+}
+
+/* Hide large logo block when collapsed so only the toggle remains centered */
+.sidebar.collapsed .logo { display: none; }
 
 .sidebar.collapsed .nav-link,
 .sidebar.collapsed .nav-section-header {
     padding: 0.75rem;
     justify-content: center;
+}
+
+/* Improve collapsed sidebar visuals */
+.sidebar.collapsed .nav-icon { margin-right: 0; }
+.sidebar.collapsed .nav-link { border-left: 0; background: transparent; }
+.sidebar.collapsed .nav-link:hover,
+.sidebar.collapsed .nav-link.active { border-left: 0; background-color: rgba(0, 93, 153, 0.12); }
+.sidebar.collapsed .nav-item.dropdown .dropdown-menu { left: 70px; right: auto; }
+.sidebar.collapsed .sidebar-footer .user-info { display: none; }
+.sidebar.collapsed .sidebar-footer { justify-content: center; padding: 0.75rem; }
+.sidebar.collapsed .sidebar-footer .logout-icon-btn { margin: 0 auto; }
+.sidebar.collapsed .sidebar-logout { width: 100%; display: flex; align-items: center; justify-content: center; margin-left: 0 !important; }
+/* Force icon centering for all items when collapsed, including dropdown toggles */
+.sidebar.collapsed .nav-link i,
+.sidebar.collapsed .nav-icon {
+    margin: 0 !important;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.sidebar.collapsed .nav-link.dropdown-toggle {
+    justify-content: center !important;
+    padding: 0.75rem !important;
 }
 
 /* Content Header */
@@ -487,6 +625,27 @@ body {
     font-weight: 500;
 }
 
+/* Sidebar logout icon button - minimal and aligned */
+.logout-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    color: var(--text-muted);
+    background: transparent;
+    text-decoration: none;
+}
+.logout-icon-btn:hover {
+    background: rgba(0,0,0,0.05);
+    color: #dc3545;
+}
+.logout-icon-btn i {
+    font-size: 16px;
+    line-height: 1;
+}
+
 .fc .fc-prev-button, .fc .fc-next-button {
     width: 65px;
     height: 40px;
@@ -601,10 +760,37 @@ body {
         width: var(--sidebar-width);
         transform: translateX(-100%);
         z-index: 1000;
+        height: 100vh;
+        max-height: 100vh;
     }
     
     .sidebar.mobile-show {
         transform: translateX(0);
+    }
+    
+    .sidebar-nav-container {
+        max-height: calc(100vh - 140px);
+    }
+    
+    .leave-balance-widget {
+        padding: 0.75rem;
+    }
+    
+    .widget-header {
+        font-size: 0.8rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .balance-item {
+        padding: 0.4rem 0;
+    }
+    
+    .balance-type {
+        font-size: 0.75rem;
+    }
+    
+    .balance-days {
+        font-size: 0.75rem;
     }
     
     .content-wrapper {
@@ -644,6 +830,292 @@ body {
         font-size: 1.5rem;
         cursor: pointer;
         margin-right: 1rem;
+        padding: 0.5rem;
+        border-radius: 0.375rem;
+        transition: all 0.2s ease;
+    }
+    
+    .mobile-menu-toggle:hover {
+        background-color: var(--light-bg);
+        color: var(--primary-color);
+    }
+    
+    /* Mobile navigation improvements */
+    .sidebar .nav-menu {
+        padding: 0.5rem 0;
+    }
+    
+    .sidebar .nav-item {
+        margin: 0.125rem 0;
+    }
+    
+    .sidebar .nav-link {
+        padding: 0.75rem 1rem;
+        margin: 0.125rem 0.5rem;
+        border-radius: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .sidebar .nav-section-header {
+        padding: 0.5rem 1rem;
+        margin: 0.5rem 0.5rem 0.25rem 0.5rem;
+        font-size: 0.8rem;
+    }
+    
+    /* Mobile content improvements */
+    .page-title {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .card {
+        margin-bottom: 1rem;
+        border-radius: 0.75rem;
+    }
+    
+    .card-header {
+        padding: 1rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+    
+    /* Mobile form improvements */
+    .form-control, .form-select {
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 0.75rem;
+    }
+    
+    .btn {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    /* Mobile table improvements */
+    .table-responsive {
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .table {
+        font-size: 0.85rem;
+    }
+    
+    .table th, .table td {
+        padding: 0.5rem 0.25rem;
+        vertical-align: middle;
+    }
+    
+    /* Mobile button groups */
+    .btn-group-mobile {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .btn-group-mobile .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Additional Mobile Responsive Breakpoints */
+@media (max-width: 768px) {
+    .content-wrapper {
+        padding: 0.5rem;
+    }
+    
+    .mobile-header {
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .page-title {
+        font-size: 1.25rem;
+    }
+    
+    .card-header h3, .card-header h4, .card-header h5 {
+        font-size: 1.1rem;
+    }
+    
+    .card-body {
+        padding: 0.75rem;
+    }
+    
+    /* Mobile table improvements */
+    .table th, .table td {
+        padding: 0.375rem 0.125rem;
+        font-size: 0.8rem;
+    }
+    
+    .table th.approval-column,
+    .table td.approval-column {
+        min-width: 150px;
+        width: 150px;
+    }
+    
+    /* Mobile form improvements */
+    .form-label {
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+    
+    .form-control, .form-select {
+        font-size: 16px;
+        padding: 0.625rem;
+    }
+    
+    .btn {
+        padding: 0.625rem 0.875rem;
+        font-size: 0.85rem;
+    }
+    
+    /* Mobile modal improvements */
+    .modal-dialog {
+        margin: 0.5rem;
+        max-width: calc(100% - 1rem);
+    }
+    
+    .modal-content {
+        border-radius: 0.75rem;
+    }
+    
+    .modal-header {
+        padding: 1rem 0.75rem;
+    }
+    
+    .modal-body {
+        padding: 0.75rem;
+    }
+    
+    .modal-footer {
+        padding: 0.75rem;
+    }
+    
+    /* Mobile navigation dropdown improvements */
+    .sidebar .dropdown-menu.sidebar-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        z-index: 1000;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        margin: 0;
+        padding: 0.5rem 0;
+        background: #fff;
+        width: 100%;
+        max-width: 100%;
+        min-width: 200px;
+    }
+    
+    .sidebar .nav-item.dropdown.show .dropdown-menu.sidebar-dropdown {
+        max-height: 200px;
+    }
+    
+    /* Mobile stats cards */
+    .stats-card {
+        margin-bottom: 0.75rem;
+    }
+    
+    .stats-card .card-body {
+        padding: 0.75rem;
+    }
+    
+    .stats-number {
+        font-size: 1.5rem;
+    }
+    
+    .stats-label {
+        font-size: 0.8rem;
+    }
+    
+    /* Mobile calendar improvements */
+    .fc-toolbar {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .fc-toolbar-chunk {
+        display: flex;
+        justify-content: center;
+        gap: 0.25rem;
+    }
+    
+    .fc-button {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+    }
+    
+    .fc-toolbar-title {
+        font-size: 1.1rem !important;
+        text-align: center;
+    }
+}
+
+@media (max-width: 576px) {
+    .content-wrapper {
+        padding: 0.25rem;
+    }
+    
+    .mobile-header {
+        padding: 0.5rem;
+    }
+    
+    .page-title {
+        font-size: 1.1rem;
+    }
+    
+    .card {
+        margin-bottom: 0.75rem;
+    }
+    
+    .card-header {
+        padding: 0.75rem;
+    }
+    
+    .card-body {
+        padding: 0.5rem;
+    }
+    
+    .table th, .table td {
+        padding: 0.25rem 0.125rem;
+        font-size: 0.75rem;
+    }
+    
+    .btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+    }
+    
+    .form-control, .form-select {
+        padding: 0.5rem;
+        font-size: 16px;
+    }
+    
+    .modal-dialog {
+        margin: 0.25rem;
+        max-width: calc(100% - 0.5rem);
+    }
+    
+    .modal-header, .modal-body, .modal-footer {
+        padding: 0.5rem;
+    }
+    
+    .stats-number {
+        font-size: 1.25rem;
+    }
+    
+    .stats-label {
+        font-size: 0.75rem;
+    }
+    
+    .fc-toolbar-title {
+        font-size: 1rem !important;
+    }
+    
+    .fc-button {
+        padding: 0.375rem 0.5rem;
+        font-size: 0.75rem;
     }
 }
 
@@ -700,4 +1172,683 @@ body {
     font-weight: 600;
     color: #ffffff;
     background-color: var(--primary-color);
+}
+
+/* Page Loader */
+.page-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--light-bg);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.page-loader-logo {
+    text-align: center;
+}
+
+.page-loader-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--border-color);
+    border-top: 4px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Hide page loader when content is loaded */
+.page-loaded .page-loader {
+    display: none;
+}
+
+/* Page loader fade out animation */
+.page-loader.fade-out {
+    opacity: 0;
+    transition: opacity 0.3s ease-out;
+}
+
+/* Fallback: Hide loader after 5 seconds even if JavaScript fails */
+.page-loader {
+    animation: hideLoader 5s ease-in-out forwards;
+}
+
+@keyframes hideLoader {
+    0% {
+        opacity: 1;
+        visibility: visible;
+    }
+    90% {
+        opacity: 1;
+        visibility: visible;
+    }
+    100% {
+        opacity: 0;
+        visibility: hidden;
+        display: none;
+    }
+}
+
+/* Sync Status Indicator removed as requested */
+
+/* Sidebar Dropdown Styles */
+.sidebar .nav-item.dropdown {
+    position: relative;
+    margin-bottom: 0;
+}
+
+.sidebar .nav-link.dropdown-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    color: var(--text-color);
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    margin: 2px 8px;
+    position: relative;
+    z-index: 10;
+}
+
+.sidebar .nav-link.dropdown-toggle:hover {
+    background-color: rgba(0, 93, 153, 0.1);
+    color: var(--primary-color);
+}
+
+.sidebar .nav-link.dropdown-toggle.active {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* Dropdown arrow removed - no longer needed */
+
+.sidebar .dropdown-menu.sidebar-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 8px 0;
+    margin: 4px 8px 0 8px;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+    z-index: 1000;
+    min-width: calc(100% - 16px);
+}
+
+.sidebar .nav-item.dropdown.show .dropdown-menu.sidebar-dropdown {
+    max-height: 300px;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.sidebar .dropdown-menu.sidebar-dropdown .dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    color: var(--text-color);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+}
+
+.sidebar .dropdown-menu.sidebar-dropdown .dropdown-item:hover {
+    background-color: rgba(0, 93, 153, 0.1);
+    color: var(--primary-color);
+}
+
+.sidebar .dropdown-menu.sidebar-dropdown .dropdown-item i {
+    width: 20px;
+    text-align: center;
+    margin-right: 12px;
+    font-size: 14px;
+}
+
+/* Sidebar content shift animation */
+.sidebar .nav-menu {
+    transition: all 0.3s ease;
+}
+
+.sidebar .nav-item.dropdown.show ~ .nav-item {
+    transform: translateY(0);
+    transition: transform 0.3s ease;
+}
+
+/* Ensure proper spacing for dropdown */
+.sidebar .nav-item.dropdown.show {
+    margin-bottom: 8px;
+}
+
+/* Dark mode support for sidebar dropdowns */
+.dark-mode .sidebar .nav-link.dropdown-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark-mode .sidebar .dropdown-menu.sidebar-dropdown .dropdown-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark-mode .sidebar .dropdown-menu.sidebar-dropdown {
+    background-color: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+/* Dark mode scrollbar styling */
+.dark-mode .sidebar-nav-container::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.dark-mode .sidebar-nav-container::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Dark mode support for leave balance widget */
+.dark-mode .leave-balance-widget {
+    background-color: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+.dark-mode .widget-header {
+    color: var(--primary-color);
+}
+
+.dark-mode .balance-type {
+    color: var(--text-color);
+}
+
+.dark-mode .balance-remaining {
+    color: var(--success-color);
+}
+
+.dark-mode .balance-total {
+    color: var(--text-muted);
+}
+
+.dark-mode .balance-used {
+    color: var(--danger-color);
+}
+
+.dark-mode .balance-progress {
+    background-color: var(--border-color);
+}
+
+/* Ensure dropdown doesn't overflow sidebar */
+.sidebar {
+    overflow: visible;
+}
+
+.sidebar .nav-menu {
+    overflow: visible;
+}
+
+/* Smooth transitions for all nav items */
+.sidebar .nav-item {
+    transition: all 0.3s ease;
+}
+
+/* Dropdown positioning adjustments */
+.sidebar .nav-item.dropdown {
+    overflow: visible;
+}
+
+.sidebar .dropdown-menu.sidebar-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 8px;
+    right: 8px;
+    width: auto;
+    min-width: calc(100% - 16px);
+    max-width: calc(100% - 16px);
+}
+
+/* Ensure proper z-index stacking */
+.sidebar .nav-item.dropdown.show {
+    z-index: 1000;
+}
+
+.sidebar .nav-item.dropdown.show .dropdown-menu.sidebar-dropdown {
+    z-index: 1001;
+}
+
+/* Sidebar footer styling for both implementations */
+.sb-sidenav-footer {
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    background-color: var(--card-bg);
+    margin-top: auto;
+}
+
+/* Leave Balance Widget */
+.leave-balance-widget {
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--card-bg);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+    margin-top: auto;
+}
+
+.widget-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.widget-header i {
+    margin-right: 0.5rem;
+    font-size: 1rem;
+}
+
+.widget-title {
+    font-size: 0.9rem;
+}
+
+.widget-content {
+    font-size: 0.8rem;
+}
+
+.balance-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.balance-item:last-child {
+    border-bottom: none;
+}
+
+.balance-type {
+    font-weight: 500;
+    color: var(--text-color);
+    flex: 1;
+}
+
+.balance-days {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.balance-remaining {
+    font-weight: 600;
+    color: var(--success-color);
+}
+
+.balance-total {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.balance-used {
+    color: var(--danger-color);
+    font-size: 0.75rem;
+}
+
+.balance-progress {
+    width: 100%;
+    height: 4px;
+    background-color: var(--border-color);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 0.25rem;
+}
+
+.balance-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--success-color), var(--warning-color));
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.balance-progress-bar.low {
+    background: linear-gradient(90deg, var(--danger-color), var(--warning-color));
+}
+
+.balance-progress-bar.medium {
+    background: linear-gradient(90deg, var(--warning-color), var(--success-color));
+}
+
+.balance-progress-bar.high {
+    background: var(--success-color);
+}
+
+.sidebar-footer {
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    background-color: var(--card-bg);
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+}
+
+/* Button Group Styling */
+.btn-group .btn {
+    text-decoration: none !important;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.btn-group .btn:hover {
+    background-color: var(--light-bg);
+    border-color: var(--primary-color);
+    text-decoration: none !important;
+}
+
+.btn-group .btn.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    text-decoration: none !important;
+}
+
+.btn-group .btn.active:hover {
+    background-color: var(--primary-color);
+    color: white;
+    text-decoration: none !important;
+}
+
+/* Ensure no underlines on any buttons */
+.btn, .btn-group .btn, .btn-group a {
+    text-decoration: none !important;
+}
+
+.btn:hover, .btn-group .btn:hover, .btn-group a:hover {
+    text-decoration: none !important;
+}
+
+/* Leave Balance Widget Styling */
+.leave-balance-widget {
+    background-color: var(--card-bg) !important;
+    border-top: 1px solid var(--border-color) !important;
+    padding: 1rem !important;
+    flex-shrink: 0 !important;
+    margin-top: auto !important;
+    z-index: 10;
+}
+
+.leave-balance-widget .small {
+    color: var(--text-muted) !important;
+    font-weight: 600 !important;
+}
+
+.leave-balance-widget .badge {
+    font-size: 0.75rem !important;
+    padding: 0.25rem 0.5rem !important;
+}
+
+.leave-balance-widget .spinner-border-sm {
+    width: 1rem !important;
+    height: 1rem !important;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .sidebar .dropdown-menu.sidebar-dropdown {
+        position: static;
+        box-shadow: none;
+        border: none;
+        margin: 0;
+        border-radius: 0;
+        background-color: transparent;
+        left: 0;
+        right: 0;
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .sidebar .nav-item.dropdown.show .dropdown-menu.sidebar-dropdown {
+        max-height: 200px;
+    }
+    
+    .sidebar .nav-item.dropdown.show {
+        margin-bottom: 0;
+    }
+}
+
+/* ========================================
+   ENHANCED EMPLOYEE SIDEBAR STYLING
+   ======================================== */
+
+/* Enhanced Employee Sidebar Styling */
+.sb-sidenav {
+    background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 50%, #1d4ed8 100%);
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    border-right: none;
+}
+
+.sb-sidenav .nav-link {
+    color: rgba(255, 255, 255, 0.8);
+    padding: 0.875rem 1.5rem;
+    margin: 0.25rem 0.75rem;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    position: relative;
+    overflow: hidden;
+}
+
+.sb-sidenav .nav-link::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: left 0.5s ease;
+}
+
+.sb-sidenav .nav-link:hover::before {
+    left: 100%;
+}
+
+.sb-sidenav .nav-link:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateX(5px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.sb-sidenav .nav-link.active {
+    color: white;
+    background: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    border-left: 4px solid #fbbf24;
+}
+
+.sb-sidenav .nav-link i {
+    width: 20px;
+    text-align: center;
+    margin-right: 12px;
+    font-size: 1.1rem;
+    transition: transform 0.3s ease;
+}
+
+.sb-sidenav .nav-link:hover i {
+    transform: scale(1.1);
+}
+
+.sb-sidenav .nav-link.active i {
+    color: #fbbf24;
+}
+
+/* Enhanced Leave Balance Widget for Employees */
+.leave-balance-widget {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    margin: 1rem 0.75rem;
+    padding: 1.25rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.leave-balance-widget:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.leave-balance-widget .small {
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+}
+
+.leave-balance-widget .small i {
+    margin-right: 8px;
+    color: #fbbf24;
+}
+
+.leave-balance-item {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.leave-balance-item:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateX(3px);
+}
+
+.leave-balance-item:last-child {
+    margin-bottom: 0;
+}
+
+.leave-balance-item .d-flex {
+    align-items: center;
+    justify-content: space-between;
+}
+
+.leave-balance-item .badge {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+.leave-balance-item .text-muted {
+    color: rgba(255, 255, 255, 0.7) !important;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.leave-balance-item .fw-bold {
+    color: white !important;
+    font-size: 0.9rem;
+}
+
+/* Enhanced Footer for Employees */
+.sb-sidenav-footer {
+    background: rgba(0, 0, 0, 0.2);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+    padding: 1.25rem;
+    text-align: center;
+    flex-shrink: 0;
+    margin-top: auto;
+    backdrop-filter: blur(10px);
+}
+
+.sb-sidenav-footer .small {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.sb-sidenav-footer .fw-bold {
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* Sidebar section headings */
+.sb-sidenav-menu-heading {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 1rem 1.5rem 0.5rem;
+    margin: 1rem 0.75rem 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sb-sidenav-menu-heading:first-child {
+    border-top: none;
+    margin-top: 0;
+    padding-top: 0.5rem;
+}
+
+/* Loading state for leave balance */
+.leave-balance-widget .spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+    border-width: 2px;
+    color: #fbbf24;
+}
+
+/* Empty state for leave balance */
+.leave-balance-widget .text-muted {
+    color: rgba(255, 255, 255, 0.6) !important;
+    font-size: 0.8rem;
+}
+
+/* Responsive adjustments for employee sidebar */
+@media (max-width: 768px) {
+    .sb-sidenav .nav-link {
+        margin: 0.125rem 0.5rem;
+        padding: 0.75rem 1rem;
+    }
+    
+    .leave-balance-widget {
+        margin: 0.75rem 0.5rem;
+        padding: 1rem;
+    }
 }

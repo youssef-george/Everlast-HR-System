@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="card-title">
+                            <i class="fas fa-calendar-alt me-2"></i>
+                            Paid Holidays Management
+                        </h3>
+                        <a href="{{ url_for('paid_holidays.create') }}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add New Holiday
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if holidays.items %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Holiday Name</th>
+                                        <th>Type</th>
+                                        <th>Start Date</th>
+                                        <th>End Date</th>
+                                        <th>Duration</th>
+                                        <th>Recurring</th>
+                                        <th>Created By</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for holiday in holidays.items %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ holiday.description }}</strong>
+                                            {% if holiday.is_recurring %}
+                                                <span class="badge bg-info ms-2">Annual</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{{ 'primary' if holiday.holiday_type == 'day' else 'success' }}">
+                                                {{ 'Single Day' if holiday.holiday_type == 'day' else 'Date Range' }}
+                                            </span>
+                                        </td>
+                                        <td>{{ holiday.start_date.strftime('%B %d, %Y') }}</td>
+                                        <td>
+                                            {% if holiday.end_date %}
+                                                {{ holiday.end_date.strftime('%B %d, %Y') }}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ holiday.get_duration() }} day{{ 's' if holiday.get_duration() > 1 else '' }}</span>
+                                        </td>
+                                        <td>
+                                            {% if holiday.is_recurring %}
+                                                <i class="fas fa-check text-success"></i>
+                                            {% else %}
+                                                <i class="fas fa-times text-muted"></i>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if holiday.created_by %}
+                                                {{ holiday.created_by_user.get_full_name() if holiday.created_by_user else 'Unknown' }}
+                                            {% else %}
+                                                <span class="text-muted">System</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <a href="{{ url_for('paid_holidays.edit', id=holiday.id) }}" 
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                        onclick="confirmDelete({{ holiday.id }}, '{{ holiday.description }}')">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Pagination -->
+                        {% if holidays.pages > 1 %}
+                        <nav aria-label="Holidays pagination">
+                            <ul class="pagination justify-content-center">
+                                {% if holidays.has_prev %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('paid_holidays.index', page=holidays.prev_num) }}">Previous</a>
+                                    </li>
+                                {% endif %}
+                                
+                                {% for page_num in holidays.iter_pages() %}
+                                    {% if page_num %}
+                                        {% if page_num != holidays.page %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="{{ url_for('paid_holidays.index', page=page_num) }}">{{ page_num }}</a>
+                                            </li>
+                                        {% else %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ page_num }}</span>
+                                            </li>
+                                        {% endif %}
+                                    {% else %}
+                                        <li class="page-item disabled">
+                                            <span class="page-link">...</span>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if holidays.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('paid_holidays.index', page=holidays.next_num) }}">Next</a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-calendar-alt fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No paid holidays found</h5>
+                            <p class="text-muted">Create your first paid holiday to get started.</p>
+                            <a href="{{ url_for('paid_holidays.create') }}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Add New Holiday
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the holiday "<span id="holidayName"></span>"?</p>
+                <p class="text-danger"><strong>Warning:</strong> This will also remove all related attendance records for this holiday.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="btn btn-danger">Delete Holiday</button>
+                </form>
+                <form id="deleteAndViewForm" method="POST" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="btn btn-warning">Delete & View Attendance</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete(holidayId, holidayName) {
+    document.getElementById('holidayName').textContent = holidayName;
+    document.getElementById('deleteForm').action = '{{ url_for("paid_holidays.delete", id=0) }}'.replace('0', holidayId);
+    document.getElementById('deleteAndViewForm').action = '{{ url_for("paid_holidays.delete", id=0, redirect_to="attendance") }}'.replace('0', holidayId);
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+{% endblock %}
