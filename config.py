@@ -65,6 +65,11 @@ class Config:
     # Server configuration
     HOST = os.environ.get('HOST', '127.0.0.1')
     
+    # Device configuration for attendance data fetching
+    DEVICE_IP = os.environ.get('DEVICE_IP', '192.168.11.253')
+    DEVICE_PORT = int(os.environ.get('DEVICE_PORT', '4370'))
+    DEVICE_URL = os.environ.get('DEVICE_URL', 'http://192.168.11.253/')
+    
     @staticmethod
     def init_app(app):
         pass

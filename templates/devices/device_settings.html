@@ -43,7 +43,7 @@
                             <div class="mb-4">
                                 <label class="form-label fw-bold">Device IP</label>
                                 {% if current_user.is_admin() %}
-                                {{ render_field(form.device_ip, attrs={"placeholder": "192.168.11.2"}) }}
+                                {{ render_field(form.device_ip, attrs={"placeholder": "192.168.11.253"}) }}
                                 {% else %}
                                     <input type="text" class="form-control form-control-solid" value="{{ device.device_ip }}" readonly>
                                 {% endif %}
