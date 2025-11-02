@@ -1,237 +1,297 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div class="content-header">
-    <h1 class="page-title">Employee Dashboard</h1>
-    <div class="content-header-actions">
-        <a href="{{ url_for('leave.create') }}" class="btn btn-primary me-2">
-            <i class="fas fa-plus-circle me-1"></i> New Leave Request
-        </a>
-        <a href="{{ url_for('permission.create') }}" class="btn btn-secondary">
-            <i class="fas fa-plus-circle me-1"></i> New Permission Request
-        </a>
-    </div>
-</div>
+<div class="d-flex flex-column flex-column-fluid">
+    <div id="kt_app_content" class="app-content flex-column-fluid">
+        <div id="kt_app_content_container" class="container-fluid">
+            <div class="d-flex flex-wrap flex-stack mb-6">
+                <h1 class="d-flex align-items-center text-dark fw-bolder my-1 fs-3">Employee Dashboard</h1>
+                <div class="d-flex align-items-center gap-2 gap-lg-3">
+                    <a href="{{ url_for('leave.create') }}" class="btn btn-sm fw-bold btn-primary">
+                        <i class="fas fa-plus-circle me-1"></i> New Leave Request
+                    </a>
+                    <a href="{{ url_for('permission.create') }}" class="btn btn-sm fw-bold btn-success">
+                        <i class="fas fa-plus-circle me-1"></i> New Permission Request
+                    </a>
+                </div>
+            </div>
 
 <div class="row">
-    <!-- Stats Cards -->
-    <div class="col-lg-3 col-md-6 mb-4">
-        <div class="card">
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <i class="fas fa-umbrella-beach"></i>
+    <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
+        <div class="col-md-6 col-lg-6 col-xl-6 col-xxl-3">
+            <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-xl-100" style="background-color: #F1416C; background-image: url('/static/media/patterns/vector-1.png');">
+                <div class="card-header pt-5">
+                    <div class="card-title d-flex flex-column">
+                        <span class="fs-2hx fw-bolder text-white me-2 lh-1 ls-n2">{{ stats.pending_leave_requests }}</span>
+                        <span class="text-white opacity-75 pt-1 fw-bold fs-6">Pending Leaves</span>
+                    </div>
                 </div>
-                <div class="stat-content">
-                    <h5 class="stat-value">{{ stats.pending_leave_requests }}</h5>
-                    <p class="stat-label">Pending Leaves</p>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-6 col-xl-6 col-xxl-3">
+            <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-xl-100" style="background-color: #7239EA; background-image: url('/static/media/patterns/vector-1.png');">
+                <div class="card-header pt-5">
+                    <div class="card-title d-flex flex-column">
+                        <span class="fs-2hx fw-bolder text-white me-2 lh-1 ls-n2">{{ stats.pending_permission_requests }}</span>
+                        <span class="text-white opacity-75 pt-1 fw-bold fs-6">Pending Permissions</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-6 col-xl-6 col-xxl-3">
+            <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-xl-100" style="background-color: #009EF7; background-image: url('/static/media/patterns/vector-1.png');">
+                <div class="card-header pt-5">
+                    <div class="card-title d-flex flex-column">
+                        <span class="fs-2hx fw-bolder text-white me-2 lh-1 ls-n2">{{ stats.approved_leave_requests }}</span>
+                        <span class="text-white opacity-75 pt-1 fw-bold fs-6">Approved Leaves</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-6 col-xl-6 col-xxl-3">
+            <div class="card card-flush bgi-no-repeat bgi-size-contain bgi-position-x-end h-xl-100" style="background-color: #50CD89; background-image: url('/static/media/patterns/vector-1.png');">
+                <div class="card-header pt-5">
+                    <div class="card-title d-flex flex-column">
+                        <span class="fs-2hx fw-bolder text-white me-2 lh-1 ls-n2">{{ stats.rejected_leave_requests }}</span>
+                        <span class="text-white opacity-75 pt-1 fw-bold fs-6">Rejected Leaves</span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
     
-    <div class="col-lg-3 col-md-6 mb-4">
-        <div class="card">
-            <div class="stat-card">
-                <div class="stat-icon" style="background-color: rgba(0, 93, 153, 0.1); color: #005d99;">
-                    <i class="fas fa-clock"></i>
+    <div class="row gx-5 gx-xl-10 mb-5 mb-xl-10">
+        <div class="col-xl-8">
+            <div class="card card-xl-stretch mb-xl-8">
+                <div class="card-header border-0 pt-5">
+                    <h3 class="card-title align-items-start flex-column">
+                        <span class="card-label fw-bolder fs-3 mb-1">Your Request History</span>
+                        <span class="text-muted fw-bold fs-7">Overview of your leave and permission requests</span>
+                    </h3>
                 </div>
-                <div class="stat-content">
-                    <h5 class="stat-value">{{ stats.pending_permission_requests }}</h5>
-                    <p class="stat-label">Pending Permissions</p>
+                <div class="card-body">
+                    <canvas id="employeeRequestHistory" height="300"
+                            data-leaves="{{ leave_requests|tojson }}"
+                            data-permissions="{{ permission_requests|tojson }}"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4">
+            <div class="card card-xl-stretch mb-5 mb-xl-10">
+                <div class="card-header border-0 pt-5">
+                    <h3 class="card-title align-items-start flex-column">
+                        <span class="card-label fw-bolder fs-3 mb-1">Calendar</span>
+                        <span class="text-muted fw-bold fs-7">Your upcoming events and requests</span>
+                    </h3>
+                    <div class="card-toolbar">
+                        <a href="{{ url_for('calendar.index') }}" class="btn btn-sm btn-light">Full View</a>
+                    </div>
+                </div>
+                <div class="card-body pt-6">
+                    <div id="mini-calendar"></div>
+                </div>
+            </div>
+            <div class="card card-xl-stretch mb-5 mb-xl-10">
+                <div class="card-header border-0 pt-5">
+                    <h3 class="card-title align-items-start flex-column">
+                        <span class="card-label fw-bolder fs-3 mb-1">Quick Actions</span>
+                        <span class="text-muted fw-bold fs-7">Perform common tasks quickly</span>
+                    </h3>
+                </div>
+                <div class="card-body pt-6">
+                    <div class="d-grid gap-3">
+                        <a href="{{ url_for('leave.create') }}" class="btn btn-light-primary btn-flex flex-center">
+                            <span class="svg-icon svg-icon-3 me-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                    <rect opacity="0.3" x="2" y="2" width="20" height="20" rx="10" fill="currentColor"/>
+                                    <rect x="11" y="11" width="2" height="2" rx="1" fill="currentColor"/>
+                                    <rect x="11" y="15" width="2" height="2" rx="1" fill="currentColor"/>
+                                    <rect x="11" y="7" width="2" height="2" rx="1" fill="currentColor"/>
+                                </svg>
+                            </span>
+                            Submit Leave Request
+                        </a>
+                        <a href="{{ url_for('permission.create') }}" class="btn btn-light-success btn-flex flex-center">
+                            <span class="svg-icon svg-icon-3 me-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                    <rect opacity="0.3" x="2" y="2" width="20" height="20" rx="10" fill="currentColor"/>
+                                    <rect x="11" y="11" width="2" height="2" rx="1" fill="currentColor"/>
+                                    <rect x="11" y="15" width="2" height="2" rx="1" fill="currentColor"/>
+                                    <rect x="11" y="7" width="2" height="2" rx="1" fill="currentColor"/>
+                                </svg>
+                            </span>
+                            Submit Permission Request
+                        </a>
+                        <a href="{{ url_for('profile.index') }}" class="btn btn-light-warning btn-flex flex-center">
+                            <span class="svg-icon svg-icon-3 me-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                    <path d="M6.28548 15.0861C7.34369 13.1814 9.35941 12 11.6066 12C13.8538 12 15.8695 13.1814 16.9277 15.0861L17.6106 16.222C18.0436 16.9165 18.0436 17.7927 17.6106 18.4871L16.9277 19.6229C15.8695 21.5276 13.8538 22.709 11.6066 22.709C9.35941 22.709 7.34369 21.5276 6.28548 19.6229L5.60262 18.4871C5.1696 17.7927 5.1696 16.9165 5.60262 16.222L6.28548 15.0861Z" fill="currentColor"/>
+                                    <path d="M11.6066 11.709C10.0729 11.709 8.77344 10.4095 8.77344 8.87576C8.77344 7.34202 10.0729 6.04248 11.6066 6.04248C13.1403 6.04248 14.4398 7.34202 14.4398 8.87576C14.4398 10.4095 13.1403 11.709 11.6066 11.709Z" fill="currentColor"/>
+                                </svg>
+                            </span>
+                            Update Profile
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
     
-    <div class="col-lg-3 col-md-6 mb-4">
-        <div class="card">
-            <div class="stat-card">
-                <div class="stat-icon" style="background-color: rgba(23, 167, 74, 0.1); color: #17a74a;">
-                    <i class="fas fa-check-circle"></i>
+    <div class="row gx-5 gx-xl-10">
+        <div class="col-xl-6 mb-5 mb-xl-10">
+            <div class="card card-xl-stretch">
+                <div class="card-header border-0 pt-5">
+                    <h3 class="card-title align-items-start flex-column">
+                        <span class="card-label fw-bolder fs-3 mb-1">Recent Leave Requests</span>
+                        <span class="text-muted fw-bold fs-7">Your latest leave submissions</span>
+                    </h3>
+                    <div class="card-toolbar">
+                        <a href="{{ url_for('leave.index') }}" class="btn btn-sm btn-light">View All</a>
+                    </div>
                 </div>
-                <div class="stat-content">
-                    <h5 class="stat-value">{{ stats.approved_leave_requests }}</h5>
-                    <p class="stat-label">Approved Leaves</p>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-lg-3 col-md-6 mb-4">
-        <div class="card">
-            <div class="stat-card">
-                <div class="stat-icon" style="background-color: rgba(241, 65, 108, 0.1); color: #f1416c;">
-                    <i class="fas fa-times-circle"></i>
-                </div>
-                <div class="stat-content">
-                    <h5 class="stat-value">{{ stats.rejected_leave_requests }}</h5>
-                    <p class="stat-label">Rejected Leaves</p>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Request History Graph -->
-    <div class="col-lg-8 mb-4">
-        <div class="card">
-            <div class="card-header border-0">
-                <h3 class="card-title">Your Request History</h3>
-            </div>
-            <div class="card-body">
-                <canvas id="employeeRequestHistory" height="300" 
-                        data-leaves="{{ leave_requests|tojson }}" 
-                        data-permissions="{{ permission_requests|tojson }}"></canvas>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Mini Calendar and Quick Links -->
-    <div class="col-lg-4 mb-4">
-        <!-- Mini Calendar -->
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h3 class="card-title">Calendar</h3>
-                <a href="{{ url_for('calendar.index') }}" class="btn btn-sm btn-light">Full View</a>
-            </div>
-            <div class="card-body">
-                <div id="mini-calendar"></div>
-            </div>
-        </div>
-        
-        <!-- Quick Actions -->
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Quick Actions</h3>
-            </div>
-            <div class="card-body">
-                <div class="d-grid gap-3">
-                    <a href="{{ url_for('leave.create') }}" class="btn btn-light-primary">
-                        <i class="fas fa-plus-circle me-2"></i> Submit Leave Request
-                    </a>
-                    <a href="{{ url_for('permission.create') }}" class="btn btn-light-secondary">
-                        <i class="fas fa-plus-circle me-2"></i> Submit Permission Request
-                    </a>
-                    <a href="{{ url_for('profile.index') }}" class="btn btn-light-warning">
-                        <i class="fas fa-user-cog me-2"></i> Update Profile
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Recent Leave Requests -->
-    <div class="col-lg-6 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Recent Leave Requests</h3>
-                <div class="card-toolbar">
-                    <a href="{{ url_for('leave.index') }}" class="btn btn-sm btn-light">View All</a>
-                </div>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Dates</th>
-                                <th>Reason</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% if leave_requests_db %}
-                                {% for leave in leave_requests_db %}
-                                <tr>
-                                    <td>{{ leave.start_date.strftime('%d/%m/%Y') }} - {{ leave.end_date.strftime('%d/%m/%Y') }}</td>
-                                    <td>{{ leave.reason|truncate(30) }}</td>
-                                    <td>
-                                        {% if leave.status == 'pending' %}
-                                            <span class="badge badge-light-warning">Pending</span>
-                                        {% elif leave.status == 'approved' %}
-                                            <span class="badge badge-light-success">Approved</span>
-                                        {% else %}
-                                            <span class="badge badge-light-danger">Rejected</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <a href="{{ url_for('leave.view', id=leave.id) }}" class="btn btn-sm btn-icon btn-light" data-bs-toggle="tooltip" title="View Details">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        {% if leave.status == 'pending' %}
-                                            <a href="{{ url_for('leave.edit', id=leave.id) }}" class="btn btn-sm btn-icon btn-light" data-bs-toggle="tooltip" title="Edit">
-                                                <i class="fas fa-edit"></i>
+                <div class="card-body py-3">
+                    <div class="table-responsive">
+                        <table class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4">
+                            <thead>
+                                <tr class="fw-bolder text-muted">
+                                    <th class="min-w-150px">Dates</th>
+                                    <th class="min-w-150px">Reason</th>
+                                    <th class="min-w-100px">Status</th>
+                                    <th class="min-w-100px text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if leave_requests_db %}
+                                    {% for leave in leave_requests_db %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="d-flex justify-content-start flex-column">
+                                                    <span class="text-dark fw-bolder text-hover-primary fs-6">{{ leave.start_date.strftime('%d/%m/%Y') }} - {{ leave.end_date.strftime('%d/%m/%Y') }}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="text-dark fw-bolder text-hover-primary d-block fs-6">{{ leave.reason|truncate(30) }}</span>
+                                        </td>
+                                        <td>
+                                            {% if leave.status == 'pending' %}
+                                                <span class="badge badge-light-warning">Pending</span>
+                                            {% elif leave.status == 'approved' %}
+                                                <span class="badge badge-light-success">Approved</span>
+                                            {% else %}
+                                                <span class="badge badge-light-danger">Rejected</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            <a href="{{ url_for('leave.view', id=leave.id) }}" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1">
+                                                <span class="svg-icon svg-icon-3">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                                        <path d="M17.5 11H6.5C4.02944 11 2 12.0294 2 14.5C2 16.9706 4.02944 18 6.5 18H17.5C19.9706 18 22 16.9706 22 14.5C22 12.0294 19.9706 11 17.5 11Z" fill="currentColor"/>
+                                                        <path opacity="0.3" d="M17.5 11H6.5C4.02944 11 2 12.0294 2 14.5C2 16.9706 4.02944 18 6.5 18H17.5C19.9706 18 22 16.9706 22 14.5C22 12.0294 19.9706 11 17.5 11Z" fill="currentColor"/>
+                                                    </svg>
+                                                </span>
                                             </a>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            {% else %}
-                                <tr>
-                                    <td colspan="4" class="text-center p-4">No leave requests found.</td>
-                                </tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
+                                            {% if leave.status == 'pending' %}
+                                                <a href="{{ url_for('leave.edit', id=leave.id) }}" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm">
+                                                    <span class="svg-icon svg-icon-3">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                                            <path d="M17.5 11H6.5C4.02944 11 2 12.0294 2 14.5C2 16.9706 4.02944 18 6.5 18H17.5C19.9706 18 22 16.9706 22 14.5C22 12.0294 19.9706 11 17.5 11Z" fill="currentColor"/>
+                                                            <path opacity="0.3" d="M17.5 11H6.5C4.02944 11 2 12.0294 2 14.5C2 16.9706 4.02944 18 6.5 18H17.5C19.9706 18 22 16.9706 22 14.5C22 12.0294 19.9706 11 17.5 11Z" fill="currentColor"/>
+                                                        </svg>
+                                                    </span>
+                                                </a>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="4" class="text-center p-4">No leave requests found.</td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-    
-    <!-- Recent Permission Requests -->
-    <div class="col-lg-6 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Recent Permission Requests</h3>
-                <div class="card-toolbar">
-                    <a href="{{ url_for('permission.index') }}" class="btn btn-sm btn-light">View All</a>
+        <div class="col-xl-6 mb-5 mb-xl-10">
+            <div class="card card-xl-stretch">
+                <div class="card-header border-0 pt-5">
+                    <h3 class="card-title align-items-start flex-column">
+                        <span class="card-label fw-bolder fs-3 mb-1">Recent Permission Requests</span>
+                        <span class="text-muted fw-bold fs-7">Your latest permission submissions</span>
+                    </h3>
+                    <div class="card-toolbar">
+                        <a href="{{ url_for('permission.index') }}" class="btn btn-sm btn-light">View All</a>
+                    </div>
                 </div>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Date & Time</th>
-                                <th>Reason</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% if permission_requests_db %}
-                                {% for permission in permission_requests_db %}
-                                <tr>
-                                    <td>{{ permission.start_time.strftime('%d/%m/%Y %H:%M') }} - {{ permission.end_time.strftime('%H:%M') }}</td>
-                                    <td>{{ permission.reason|truncate(30) }}</td>
-                                    <td>
-                                        {% if permission.status == 'pending' %}
-                                            <span class="badge badge-light-warning">Pending</span>
-                                        {% elif permission.status == 'approved' %}
-                                            <span class="badge badge-light-success">Approved</span>
-                                        {% else %}
-                                            <span class="badge badge-light-danger">Rejected</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <a href="{{ url_for('permission.view', id=permission.id) }}" class="btn btn-sm btn-icon btn-light" data-bs-toggle="tooltip" title="View Details">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        {% if permission.status == 'pending' %}
-                                            <a href="{{ url_for('permission.edit', id=permission.id) }}" class="btn btn-sm btn-icon btn-light" data-bs-toggle="tooltip" title="Edit">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                        {% endif %}
-                                    </td>
+                <div class="card-body py-3">
+                    <div class="table-responsive">
+                        <table class="table table-row-dashed table-row-gray-300 align-middle gs-0 gy-4">
+                            <thead>
+                                <tr class="fw-bolder text-muted">
+                                    <th class="min-w-150px">Date & Time</th>
+                                    <th class="min-w-150px">Reason</th>
+                                    <th class="min-w-100px">Status</th>
+                                    <th class="min-w-100px text-end">Actions</th>
                                 </tr>
-                                {% endfor %}
-                            {% else %}
-                                <tr>
-                                    <td colspan="4" class="text-center p-4">No permission requests found.</td>
-                                </tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
+                            </thead>
+                                <tbody>
+                                    {% if permission_requests_db %}
+                                        {% for permission in permission_requests_db %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="d-flex justify-content-start flex-column">
+                                                        <span class="text-dark fw-bolder text-hover-primary fs-6">{{ permission.request_date.strftime('%d/%m/%Y %H:%M') }}</span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="text-dark fw-bolder text-hover-primary d-block fs-6">{{ permission.reason|truncate(30) }}</span>
+                                            </td>
+                                            <td>
+                                                {% if permission.status == 'pending' %}
+                                                    <span class="badge badge-light-warning">Pending</span>
+                                                {% elif permission.status == 'approved' %}
+                                                    <span class="badge badge-light-success">Approved</span>
+                                                {% else %}
+                                                    <span class="badge badge-light-danger">Rejected</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-end">
+                                                <a href="{{ url_for('permission.view', id=permission.id) }}" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm me-1">
+                                                    <span class="svg-icon svg-icon-3">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                                            <path d="M17.5 11H6.5C4.02944 11 2 12.0294 2 14.5C2 16.9706 4.02944 18 6.5 18H17.5C19.9706 18 22 16.9706 22 14.5C22 12.0294 19.9706 11 17.5 11Z" fill="currentColor"/>
+                                                            <path opacity="0.3" d="M17.5 11H6.5C4.02944 11 2 12.0294 2 14.5C2 16.9706 4.02944 18 6.5 18H17.5C19.9706 18 22 16.9706 22 14.5C22 12.0294 19.9706 11 17.5 11Z" fill="currentColor"/>
+                                                        </svg>
+                                                    </span>
+                                                </a>
+                                                {% if permission.status == 'pending' %}
+                                                    <a href="{{ url_for('permission.edit', id=permission.id) }}" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm">
+                                                        <span class="svg-icon svg-icon-3">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                                                <path d="M17.5 11H6.5C4.02944 11 2 12.0294 2 14.5C2 16.9706 4.02944 18 6.5 18H17.5C19.9706 18 22 16.9706 22 14.5C22 12.0294 19.9706 11 17.5 11Z" fill="currentColor"/>
+                                                                <path opacity="0.3" d="M17.5 11H6.5C4.02944 11 2 12.0294 2 14.5C2 16.9706 4.02944 18 6.5 18H17.5C19.9706 18 22 16.9706 22 14.5C22 12.0294 19.9706 11 17.5 11Z" fill="currentColor"/>
+                                                            </svg>
+                                                        </span>
+                                                    </a>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="4" class="text-center p-4">No permission requests found.</td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -239,7 +299,93 @@
 </div>
 {% endblock %}
 
-{% block extra_js %}
-<!-- Make sure FullCalendar is loaded for the mini calendar -->
-<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Chart.js for Employee Request History
+        var ctx = document.getElementById('employeeRequestHistory').getContext('2d');
+        var leaveRequests = JSON.parse(document.getElementById('employeeRequestHistory').dataset.leaves);
+        var permissionRequests = JSON.parse(document.getElementById('employeeRequestHistory').dataset.permissions);
+
+        // Aggregate data by month
+        var monthlyData = {};
+
+        leaveRequests.forEach(function(request) {
+            var month = new Date(request.request_date).toLocaleString('default', { month: 'short', year: 'numeric' });
+            if (!monthlyData[month]) monthlyData[month] = { leaves: 0, permissions: 0 };
+            monthlyData[month].leaves++;
+        });
+
+        permissionRequests.forEach(function(request) {
+            var month = new Date(request.request_date).toLocaleString('default', { month: 'short', year: 'numeric' });
+            if (!monthlyData[month]) monthlyData[month] = { leaves: 0, permissions: 0 };
+            monthlyData[month].permissions++;
+        });
+
+        var labels = Object.keys(monthlyData).sort(function(a, b) {
+            return new Date(a) - new Date(b);
+        });
+        var leaveData = labels.map(function(month) { return monthlyData[month].leaves; });
+        var permissionData = labels.map(function(month) { return monthlyData[month].permissions; });
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Leave Requests',
+                        data: leaveData,
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Permission Requests',
+                        data: permissionData,
+                        backgroundColor: 'rgba(255, 206, 86, 0.5)',
+                        borderColor: 'rgba(255, 206, 86, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+
+        // FullCalendar for Mini Calendar
+        var calendarEl = document.getElementById('mini-calendar');
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev',
+                center: 'title',
+                right: 'next'
+            },
+            events: [
+                // Example events (you would populate this from your backend)
+                { title: 'Leave', start: '2024-07-10', color: '#f1416c' },
+                { title: 'Permission', start: '2024-07-15', color: '#009EF7' }
+            ]
+        });
+        calendar.render();
+
+        // Tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+    });
+</script>
 {% endblock %}

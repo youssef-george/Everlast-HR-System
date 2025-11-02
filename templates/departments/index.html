@@ -38,21 +38,21 @@
                                                     <i class="fas fa-building"></i>
                                                 </span>
                                             </div>
-                                            <div>{{ dept.name }}</div>
+                                            <div>{{ dept.department_name }}</div>
                                         </div>
                                     </td>
-                                    <td>{{ dept.manager }}</td>
-                                    <td>{{ dept.employee_count }}</td>
+                                    <td>{% if dept.manager %}{{ dept.manager.get_full_name() }}{% else %}None{% endif %}</td>
+                                    <td>{{ dept.employees|length }}</td>
                                     <td>
                                         <a href="{{ url_for('departments.edit', id=dept.id) }}" class="btn btn-sm btn-icon btn-light me-1" data-bs-toggle="tooltip" title="Edit Department">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <form method="POST" action="{{ url_for('departments.delete', id=dept.id) }}" class="d-inline" data-confirm="Are you sure you want to delete this department? This action cannot be undone.">
-                                            {{ csrf_token() }}
-                                            <button type="submit" class="btn btn-sm btn-icon btn-light-danger" data-bs-toggle="tooltip" title="Delete Department">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
+<form action="{{ url_for('departments.delete_department', dept_id=dept.id) }}" method="POST" class="d-inline">
+                                        {{ delete_form.csrf_token }}
+                                        <button type="submit" class="btn btn-sm btn-icon btn-danger me-1" onclick="return confirm('Are you sure you want to delete this department?');" data-bs-toggle="tooltip" title="Delete Department">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
                                     </td>
                                 </tr>
                                 {% endfor %}

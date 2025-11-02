@@ -142,6 +142,57 @@
             </div>
         </div>
         
+        <!-- Attendance Summary Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title">Attendance Summary</h3>
+                <div class="card-toolbar">
+                    <a href="{{ url_for('attendance.employee_attendance', user_id=current_user.id) }}" class="btn btn-sm btn-light">View Details</a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% set current_month = current_user.get_monthly_working_hours(today.year, today.month) %}
+                {% set previous_month = current_user.get_monthly_working_hours(
+                    (today.replace(day=1) - timedelta(days=1)).year,
+                    (today.replace(day=1) - timedelta(days=1)).month
+                ) %}
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5 class="fw-bold mb-3">Current Month</h5>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Total Hours:</span>
+                            <span class="badge badge-light-primary">{{ "%.2f"|format(current_month) }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>Daily Average:</span>
+                            <span class="badge badge-light-info">{{ "%.2f"|format(current_month / today.day) if today.day > 0 else "0.00" }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h5 class="fw-bold mb-3">Previous Month</h5>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Total Hours:</span>
+                            <span class="badge badge-light-primary">{{ "%.2f"|format(previous_month) }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>Daily Average:</span>
+                            <span class="badge badge-light-info">{{ "%.2f"|format(previous_month / previous_month_days) if previous_month_days > 0 else "0.00" }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="separator my-4"></div>
+                
+                <div class="d-flex justify-content-center">
+                    <a href="{{ url_for('attendance.employee_attendance', user_id=current_user.id) }}" class="btn btn-light-primary">
+                        <i class="fas fa-clock me-1"></i> View Full Attendance History
+                    </a>
+                </div>
+            </div>
+        </div>
+        
         <!-- Recent Requests Card -->
         <div class="card">
             <div class="card-header border-0">

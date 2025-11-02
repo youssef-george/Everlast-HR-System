@@ -1,0 +1,293 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mt-4">{{ title }}</h1>
+        <ol class="breadcrumb mb-4">
+            <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+            <li class="breadcrumb-item active">{{ title }}</li>
+        </ol>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-filter me-1"></i>
+            Report
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('dashboard.report') }}">
+                <input type="hidden" name="_method" value="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="dropdown">
+                        <button class="btn btn-secondary dropdown-toggle" type="button" id="employeeDropdown" data-bs-toggle="dropdown" aria-expanded="false" data-bs-display="static">
+                            Select Employee
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="employeeDropdown" id="user_checkboxes_dropdown">
+                            
+
+                            {% for user in users %}
+                            <li>
+
+
+                                <div class="form-check dropdown-item">
+                                    <input class="form-check-input user-checkbox" type="checkbox" name="user_id" value="{{ user.id }}" id="user_{{ user.id }}">
+                                    <label class="form-check-label" for="user_{{ user.id }}">
+                                        &nbsp;{{ user.first_name }} {{ user.last_name }} ({{ user.department.department_name if user.department else 'N/A' }}) {% if user.fingerprint_id %}[FP: {{ user.fingerprint_id }}]{% endif %}
+                                    </label>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="start_date" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date.strftime('%Y-%m-%d') if start_date else '' }}" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="end_date" class="form-label">End Date</label>
+                        <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date.strftime('%Y-%m-%d') if end_date else '' }}" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-search me-1"></i> Generate Report</button>
+            </form>
+        </div>
+    </div>
+
+    {% if all_user_reports %}
+    {% for user_report in all_user_reports %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-user me-1"></i>
+            Report for {{ user_report.user.first_name }} {{ user_report.user.last_name }}
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card bg-primary text-white h-100">
+                        <div class="card-body">Total Days: {{ user_report.summary_metrics.total_days }}</div>
+                        <div class="card-footer d-flex align-items-center justify-content-between">
+                            <div class="small text-white"><i class="fas fa-calendar-alt"></i></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card bg-success text-white h-100">
+                        <div class="card-body">Present Days: {{ user_report.summary_metrics.present_days }}</div>
+                        <div class="card-footer d-flex align-items-center justify-content-between">
+                            <div class="small text-white"><i class="fas fa-check-circle"></i></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card bg-danger text-white h-100">
+                        <div class="card-body">Absent Days: {{ user_report.summary_metrics.absent_days }}</div>
+                        <div class="card-footer d-flex align-items-center justify-content-between">
+                            <div class="small text-white"><i class="fas fa-times-circle"></i></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card bg-warning text-white h-100">
+                        <div class="card-body">Leave Requests: {{ user_report.summary_metrics.leave_days }}</div>
+                        <div class="card-footer d-flex align-items-center justify-content-between">
+                            <div class="small text-white"><i class="fas fa-plane-departure"></i></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card bg-info text-white h-100">
+                        <div class="card-body">Permission Days: {{ user_report.summary_metrics.permission_days }}</div>
+                        <div class="card-footer d-flex align-items-center justify-content-between">
+                            <div class="small text-white"><i class="fas fa-user-check"></i></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card bg-info text-white h-100">
+                        <div class="card-body">Day Off: {{ user_report.summary_metrics.day_off_days }}</div>
+                        <div class="card-footer d-flex align-items-center justify-content-between">
+                            <div class="small text-white"><i class="fas fa-sun"></i></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card bg-dark text-white h-100">
+                        <div class="card-body">Extra Time: {{ user_report.summary_metrics.extra_time_hours }} hours</div>
+                        <div class="card-footer d-flex align-items-center justify-content-between">
+                            <div class="small text-white"><i class="fas fa-hourglass-half"></i></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-table me-1"></i>
+                    Detailed Attendance Records for {{ user_report.user.first_name }} {{ user_report.user.last_name }}
+                    <div class="float-end">
+
+                        <a href="{{ url_for('dashboard.export_report', user_id=user_report.user.id, start_date=start_date, end_date=end_date, format='excel') }}" class="btn btn-sm btn-success"><i class="fas fa-file-excel"></i> Excel</a>
+                        <a href="{{ url_for('dashboard.export_report', user_id=user_report.user.id, start_date=start_date, end_date=end_date, format='csv') }}" class="btn btn-sm btn-info"><i class="fas fa-file-csv"></i> CSV</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" id="attendanceTable-{{ user_report.user.id }}" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Day</th>
+                                    <th>Status</th>
+                                    <th>Check-in</th>
+                                    <th>Check-out</th>
+                                    <th>Hours Worked</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in user_report.report_data %}
+                                <tr>
+                                    <td>{{ record.date.strftime('%Y-%m-%d') }}</td>
+                                    <td>{{ record.day_of_week }}</td>
+                                    <td>
+                                        {% if record.status == 'Present' %}
+                                        <span class="badge bg-success">{{ record.status }}</span>
+                                        {% elif record.status == 'Absent' %}
+                                        <span class="badge bg-danger">{{ record.status }}</span>
+                                        {% elif record.status == 'Leave' %}
+                                        <span class="badge bg-warning">{{ record.status }}</span>
+                                        {% elif record.status == 'Permission' %}
+                                        <span class="badge bg-primary">{{ record.status }}</span>
+                                        {% elif record.status == 'Day Off' %}
+                                        <span class="badge bg-info">{{ record.status }}</span>
+                                        {% elif record.status == 'Not Yet Joined' %}
+                                        <span class="badge bg-secondary">{{ record.status }}</span>
+                                        {% else %}
+                                        <span class="badge bg-primary">{{ record.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ record.check_in.strftime('%H:%M:%S') if record.check_in else 'N/A' }}</td>
+                                    <td>{{ record.check_out.strftime('%H:%M:%S') if record.check_out else 'N/A' }}</td>
+                                    <td>{{ '%.2f'|format(record.hours_worked) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% elif request.method == 'POST' and not all_user_reports %}
+    <div class="alert alert-warning" role="alert">
+        No reports found for the selected criteria. Please adjust your filters.
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    $(document).ready(function() {
+        // Initialize DataTables for each attendance table
+        {% if all_user_reports %}
+        {% for user_report in all_user_reports %}
+        $('#attendanceTable-{{ user_report.user.id }}').DataTable();
+        {% endfor %}
+        {% endif %}
+
+        $('#select_all_users_dropdown').on('change', function() {
+            $('.user-checkbox').prop('checked', $(this).prop('checked'));
+        });
+
+        $('.user-checkbox').on('change', function() {
+            if ($('.user-checkbox:checked').length === $('.user-checkbox').length) {
+                $('#select_all_users_dropdown').prop('checked', true);
+            } else {
+                $('#select_all_users_dropdown').prop('checked', false);
+            }
+        });
+
+        // Pre-select checkboxes based on initial user IDs (if any)
+        var initialUserIds = {{ request.form.getlist('user_id') | tojson }};
+        if (initialUserIds.length > 0) {
+            initialUserIds.forEach(function(userId) {
+                $('#user_' + userId).prop('checked', true);
+            });
+            // Check/uncheck select all based on all checkboxes being checked
+            if ($('.user-checkbox:checked').length === $('.user-checkbox').length) {
+                $('#select_all_users_dropdown').prop('checked', true);
+            }
+        }
+
+        // Keep dropdown open when clicking inside it
+        $('#user_checkboxes_dropdown').on('click', function (e) {
+            e.stopPropagation();
+        });
+
+        // Handle form submission to include all selected user IDs
+        $('form').on('submit', function(e) {
+            var selectedUserIds = [];
+            $('.user-checkbox:checked').each(function() {
+                selectedUserIds.push($(this).val());
+            });
+
+            // Prevent form submission if no employees are selected
+            if (selectedUserIds.length === 0) {
+                alert('Please select at least one employee.');
+                e.preventDefault();
+                return;
+            }
+
+            // Remove existing hidden inputs to avoid duplicates
+            $('input[name="user_id"][type="hidden"]').remove();
+
+            // Add hidden inputs for each selected user ID
+            selectedUserIds.forEach(function(userId) {
+                $('<input>').attr({
+                    type: 'hidden',
+                    name: 'user_id',
+                    value: userId
+                }).appendTo('form');
+            });
+        });
+
+
+
+            if (selectedUsers.length === 0) {
+                alert('Please select at least one employee.');
+                event.preventDefault(); // Prevent form submission
+                return false;
+            }
+
+            // Create hidden inputs for each selected user_id
+            selectedUsers.forEach(function(userId) {
+                $('<input>').attr({
+                    type: 'hidden',
+                    name: 'user_id',
+                    value: userId
+                }).appendTo('form');
+            });
+        });
+
+        // Pre-select checkboxes if user_ids are present (e.g., after form submission)
+        var initialUserIds = {{ request.form.getlist('user_id') | tojson }};
+        if (initialUserIds.length > 0) {
+            initialUserIds.forEach(function(userId) {
+                $('#user_' + userId).prop('checked', true);
+            });
+            // Check if all are selected to update select_all_users checkbox
+            if ($('.user-checkbox:checked').length === $('.user-checkbox').length) {
+                $('#select_all_users').prop('checked', true);
+            }
+        }
+    });
+</script>
+{% endblock %}

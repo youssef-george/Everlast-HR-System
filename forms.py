@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, TextAreaField, SelectField, DateField, TimeField, BooleanField, HiddenField, SubmitField, EmailField, ValidationError
-from wtforms.validators import DataRequired, Email, EqualTo, Length, Optional, Regexp
+from wtforms import StringField, PasswordField, TextAreaField, SelectField, DateField, TimeField, BooleanField, HiddenField, SubmitField, EmailField, ValidationError, IntegerField
+from wtforms.validators import DataRequired, Email, EqualTo, Length, Optional, Regexp, IPAddress, NumberRange
 from datetime import datetime, date
 
 # Custom validator for @everlastwellness.com domain
@@ -19,6 +19,7 @@ class RegistrationForm(FlaskForm):
     last_name = StringField('Last Name', validators=[DataRequired(), Length(min=2, max=50)])
     email = EmailField('Email', validators=[DataRequired(), Email(), validate_everlast_domain])
     fingerprint_number = StringField('Fingerprint Number', validators=[Optional(), Length(max=50)])
+    avaya_number = StringField('Avaya Number', validators=[Optional(), Length(max=50)])
     password = PasswordField('Password', validators=[
         DataRequired(),
         Length(min=8, message='Password must be at least 8 characters')
@@ -34,6 +35,7 @@ class RegistrationForm(FlaskForm):
         ('admin', 'Account Manager (Admin)'),
         ('director', 'Company Director')
     ], validators=[DataRequired()])
+    joining_date = DateField('Joining Date', validators=[Optional()], format='%Y-%m-%d')
     submit = SubmitField('Register')
 
 class UserEditForm(FlaskForm):
@@ -41,6 +43,7 @@ class UserEditForm(FlaskForm):
     last_name = StringField('Last Name', validators=[DataRequired(), Length(min=2, max=50)])
     email = EmailField('Email', validators=[DataRequired(), Email(), validate_everlast_domain])
     fingerprint_number = StringField('Fingerprint Number', validators=[Optional(), Length(max=50)])
+    avaya_number = StringField('Avaya Number', validators=[Optional(), Length(max=50)])
     department_id = SelectField('Department', coerce=int, validators=[Optional()])
     role = SelectField('Role', choices=[
         ('employee', 'Employee'),
@@ -52,6 +55,7 @@ class UserEditForm(FlaskForm):
         ('active', 'Active'),
         ('inactive', 'Inactive')
     ], validators=[DataRequired()])
+    joining_date = DateField('Joining Date', validators=[Optional()], format='%Y-%m-%d')
     new_password = PasswordField('New Password', validators=[Optional(), Length(min=8, message='Password must be at least 8 characters')])
     confirm_password = PasswordField('Confirm Password', validators=[
         EqualTo('new_password', message='Passwords must match')
@@ -121,3 +125,23 @@ class AdminPermissionRequestForm(PermissionRequestForm):
     """Form for admin to create permission requests on behalf of employees"""
     employee_id = SelectField('Employee', coerce=int, validators=[DataRequired()])
     submit = SubmitField('Submit Permission Request for Employee')
+
+class DeviceSettingsForm(FlaskForm):
+    """Form for managing fingerprint device settings"""
+    device_ip = StringField('Device IP', validators=[
+        DataRequired(),
+        IPAddress(message='Please enter a valid IP address')
+    ])
+    device_port = IntegerField('Device Port', validators=[
+        DataRequired(),
+        NumberRange(min=1, max=65535, message='Port must be between 1 and 65535')
+    ])
+    device_name = StringField('Device Name', validators=[
+        Optional(),
+        Length(max=100, message='Device name must be less than 100 characters')
+    ])
+    submit = SubmitField('Save Settings')
+
+class DeleteForm(FlaskForm):
+    """Generic form for delete operations, primarily for CSRF protection."""
+    submit = SubmitField('Delete')

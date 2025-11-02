@@ -3,7 +3,10 @@ from functools import wraps
 from flask import flash, redirect, url_for, abort
 from flask_login import current_user
 from models import LeaveRequest, PermissionRequest, Notification, User
-from app import db
+from extensions import db
+from zk import ZK, const
+import logging
+from datetime import date, datetime, timedelta
 
 def role_required(*roles):
     """Decorator that checks if the current user has one of the required roles."""
@@ -18,6 +21,18 @@ def role_required(*roles):
             return f(*args, **kwargs)
         return decorated_function
     return decorator
+
+def admin_required(f):
+    """Decorator that checks if the current user is an admin."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return redirect(url_for('auth.login'))
+        if current_user.role != 'admin':
+            flash('You do not have administrative privileges to access this page.', 'danger')
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
 
 def get_leave_count(user_id, period='monthly'):
     """Get the count of approved leaves for a user in the current month/year."""
@@ -193,8 +208,12 @@ def leave_request_to_dict(leave_request):
         'status': leave_request.status,
         'reason': leave_request.reason,
         'created_at': leave_request.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-        'manager_approved': leave_request.manager_approved,
-        'admin_approved': leave_request.admin_approved
+        'manager_status': leave_request.manager_status,
+        'admin_status': leave_request.admin_status,
+        'general_manager_status': leave_request.general_manager_status,
+        'manager_comment': leave_request.manager_comment,
+        'admin_comment': leave_request.admin_comment,
+        'general_manager_comment': leave_request.general_manager_comment
     }
 
 def permission_request_to_dict(permission_request):
@@ -206,9 +225,15 @@ def permission_request_to_dict(permission_request):
         'status': permission_request.status,
         'reason': permission_request.reason,
         'created_at': permission_request.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-        'manager_approved': permission_request.manager_approved,
-        'director_approved': permission_request.director_approved,
-        'admin_approved': permission_request.admin_approved
+        'manager_status': permission_request.manager_status,
+        'director_status': permission_request.director_status,
+        'admin_status': permission_request.admin_status,
+        'manager_comment': permission_request.manager_comment,
+        'director_comment': permission_request.director_comment,
+        'admin_comment': permission_request.admin_comment,
+        'manager_updated_at': permission_request.manager_updated_at.strftime('%Y-%m-%d %H:%M:%S') if permission_request.manager_updated_at else None,
+        'director_updated_at': permission_request.director_updated_at.strftime('%Y-%m-%d %H:%M:%S') if permission_request.director_updated_at else None,
+        'admin_updated_at': permission_request.admin_updated_at.strftime('%Y-%m-%d %H:%M:%S') if permission_request.admin_updated_at else None
     }
 
 def get_dashboard_stats(user):
@@ -259,13 +284,13 @@ def get_dashboard_stats(user):
             stats['pending_leave_requests'] = LeaveRequest.query.filter(
                 LeaveRequest.user_id.in_(employee_ids),
                 LeaveRequest.status == 'pending',
-                ~LeaveRequest.manager_approved
+                LeaveRequest.manager_status == 'pending'
             ).count()
             
             stats['pending_permission_requests'] = PermissionRequest.query.filter(
                 PermissionRequest.user_id.in_(employee_ids),
                 PermissionRequest.status == 'pending',
-                ~PermissionRequest.manager_approved
+                PermissionRequest.manager_status == 'pending'
             ).count()
             
             stats['total_employees'] = len(employee_ids)
@@ -274,25 +299,24 @@ def get_dashboard_stats(user):
         # Director sees permission requests that need director approval
         stats['pending_permission_requests'] = PermissionRequest.query.filter(
             PermissionRequest.status == 'pending',
-            PermissionRequest.manager_approved == True,
-            PermissionRequest.director_approved == False
+            PermissionRequest.manager_status == 'approved',
+            PermissionRequest.director_status == 'pending'
         ).count()
         
     elif user.role == 'admin':
-        # All admins now see ALL company-wide stats, regardless of department assignments
-        # Pending leave requests that need admin approval
+        # Admin sees requests that need admin approval
         stats['pending_leave_requests'] = LeaveRequest.query.filter(
             LeaveRequest.status == 'pending',
-            LeaveRequest.manager_approved == True,
-            LeaveRequest.admin_approved == False
+            LeaveRequest.manager_status == 'approved',
+            LeaveRequest.admin_status == 'pending'
         ).count()
         
         # Pending permission requests that need admin approval
         stats['pending_permission_requests'] = PermissionRequest.query.filter(
             PermissionRequest.status == 'pending',
-            PermissionRequest.manager_approved == True,
-            PermissionRequest.director_approved == True,
-            PermissionRequest.admin_approved == False
+            PermissionRequest.manager_status == 'approved',
+            PermissionRequest.director_status == 'approved',
+            PermissionRequest.admin_status == 'pending'
         ).count()
         
         # All approved leave requests
@@ -313,4 +337,90 @@ def get_dashboard_stats(user):
         # Count all departments
         stats['total_departments'] = db.session.query(db.func.count(db.distinct(User.department_id))).scalar()
     
+    elif user.role == 'general_manager':
+        # General Manager sees requests that need their approval
+        stats['pending_leave_requests'] = LeaveRequest.query.filter(
+            LeaveRequest.status == 'pending',
+            LeaveRequest.manager_status == 'approved',
+            LeaveRequest.admin_status == 'approved',
+            LeaveRequest.general_manager_status == 'pending'
+        ).count()
+        
+        # All approved leave requests
+        stats['approved_leave_requests'] = LeaveRequest.query.filter_by(status='approved').count()
+        
+        # All rejected leave requests
+        stats['rejected_leave_requests'] = LeaveRequest.query.filter_by(status='rejected').count()
+        
+        # Count all employees
+        stats['total_employees'] = User.query.filter(User.status == 'active').count()
+        
+        # Count all departments
+        stats['total_departments'] = db.session.query(db.func.count(db.distinct(User.department_id))).scalar()
+    
     return stats
+
+def connect_to_fingerprint_device(ip, port=4370):
+    """
+    Establishes connection with the fingerprint device
+    Returns the connection object if successful, None otherwise
+    """
+    try:
+        zk = ZK(ip, port=port, timeout=5)
+        conn = zk.connect()
+        return conn
+    except Exception as e:
+        logging.error(f"Error connecting to fingerprint device: {str(e)}")
+        return None
+
+def sync_users_from_device(ip="192.168.11.2", port=4370):
+    """
+    Fetches users from the fingerprint device and syncs them with the database
+    Returns tuple (success: bool, message: str)
+    """
+    conn = None
+    try:
+        conn = connect_to_fingerprint_device(ip, port)
+        if not conn:
+            return False, "Could not connect to the device"
+
+        # Get all users from the device
+        device_users = conn.get_users()
+        if not device_users:
+            return False, "No users found on the device"
+
+        # Process each user from the device
+        for device_user in device_users:
+            # Check if user already exists in database by fingerprint number
+            user = User.query.filter_by(fingerprint_number=str(device_user.uid)).first()
+            
+            if user:
+                # User already exists, skip updating their data
+                logging.info(f"Existing user skipped: {user.first_name} (Fingerprint ID: {user.fingerprint_number})")
+            else:
+                # Create new user
+                new_user = User(
+                    first_name=device_user.name,
+                    last_name="",  # Device might not provide last name
+                    email=f"fp_{device_user.uid}@placeholder.com",  # Placeholder email
+                    password_hash="",  # Will need to be set later
+                    fingerprint_number=str(device_user.uid),
+                    role='employee',  # Default role
+                    status='active'
+                )
+                db.session.add(new_user)
+                db.session.commit()
+                logging.info(f"New user created: {new_user.first_name} (Fingerprint ID: {new_user.fingerprint_number})")
+
+        db.session.commit()
+        return True, f"Successfully synced {len(device_users)} users from the device"
+
+    except Exception as e:
+        db.session.rollback()
+        error_msg = f"Error syncing users: {str(e)}"
+        logging.error(error_msg)
+        return False, error_msg
+    
+    finally:
+        if conn:
+            conn.disconnect()

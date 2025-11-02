@@ -3,9 +3,9 @@ from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_wtf.csrf import CSRFError
 from forms import LoginForm, RegistrationForm
-from models import User, Department
-from app import db, app
+from models import db, User, Department
 from datetime import datetime
+import logging
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -47,7 +47,7 @@ def login():
         except Exception as e:
             # Catch any other exceptions
             flash(f'An error occurred: {str(e)}', 'danger')
-            app.logger.error(f'Login error: {str(e)}')
+            logging.error(f'Login error: {str(e)}')
     
     # For GET request or if form validation fails
     return render_template('auth/login.html', form=form, title='Login')
@@ -89,9 +89,11 @@ def register():
                 email=form.email.data,
                 password_hash=hashed_password,
                 fingerprint_number=form.fingerprint_number.data if form.fingerprint_number.data else None,
+                avaya_number=form.avaya_number.data if form.avaya_number.data else None,
                 role=form.role.data,
                 department_id=form.department_id.data if form.department_id.data != 0 else None,
-                status='active'
+                status='active',
+                joining_date=form.joining_date.data if form.joining_date.data else None
             )
             
             db.session.add(new_user)
@@ -102,6 +104,6 @@ def register():
         except Exception as e:
             db.session.rollback()
             flash(f'Error registering user: {str(e)}', 'danger')
-            app.logger.error(f'Registration error: {str(e)}')
+            logging.error(f'Registration error: {str(e)}')
     
     return render_template('auth/register.html', form=form, title='Register New User')

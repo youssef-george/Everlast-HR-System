@@ -1,33 +1,16 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
-from forms import DepartmentForm
-from models import Department, User
-from app import db
-from helpers import role_required
+from forms import DepartmentForm, DeleteForm
+from models import db, Department, User
+from helpers import role_required, admin_required
 
 departments_bp = Blueprint('departments', __name__, url_prefix='/departments')
 
 @departments_bp.route('/')
-@login_required
-@role_required('admin')
 def index():
-    """List all departments"""
     departments = Department.query.all()
-    
-    # Get manager names for each department
-    department_data = []
-    for dept in departments:
-        manager = User.query.get(dept.manager_id) if dept.manager_id else None
-        department_data.append({
-            'id': dept.id,
-            'name': dept.department_name,
-            'manager': manager.get_full_name() if manager else 'No Manager Assigned',
-            'employee_count': User.query.filter_by(department_id=dept.id).count()
-        })
-    
-    return render_template('departments/index.html', 
-                           title='Departments', 
-                           departments=department_data)
+    delete_form = DeleteForm()
+    return render_template('departments/index.html', departments=departments, delete_form=delete_form)
 
 @departments_bp.route('/create', methods=['GET', 'POST'])
 @login_required
@@ -90,21 +73,19 @@ def edit(id):
                            department=department,
                            is_create=False)
 
-@departments_bp.route('/delete/<int:id>', methods=['POST'])
+@departments_bp.route('/departments/delete/<int:dept_id>', methods=['POST'])
 @login_required
-@role_required('admin')
-def delete(id):
-    """Delete a department"""
-    department = Department.query.get_or_404(id)
-    
-    # Check if any employees are in this department
-    employees = User.query.filter_by(department_id=id).all()
-    if employees:
-        flash(f'Cannot delete department. {len(employees)} employees are still assigned to it.', 'danger')
-        return redirect(url_for('departments.index'))
-    
-    db.session.delete(department)
-    db.session.commit()
-    
-    flash(f'Department {department.department_name} has been deleted successfully!', 'success')
+@admin_required
+def delete_department(dept_id):
+    form = DeleteForm()
+    if form.validate_on_submit():
+        department = Department.query.get_or_404(dept_id)
+        if department.employees:
+            flash('Cannot delete department with assigned employees.', 'danger')
+        else:
+            db.session.delete(department)
+            db.session.commit()
+            flash('Department deleted successfully.', 'success')
+    else:
+        flash('Invalid request or session expired. Please try again.', 'danger')
     return redirect(url_for('departments.index'))

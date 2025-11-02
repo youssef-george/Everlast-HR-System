@@ -2,8 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from datetime import datetime, date, time
 from forms import PermissionRequestForm, ApprovalForm, AdminPermissionRequestForm
-from models import PermissionRequest, User
-from app import db
+from models import db, PermissionRequest, User
 from helpers import role_required, create_notification, get_user_managers, get_employees_for_manager
 
 permission_bp = Blueprint('permission', __name__, url_prefix='/permission')

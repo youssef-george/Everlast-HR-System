@@ -56,12 +56,26 @@
                         {% endif %}
                     </div>
                     
+                    {% if current_user.role == 'admin' %}
                     <div class="mb-3">
                         {{ form.fingerprint_number.label(class="form-label") }}
                         {{ form.fingerprint_number(class="form-control", placeholder="Enter fingerprint number (optional)") }}
                         {% if form.fingerprint_number.errors %}
                             <div class="text-danger">
                                 {% for error in form.fingerprint_number.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        {{ form.avaya_number.label(class="form-label") }}
+                        {{ form.avaya_number(class="form-control", placeholder="Enter Avaya number (optional)") }}
+                        {% if form.avaya_number.errors %}
+                            <div class="text-danger">
+                                {% for error in form.avaya_number.errors %}
                                     <small>{{ error }}</small>
                                 {% endfor %}
                             </div>
@@ -98,6 +112,18 @@
                         {% if form.status.errors %}
                             <div class="text-danger">
                                 {% for error in form.status.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.joining_date.label(class="form-label") }}
+                        {{ form.joining_date(class="form-control") }}
+                        {% if form.joining_date.errors %}
+                            <div class="text-danger">
+                                {% for error in form.joining_date.errors %}
                                     <small>{{ error }}</small>
                                 {% endfor %}
                             </div>
@@ -182,6 +208,15 @@
                 } else {
                     this.setCustomValidity('');
                 }
+            });
+        }
+
+        // Initialize date picker for joining_date
+        const joiningDateInput = document.getElementById('joining_date');
+        if (joiningDateInput) {
+            flatpickr(joiningDateInput, {
+                dateFormat: "Y-m-d",
+                allowInput: true
             });
         }
     });

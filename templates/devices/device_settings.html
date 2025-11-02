@@ -1,0 +1,231 @@
+{% extends "layout.html" %}
+{% from "macros/forms.html" import render_field, render_form_errors %}
+
+
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="row mb-4">
+            <div class="col-sm-6">
+                <h1 class="page-title">Device Settings</h1>
+            </div>
+            <div class="col-sm-6">
+                <div class="float-sm-end">
+                    <a href="{{ url_for('attendance.index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-3"></i> Back to Attendance
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% if not current_user.is_admin() %}
+        <div class="alert alert-info bg-light-info mb-4">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-info-circle me-2"></i>
+                <div>
+                    <h4 class="alert-heading mb-1">View-Only Mode</h4>
+                    <p class="mb-0">You are viewing the device settings in read-only mode. Contact an administrator for any changes.</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="row g-5">
+            <div class="col-xl-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Device Configuration</h3>
+                    </div>
+                    <div class="card-body">
+                        {{ render_form_errors(form) }}
+                        <form method="POST" action="{{ url_for('attendance.device_settings') }}" class="form">
+                            {{ form.csrf_token }}
+
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Device IP</label>
+                                {% if current_user.is_admin() %}
+                                {{ render_field(form.device_ip, attrs={"placeholder": "192.168.11.2"}) }}
+                                {% else %}
+                                    <input type="text" class="form-control form-control-solid" value="{{ device.device_ip }}" readonly>
+                                {% endif %}
+                                <div class="form-text text-muted">Current IP: {{ device.device_ip }}</div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Device Port</label>
+                                {% if current_user.is_admin() %}
+                                {{ render_field(form.device_port, attrs={"placeholder": "8080"}) }}
+                                {% else %}
+                                    <input type="text" class="form-control form-control-solid" value="{{ device.device_port }}" readonly>
+                                {% endif %}
+                                <div class="form-text text-muted">Current Port: {{ device.device_port }}</div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Device Name</label>
+                                {% if current_user.is_admin() %}
+                                {{ render_field(form.device_name, attrs={"placeholder": "Main Office Device"}) }}
+                                {% else %}
+                                    <input type="text" class="form-control form-control-solid" value="{{ device.device_name or 'Default Device' }}" readonly>
+                                {% endif %}
+                            </div>
+
+                            {% if current_user.is_admin() %}
+                            <div class="d-flex justify-content-end">
+                                {{ form.submit(class="btn btn-primary") }}
+                            </div>
+                            {% endif %}
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Device Status</h3>
+                    </div>
+                    <div class="card-body">
+                        {% if device_status.connected %}
+                            <div class="alert alert-success mb-4">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    <strong>Device Connected</strong>
+                                </div>
+                            </div>
+
+                            {% if device_status.device_info %}
+                                <h6 class="fw-bold mb-3">Device Information</h6>
+                                <table class="table table-sm device-info-table">
+                                    <tbody>
+                                        <tr>
+                                            <th>Firmware Version</th>
+                                            <td>{{ device_status.device_info.firmware_version }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Serial Number</th>
+                                            <td>{{ device_status.device_info.serial_number }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Platform</th>
+                                            <td>{{ device_status.device_info.platform }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Device Name</th>
+                                            <td>{{ device_status.device_info.device_name }}</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Registered Users</th>
+                                            <td>{{ device_status.device_info.users }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                {% if device_status.last_sync %}
+                                    <p class="text-muted mb-4">
+                                        <i class="fas fa-sync me-1"></i>
+                                        <small>Last Sync: {{ device_status.last_sync|datetime }}</small>
+                                    </p>
+                                {% endif %}
+                            {% endif %}
+                        {% else %}
+                            <div class="alert alert-danger mb-4">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-exclamation-circle me-2"></i>
+                                    <div>
+                                        <strong>Device Disconnected</strong>
+                                        {% if device_status.error %}
+                                            <p class="mb-0 mt-2"><small>{{ device_status.error }}</small></p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <div class="d-grid gap-2">
+                            <button type="button" id="testConnectionBtn" class="btn btn-primary" {{ ' disabled' if not current_user.is_admin() }}>
+                                <i class="fas fa-sync me-2"></i> Test Connection
+                            </button>
+                            <button type="button" id="fetchDataBtn" class="btn btn-primary" {{ ' disabled' if not current_user.is_admin() }}>
+                                <i class="fas fa-cloud-download-alt me-2"></i> Fetch Attendance Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+
+    // Common function to handle button state and spinner
+    function handleButtonState(button, isLoading, icon, text) {
+        button.disabled = isLoading;
+        if (isLoading) {
+            button.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i> ${text}...`;
+        } else {
+            button.innerHTML = `<i class="fas ${icon} me-2"></i> ${text}`;
+        }
+    }
+
+{% if current_user.is_admin() %}
+    const testConnectionBtn = document.getElementById('testConnectionBtn');
+    const fetchDataBtn = document.getElementById('fetchDataBtn');
+
+    if (testConnectionBtn) {
+        testConnectionBtn.addEventListener('click', function() {
+            handleButtonState(this, true, 'fa-sync', 'Testing');
+
+            fetch('{{ url_for("attendance.test_connection") }}')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        toastr.success(data.message);
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        toastr.error(data.message);
+                    }
+                })
+                .catch(error => {
+                    toastr.error('Failed to test connection');
+                })
+                .finally(() => {
+                    handleButtonState(testConnectionBtn, false, 'fa-sync', 'Test Connection');
+                });
+        });
+    }
+
+    if (fetchDataBtn) {
+        fetchDataBtn.addEventListener('click', function() {
+            handleButtonState(this, true, 'fa-cloud-download-alt', 'Fetching');
+
+            fetch('{{ url_for("attendance.sync_fingerprint") }}')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        toastr.success(data.message);
+                    } else {
+                        toastr.error(data.message);
+                    }
+                })
+                .catch(error => {
+                    toastr.error('Failed to fetch attendance data');
+                })
+                .finally(() => {
+                    handleButtonState(fetchDataBtn, false, 'fa-cloud-download-alt', 'Fetch Attendance Data');
+                });
+        });
+    }
+    {% endif %}
+});
+</script>
+    </div>
+{% endblock %}

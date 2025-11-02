@@ -1,0 +1,50 @@
+{% macro render_field(field, attrs={}) %}
+    <div class="form-group">
+        {{ field.label(class="form-label") }}
+        {% if field.errors %}
+            {{ field(class="form-control is-invalid", **attrs) }}
+            <div class="invalid-feedback">
+                {% for error in field.errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+        {% else %}
+            {{ field(class="form-control", **attrs) }}
+        {% endif %}
+        {% if field.description %}
+            <small class="form-text text-muted">{{ field.description }}</small>
+        {% endif %}
+    </div>
+{% endmacro %}
+
+{% macro render_checkbox(field) %}
+    <div class="form-check">
+        {{ field(class="form-check-input") }}
+        {{ field.label(class="form-check-label") }}
+        {% if field.errors %}
+            <div class="invalid-feedback">
+                {% for error in field.errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+{% endmacro %}
+
+{% macro render_submit(field) %}
+    {{ field(class="btn btn-primary") }}
+{% endmacro %}
+
+{% macro render_form_errors(form) %}
+    {% if form.errors %}
+        <div class="alert alert-danger">
+            <ul class="mb-0">
+                {% for field, errors in form.errors.items() %}
+                    {% for error in errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+{% endmacro %}

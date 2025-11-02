@@ -105,7 +105,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Notifications system
     function loadNotifications() {
         fetch('/notifications/unread_count')
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok || response.redirected) {
+                    console.warn('Notification count fetch failed or redirected:', response.status, response.statusText);
+                    return Promise.reject('Not authenticated or session expired');
+                }
+                return response.json();
+            })
             .then(data => {
                 // Update regular sidebar badge
                 const notificationBadge = document.getElementById('notification-badge');
@@ -133,7 +139,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Load recent notifications for dropdown
         fetch('/notifications/get_recent')
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok || response.redirected) {
+                    console.warn('Recent notifications fetch failed or redirected:', response.status, response.statusText);
+                    return Promise.reject('Not authenticated or session expired');
+                }
+                return response.json();
+            })
             .then(data => {
                 // Update both desktop and mobile notification lists
                 const notificationsList = document.getElementById('notifications-list');

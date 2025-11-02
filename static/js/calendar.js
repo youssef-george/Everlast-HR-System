@@ -2,7 +2,8 @@
 
 document.addEventListener('DOMContentLoaded', function() {
     const calendarEl = document.getElementById('calendar');
-    
+    let currentUserId = null; // Variable to store the currently selected user ID
+
     if (calendarEl) {
         // Initialize the calendar
         const calendar = new FullCalendar.Calendar(calendarEl, {
@@ -50,6 +51,13 @@ document.addEventListener('DOMContentLoaded', function() {
             eventSources: [
                 {
                     url: '/calendar/events',
+                    extraParams: function() {
+                        const params = {};
+                        if (currentUserId) {
+                            params.user_id = currentUserId;
+                        }
+                        return params;
+                    },
                     method: 'GET',
                     failure: function() {
                         alert('There was an error while fetching events!');
@@ -118,6 +126,24 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         calendar.render();
+
+        // Set initial currentUserId from URL or default
+        const urlParams = new URLSearchParams(window.location.search);
+        currentUserId = urlParams.get('user_id');
+
+        // Handle user filter change
+        document.getElementById('userFilter').addEventListener('change', function() {
+            currentUserId = this.value; // Update the global variable
+            calendar.refetchEvents(); // Refetch events with the new user ID
+            // Optionally, update the URL without reloading the page
+            const newUrl = new URL(window.location.href);
+            if (currentUserId) {
+                newUrl.searchParams.set('user_id', currentUserId);
+            } else {
+                newUrl.searchParams.delete('user_id');
+            }
+            window.history.pushState({ path: newUrl.href }, '', newUrl.href);
+        });
         
         // Filter events by type
         const leaveFilterCheckbox = document.getElementById('leave-filter');
@@ -203,6 +229,38 @@ document.addEventListener('DOMContentLoaded', function() {
             if (pendingPermissionCounter) pendingPermissionCounter.textContent = pendingPermissions.length;
             if (approvedPermissionCounter) approvedPermissionCounter.textContent = approvedPermissions.length;
             if (rejectedPermissionCounter) rejectedPermissionCounter.textContent = rejectedPermissions.length;
+
+            // Calculate total days in range
+            const totalDaysInRange = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+            document.getElementById('total-days-in-range').textContent = totalDaysInRange;
+
+            // Fetch detailed attendance summary for the selected range
+            const startDate = start.toISOString().split('T')[0];
+            const endDate = end.toISOString().split('T')[0];
+            const selectedUserId = document.getElementById('user-filter')?.value || ''; // Assuming a user filter exists
+
+            console.log('Fetching summary data for:', startDate, endDate, selectedUserId);
+            fetch(`/calendar/summary?start_date=${startDate}&end_date=${endDate}&user_id=${selectedUserId}`)
+                .then(response => {
+                    console.log('Summary fetch response:', response);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Summary data received:', data);
+                    document.getElementById('present-days').textContent = data.present_days;
+                    document.getElementById('absent-days').textContent = data.absent_days;
+                    document.getElementById('day-offs').textContent = data.day_offs;
+                    document.getElementById('leave-days').textContent = data.leave_days;
+                    document.getElementById('effective-days').textContent = data.effective_days;
+                    document.getElementById('extra-hours').textContent = data.extra_hours;
+                })
+                .catch(error => console.error('Error fetching summary data:', error));
         }
+        
+        // Initial update of stats
+        updateCalendarStats(calendar.view.currentStart, calendar.view.currentEnd);
     }
 });

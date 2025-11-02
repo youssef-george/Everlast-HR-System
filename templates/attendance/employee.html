@@ -1,0 +1,283 @@
+{% extends "layout.html" %}
+
+{% block extra_css %}
+<style>
+    .attendance-summary {
+        margin-bottom: 2rem;
+    }
+    .summary-card {
+        text-align: center;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    .summary-card h3 {
+        margin: 0;
+        font-size: 2rem;
+    }
+    .summary-card p {
+        margin: 0.5rem 0 0;
+        color: #6c757d;
+    }
+    .present { background-color: #d4edda; }
+    .half-day { background-color: #fff3cd; }
+    .absent { background-color: #f8d7da; }
+    .hours { background-color: #cce5ff; }
+    .date-range-form {
+        margin-bottom: 1.5rem;
+    }
+    .badge.bg-info-light {
+        background-color: #0dcaf0;
+        color: #fff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col">
+                    <h1 class="m-0">My Attendance</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="container-fluid">
+            <!-- Summary Card -->
+            <div class="row">
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-info">
+                        <div class="inner">
+                            <h3>{{ monthly_stats.present_days }}</h3>
+                            <p>Present Days</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-warning">
+                        <div class="inner">
+                            <h3>{{ monthly_stats.total_hours|round(1) }}</h3>
+                            <p>Working Hours</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-success">
+                        <div class="inner">
+                            <h3>{{ monthly_stats.avg_hours|round(1) }}</h3>
+                            <p>Avg. Hours/Day</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-danger">
+                        <div class="inner">
+                            <h3>{{ monthly_stats.late_days }}</h3>
+                            <p>Late Days</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attendance Records -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">My Attendance Records</h3>
+                    <div class="card-tools">
+                        <form class="form-inline" method="GET">
+                            <div class="input-group">
+                                <input type="month" class="form-control" name="month" value="{{ selected_month }}" onchange="this.form.submit()">
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Check In</th>
+                                    <th>Check Out</th>
+                                    <th>Duration</th>
+                                    <th>Breaks</th>
+                                    <th>Entries</th>
+                                    <th>Status</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in attendance_records %}
+                                <tr {% if record.date < user.joining_date %}class="text-muted" title="Before joining date"{% endif %}>
+                                    <td>{{ record.date.strftime('%Y-%m-%d') }}</td>
+                                    {% if record.date < user.joining_date %}
+                                    <td colspan="7" class="text-center">N/A - Before Joining Date</td>
+                                    {% else %}
+                                    <td>
+                                        {% if record.first_check_in %}
+                                            <span class="text-success">
+                                                {{ record.first_check_in.strftime('%H:%M:%S') }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.last_check_out %}
+                                            <span class="text-danger">
+                                                {{ record.last_check_out.strftime('%H:%M:%S') }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.total_working_hours %}
+                                            <span class="text-primary">
+                                                {{ record.format_working_hours() }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.total_breaks %}
+                                            <span class="text-warning">
+                                                {{ record.format_breaks() }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.entry_count %}
+                                            <span class="badge bg-secondary">{{ record.entry_count }}</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.status == 'present' %}
+                                            <span class="badge bg-success">Present</span>
+                                        {% elif record.status == 'in_office' %}
+                                            <span class="badge bg-info-light">In Office</span>
+                                        {% elif record.status == 'half-day' %}
+                                            <span class="badge bg-warning">Half Day</span>
+                                        {% elif record.status == 'leave' %}
+                                            <span class="badge bg-info" data-bs-toggle="tooltip" title="{{ record.status_reason }}">
+                                                On Leave
+                                            </span>
+                                        {% elif record.status == 'permission' %}
+                                            <span class="badge bg-primary" data-bs-toggle="tooltip" title="{{ record.status_reason }}">
+                                                Permission
+                                            </span>
+                                        {% elif record.status == 'partial' %}
+                                            <span class="badge bg-danger">Partial Day</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Absent</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#detailsModal{{ record.id }}">
+                                            <i class="fas fa-info-circle"></i>
+                                        </button>
+                                    </td>
+                                    {% endif %}
+                                </tr>
+
+                                <!-- Details Modal -->
+                                <div class="modal fade" id="detailsModal{{ record.id }}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog modal-lg">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Attendance Details - {{ record.date.strftime('%Y-%m-%d') }}</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <h6>All Entries:</h6>
+                                                <table class="table table-sm">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Time</th>
+                                                            <th>Type</th>
+                                                            <th>Duration</th>
+                                                            <th>Device</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for log in record.user.attendance_logs %}
+                                                            {% if log.timestamp.date() == record.date %}
+                                                            <tr>
+                                                                <td>{{ log.timestamp.strftime('%H:%M:%S') }}</td>
+                                                                <td>
+                                                                    {% if log.scan_type == 'check-in' %}
+                                                                        <span class="text-success">Check In</span>
+                                                                    {% else %}
+                                                                        <span class="text-danger">Check Out</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td>
+                                                                    {% if log.duration %}
+                                                                        {{ log.format_duration() }}
+                                                                    {% else %}
+                                                                        -
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td>{{ log.device_ip }}</td>
+                                                            </tr>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+
+                                                {% if record.status_reason %}
+                                                <div class="alert alert-info mt-3">
+                                                    <h6>Status Information:</h6>
+                                                    <p class="mb-0">{{ record.status_reason }}</p>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center">No attendance records found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+});
+</script>
+{% endblock %}

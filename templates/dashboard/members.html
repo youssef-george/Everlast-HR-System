@@ -5,7 +5,7 @@
     <h1 class="page-title">Company Members</h1>
 </div>
 
-<div class="row">
+<div class="row" id="activeMembersSection">
     <div class="col-12">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
@@ -15,11 +15,12 @@
                         <select id="departmentFilter" class="form-select">
                             <option value="all">All Departments</option>
                             {% for dept in departments %}
-                            <option value="{{ dept.id }}">{{ dept.department_name }}</option>
+                            <option value="{{ dept.department_name }}">{{ dept.department_name }}</option>
                             {% endfor %}
                             <option value="none">No Department</option>
                         </select>
                     </div>
+
                     <div class="input-group input-group-sm">
                         <input type="text" class="form-control" id="memberSearch" placeholder="Search members...">
                         <div class="input-group-append">
@@ -35,7 +36,7 @@
                             <tr>
                                 <th>Name</th>
                                 <th>Email</th>
-                                <th>Fingerprint</th>
+                                <th>Avaya Number</th>
                                 <th>Role</th>
                                 <th>Department</th>
                                 <th>Actions</th>
@@ -44,7 +45,7 @@
                         <tbody>
                             {% if active_users %}
                                 {% for user in active_users %}
-                                <tr data-department="{{ user.department_id if user.department_id else 'none' }}">
+                                <tr data-department="{{ user.department_id if user.department_id else 'none' }}" data-department-name="{{ user.department.department_name if user.department else 'none' }}">
                                     <td>
                                         <div class="d-flex align-items-center">
                                             <div class="avatar me-3">
@@ -65,7 +66,7 @@
                                         </div>
                                     </td>
                                     <td>{{ user.email }}</td>
-                                    <td>{{ user.fingerprint_number if user.fingerprint_number else '-' }}</td>
+                                    <td>{{ user.avaya_number if user.avaya_number else '-' }}</td>
                                     <td>
                                         {% if user.role == 'admin' %}
                                         <span class="badge bg-primary">Admin</span>
@@ -91,7 +92,104 @@
                                 {% endfor %}
                             {% else %}
                                 <tr>
-                                    <td colspan="6" class="text-center">No active members found.</td>
+                                    <td colspan="8" class="text-center">No active members found.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4" style="display:none;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="card-title">Inactive Members</h3>
+                <div class="card-tools d-flex">
+                    <div class="input-group input-group-sm me-2" style="width: 200px;">
+                        <select id="departmentFilterInactive" class="form-select">
+                            <option value="all">All Departments</option>
+                            {% for dept in departments %}
+                            <option value="{{ dept.department_name }}">{{ dept.department_name }}</option>
+                            {% endfor %}
+                            <option value="none">No Department</option>
+                        </select>
+                    </div>
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" id="memberSearchInactive" placeholder="Search inactive members...">
+                        <div class="input-group-append">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="inactiveMembersTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Avaya Number</th>
+                                <th>Role</th>
+                                <th>Department</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if inactive_users %}
+                                {% for user in inactive_users %}
+                                <tr data-department="{{ user.department_id if user.department_id else 'none' }}" data-department-name="{{ user.department.department_name if user.department else 'none' }}">
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar me-3">
+                                                {% if user.profile_picture %}
+                                                <img src="{{ user.profile_picture }}" alt="Profile" class="avatar-img rounded-circle" style="width: 40px; height: 40px;">
+                                                {% else %}
+                                                <div class="avatar-initial rounded-circle bg-label-primary d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-size: 14px;">
+                                                    {{ user.first_name[0] }}{{ user.last_name[0] }}
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold">{{ user.first_name }} {{ user.last_name }}</div>
+                                                {% if user.managed_department %}
+                                                <small class="text-muted">Manager of {{ user.managed_department[0].department_name }}</small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ user.email }}</td>
+                                    <td>{{ user.avaya_number if user.avaya_number else '-' }}</td>
+                                    <td>
+                                        {% if user.role == 'admin' %}
+                                        <span class="badge bg-primary">Admin</span>
+                                        {% elif user.role == 'director' %}
+                                        <span class="badge bg-info">Director</span>
+                                        {% elif user.role == 'manager' %}
+                                        <span class="badge bg-success">Manager</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Employee</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if user.department %}
+                                        <span class="badge bg-light text-dark">{{ user.department.department_name }}</span>
+                                        {% else %}
+                                        <small class="text-muted">No Department</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="mailto:{{ user.email }}" class="btn btn-sm btn-icon btn-light" title="Email"><i class="fas fa-envelope"></i></a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="8" class="text-center">No inactive members found.</td>
                                 </tr>
                             {% endif %}
                         </tbody>
@@ -108,30 +206,56 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Simple search functionality
         document.getElementById('memberSearch').addEventListener('input', function() {
-            filterMembers();
+            filterMembers('active');
         });
         
         // Department filter
         document.getElementById('departmentFilter').addEventListener('change', function() {
-            filterMembers();
+            filterMembers('active');
+        });
+
+        document.getElementById('memberSearchInactive').addEventListener('input', function() {
+            filterMembers('inactive');
         });
         
-        function filterMembers() {
-            const searchText = document.getElementById('memberSearch').value.toLowerCase();
-            const departmentFilter = document.getElementById('departmentFilter').value;
-            const tableRows = document.querySelectorAll('#membersTable tbody tr');
+        document.getElementById('departmentFilterInactive').addEventListener('change', function() {
+            filterMembers('inactive');
+        });
+
+        function filterMembers(type) {
+            let searchText, departmentFilter, tableRows;
+
+            if (type === 'active') {
+                searchText = document.getElementById('memberSearch').value.toLowerCase();
+                departmentFilter = document.getElementById('departmentFilter').value;
+                tableRows = document.querySelectorAll('#membersTable tbody tr');
+            } else if (type === 'inactive') {
+                searchText = document.getElementById('memberSearchInactive').value.toLowerCase();
+                departmentFilter = document.getElementById('departmentFilterInactive').value;
+                tableRows = document.querySelectorAll('#inactiveMembersTable tbody tr');
+            }
             
             tableRows.forEach(row => {
                 if (row.hasAttribute('data-department')) {
-                    const rowText = row.textContent.toLowerCase();
-                    const rowDepartment = row.getAttribute('data-department');
+                    const name = row.querySelector('td:nth-child(1) div:nth-child(2) div:nth-child(1)').textContent.toLowerCase();
+                    const email = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                    const fingerprint = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
+                    const employeeCode = row.querySelector('td:nth-child(4)').textContent.toLowerCase();
+                    const avayaNumber = row.querySelector('td:nth-child(5)').textContent.toLowerCase();
                     
-                    // Check if row matches both search text and department filter
-                    const matchesSearch = searchText === '' || rowText.includes(searchText);
+                    const rowDepartmentName = row.getAttribute('data-department-name').toLowerCase();
+                    
+                    const matchesSearch = searchText === '' || 
+                                          name.includes(searchText) || 
+                                          email.includes(searchText) || 
+                                          fingerprint.includes(searchText) ||
+                                          employeeCode.includes(searchText) ||
+                                          avayaNumber.includes(searchText);
+
                     const matchesDepartment = 
                         departmentFilter === 'all' || 
-                        (departmentFilter === 'none' && rowDepartment === 'none') || 
-                        rowDepartment === departmentFilter;
+                        (departmentFilter === 'none' && row.getAttribute('data-department') === 'none') || 
+                        (departmentFilter !== 'none' && departmentFilter !== 'all' && rowDepartmentName === departmentFilter.toLowerCase());
                     
                     if (matchesSearch && matchesDepartment) {
                         row.style.display = '';
@@ -141,6 +265,11 @@
                 }
             });
         }
+    });
+
+    // Call filterMembers on page load to apply initial filter
+    document.addEventListener('DOMContentLoaded', function() {
+        filterMembers('active');
     });
 </script>
 {% endblock %}

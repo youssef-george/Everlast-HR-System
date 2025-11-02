@@ -123,6 +123,19 @@
                                 </div>
                             {% endif %}
                         </div>
+
+                        <!-- Joining Date Field -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.joining_date.id }}" class="form-label">Joining Date</label>
+                            {{ form.joining_date(class="form-control", type="date") }}
+                            {% if form.joining_date.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.joining_date.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
                     </div>
                     
                     <!-- Submit Button -->

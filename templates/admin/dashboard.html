@@ -1,0 +1,48 @@
+<!-- Add this in the appropriate section of your admin dashboard --><div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Attendance Management</h5>
+    </div>
+    <div class="card-body">
+        <button id="syncButton" class="btn btn-primary" onclick="triggerSync()">
+            <i class="fas fa-sync-alt"></i> Sync Attendance Now
+        </button>
+        <div id="syncStatus" class="mt-2"></div>
+    </div>
+</div>
+
+<script>
+function triggerSync() {
+    const button = document.getElementById('syncButton');
+    const status = document.getElementById('syncStatus');
+    
+    // Disable button and show loading state
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
+    status.innerHTML = '';
+    
+    // Make the API call
+    fetch('/attendance/manual-sync', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            status.innerHTML = '<div class="alert alert-success">✅ ' + data.message + '</div>';
+        } else {
+            status.innerHTML = '<div class="alert alert-danger">❌ ' + data.message + '</div>';
+        }
+    })
+    .catch(error => {
+        status.innerHTML = '<div class="alert alert-danger">❌ Error: ' + error.message + '</div>';
+    })
+    .finally(() => {
+        // Reset button state
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-sync-alt"></i> Sync Attendance Now';
+    });
+}
+</script>

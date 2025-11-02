@@ -2,8 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from datetime import datetime, date
 from forms import LeaveRequestForm, ApprovalForm, AdminLeaveRequestForm
-from models import LeaveRequest, User
-from app import db
+from models import db, LeaveRequest, User
 from helpers import role_required, create_notification, get_user_managers, get_employees_for_manager
 
 leave_bp = Blueprint('leave', __name__, url_prefix='/leave')
@@ -19,44 +18,89 @@ def index():
     
     if user_role == 'employee':
         # Employees see only their own leave requests
-        leave_requests = LeaveRequest.query.filter_by(user_id=current_user.id).order_by(LeaveRequest.created_at.desc()).all()
+        leave_requests = LeaveRequest.query.filter_by(
+            user_id=current_user.id
+        ).order_by(LeaveRequest.created_at.desc()).all()
     
     elif user_role == 'manager':
         if view_type == 'my':
             # Show only the manager's own requests
             page_title = 'My Leave Requests'
-            leave_requests = LeaveRequest.query.filter_by(user_id=current_user.id).order_by(LeaveRequest.created_at.desc()).all()
+            leave_requests = LeaveRequest.query.filter_by(
+                user_id=current_user.id
+            ).order_by(LeaveRequest.created_at.desc()).all()
         else:
             # Show team requests (default view for managers)
             page_title = 'Team Leave Requests'
-            employees = get_employees_for_manager(current_user.id)
-            employee_ids = [emp.id for emp in employees]
-            
-            if employee_ids:
-                leave_requests = LeaveRequest.query.filter(
-                    LeaveRequest.user_id.in_(employee_ids)
+            # Get employees from all departments managed by this manager
+            managed_dept_ids = [dept.id for dept in current_user.managed_department]
+            if managed_dept_ids:
+                leave_requests = LeaveRequest.query.join(User).filter(
+                    User.department_id.in_(managed_dept_ids),
+                    LeaveRequest.user_id != current_user.id  # Exclude manager's own requests
                 ).order_by(LeaveRequest.created_at.desc()).all()
     
     elif user_role == 'admin':
-        # Admins see all leave requests
-        if current_user.managed_department:
-            # If admin is assigned to specific departments, show only requests from those departments
-            admin_dept_ids = [dept.id for dept in current_user.managed_department]
-            leave_requests = LeaveRequest.query.join(User).filter(
-                User.department_id.in_(admin_dept_ids)
+        if view_type == 'my':
+            page_title = 'My Leave Requests'
+            leave_requests = LeaveRequest.query.filter_by(
+                user_id=current_user.id
             ).order_by(LeaveRequest.created_at.desc()).all()
-        else:
-            # If admin is not assigned to specific departments, show all requests
+        elif view_type == 'all':
+            page_title = 'All Leave Requests'
+            # Show all requests if explicitly requested
             leave_requests = LeaveRequest.query.order_by(LeaveRequest.created_at.desc()).all()
+        else:
+            page_title = 'Leave Requests for Approval'
+            # Get requests that need admin approval based on department assignments
+            if current_user.managed_department:
+                admin_dept_ids = [dept.id for dept in current_user.managed_department]
+                leave_requests = LeaveRequest.query.join(User).filter(
+                    LeaveRequest.manager_status == 'approved',
+                    LeaveRequest.admin_status == 'pending',
+                    User.department_id.in_(admin_dept_ids)
+                ).order_by(LeaveRequest.created_at.desc()).all()
+            else:
+                # If not assigned to specific departments, show all pending admin approvals
+                leave_requests = LeaveRequest.query.filter_by(
+                    manager_status='approved',
+                    admin_status='pending'
+                ).order_by(LeaveRequest.created_at.desc()).all()
+    
+    elif user_role == 'general_manager':
+        if view_type == 'my':
+            page_title = 'My Leave Requests'
+            leave_requests = LeaveRequest.query.filter_by(
+                user_id=current_user.id
+            ).order_by(LeaveRequest.created_at.desc()).all()
+        elif view_type == 'all':
+            page_title = 'All Leave Requests'
+            leave_requests = LeaveRequest.query.order_by(LeaveRequest.created_at.desc()).all()
+        else:
+            page_title = 'Leave Requests for Final Approval'
+            leave_requests = LeaveRequest.query.filter_by(
+                manager_status='approved',
+                admin_status='approved',
+                general_manager_status='pending'
+            ).order_by(LeaveRequest.created_at.desc()).all()
     
     elif user_role == 'director':
         # Directors see all leave requests
         leave_requests = LeaveRequest.query.order_by(LeaveRequest.created_at.desc()).all()
     
+    # Add pagination
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    leave_requests_paginated = leave_requests[(page-1)*per_page:page*per_page]
+    total_pages = (len(leave_requests) + per_page - 1) // per_page
+    
     return render_template('leave/index.html', 
-                           title=page_title, 
-                           leave_requests=leave_requests,
-                           view_type=view_type)
+                         title=page_title, 
+                         leave_requests=leave_requests_paginated,
+                         view_type=view_type,
+                         total_pages=total_pages,
+                         current_page=page,
+                         total_records=len(leave_requests))
 
 @leave_bp.route('/create', methods=['GET', 'POST'])
 @login_required
@@ -115,135 +159,86 @@ def view(id):
     can_approve = False
     approval_form = None
     
-    # SPECIAL CASE: If the requester is a manager, they should bypass manager approval
-    # and only require admin approval (implementing the new special workflow)
-    requester_is_manager = requester.role == 'manager'
-    
     if user_role == 'manager':
-        # First, check if current user is the manager of the requester's department
-        if requester.department and requester.department.manager_id == current_user.id:
-            if leave_request.status == 'pending' and not leave_request.manager_approved:
-                can_approve = True
-                approval_form = ApprovalForm()
-        # If not explicitly set as department manager, check if they're in the same dept with manager role
-        elif requester.department_id and requester.department_id == current_user.department_id:
-            if leave_request.status == 'pending' and not leave_request.manager_approved:
-                can_approve = True
-                approval_form = ApprovalForm()
+        # Manager can approve if they are the department manager and request is pending manager approval
+        if (requester.department and requester.department.manager_id == current_user.id and 
+            leave_request.manager_status == 'pending'):
+            can_approve = True
+            approval_form = ApprovalForm()
     
     elif user_role == 'admin':
-        # Get the department of the requester
-        requester_department = requester.department
-        
-        # If requester is a manager, admins can approve directly even without manager approval
-        if requester_is_manager:
-            if leave_request.status == 'pending' and not leave_request.admin_approved:
-                # If the admin is specifically assigned to handle a department
-                if current_user.managed_department:
-                    # Check if the requester is from a department this admin manages
-                    admin_managed_departments = [dept.id for dept in current_user.managed_department]
-                    if requester_department and requester_department.id in admin_managed_departments:
-                        can_approve = True
-                        approval_form = ApprovalForm()
-                else:
-                    # If admin is not assigned to any specific department, they can approve any department
-                    can_approve = True
-                    approval_form = ApprovalForm()
-        else:
-            # Regular approval flow for non-manager employees
-            # Admins can approve if status is pending, manager has approved, and request is from their department
-            if leave_request.status == 'pending' and leave_request.manager_approved and not leave_request.admin_approved:
-                # If the admin is specifically assigned to handle a department (through managed_department relationship)
-                if current_user.managed_department:
-                    # Check if the requester is from a department this admin manages
-                    admin_managed_departments = [dept.id for dept in current_user.managed_department]
-                    if requester_department and requester_department.id in admin_managed_departments:
-                        can_approve = True
-                        approval_form = ApprovalForm()
-                else:
-                    # If admin is not assigned to any specific department, they can approve any department
-                    can_approve = True
-                    approval_form = ApprovalForm()
+        # Admin can approve if request has manager approval and is pending admin approval
+        if (leave_request.manager_status == 'approved' and 
+            leave_request.admin_status == 'pending'):
+            can_approve = True
+            approval_form = ApprovalForm()
+    
+    elif user_role == 'general_manager':
+        # General Manager can approve if request has both manager and admin approval
+        if (leave_request.manager_status == 'approved' and 
+            leave_request.admin_status == 'approved' and 
+            leave_request.general_manager_status == 'pending'):
+            can_approve = True
+            approval_form = ApprovalForm()
     
     # Handle approval/rejection submission
     if approval_form and approval_form.validate_on_submit():
-        if approval_form.status.data == 'approved':
-            if user_role == 'manager':
-                leave_request.manager_approved = True
-                
-                # Notify relevant admins about the request
-                all_admins = get_user_managers(requester)['admin_managers']
-                department_specific_admins = []
-                
-                # First, try to identify department-specific admins
-                if requester.department:
-                    for admin in all_admins:
-                        if admin.managed_department:
-                            admin_managed_depts = [dept.id for dept in admin.managed_department]
-                            if requester.department.id in admin_managed_depts:
-                                department_specific_admins.append(admin)
-                
-                # If no department-specific admins found, notify all admins
-                admins_to_notify = department_specific_admins if department_specific_admins else all_admins
-                
-                for admin in admins_to_notify:
+        approval_status = approval_form.status.data
+        comment = approval_form.comment.data
+        
+        if user_role == 'manager':
+            leave_request.manager_status = approval_status
+            leave_request.manager_comment = comment
+            leave_request.manager_updated_at = datetime.utcnow()
+            
+            if approval_status == 'approved':
+                # Notify admins
+                admins = User.query.filter_by(role='admin').all()
+                for admin in admins:
                     create_notification(
                         user_id=admin.id,
-                        message=f"Leave request from {requester.get_full_name()} ({requester.department.department_name if requester.department else 'No Department'}) approved by manager and needs your review",
-                        notification_type='approval',
+                        message=f"Leave request from {requester.get_full_name()} needs admin review",
+                        notification_type='approval_needed',
                         reference_id=leave_request.id,
                         reference_type='leave'
                     )
-                
-                flash('Leave request has been approved as manager.', 'success')
-            
-            elif user_role == 'admin':
-                leave_request.admin_approved = True
-                leave_request.status = 'approved'
-                
-                # If requester is a manager, auto-approve the manager part too for completeness
-                if requester_is_manager:
-                    leave_request.manager_approved = True
-                
-                # Notify the employee
-                create_notification(
-                    user_id=requester.id,
-                    message=f"Your leave request from {leave_request.start_date} to {leave_request.end_date} has been approved",
-                    notification_type='approval',
-                    reference_id=leave_request.id,
-                    reference_type='leave'
-                )
-                
-                flash('Leave request has been approved.', 'success')
         
-        elif approval_form.status.data == 'rejected':
-            leave_request.status = 'rejected'
+        elif user_role == 'admin':
+            leave_request.admin_status = approval_status
+            leave_request.admin_comment = comment
+            leave_request.admin_updated_at = datetime.utcnow()
             
-            # Notify the employee
-            create_notification(
-                user_id=requester.id,
-                message=f"Your leave request from {leave_request.start_date} to {leave_request.end_date} has been rejected",
-                notification_type='rejection',
-                reference_id=leave_request.id,
-                reference_type='leave'
-            )
-            
-            flash('Leave request has been rejected.', 'warning')
+            if approval_status == 'approved':
+                # Notify general managers
+                general_managers = User.query.filter_by(role='general_manager').all()
+                for gm in general_managers:
+                    create_notification(
+                        user_id=gm.id,
+                        message=f"Leave request from {requester.get_full_name()} needs final approval",
+                        notification_type='approval_needed',
+                        reference_id=leave_request.id,
+                        reference_type='leave'
+                    )
         
-        # Add comment if provided
-        if approval_form.comment.data:
-            leave_request.comment = approval_form.comment.data
-            
-            # Notify the employee about the comment
-            create_notification(
-                user_id=requester.id,
-                message=f"New comment on your leave request: {approval_form.comment.data[:50]}...",
-                notification_type='comment',
-                reference_id=leave_request.id,
-                reference_type='leave'
-            )
+        elif user_role == 'general_manager':
+            leave_request.general_manager_status = approval_status
+            leave_request.general_manager_comment = comment
+            leave_request.general_manager_updated_at = datetime.utcnow()
+        
+        # Update overall status
+        leave_request.update_overall_status()
+        
+        # Notify the requester
+        create_notification(
+            user_id=requester.id,
+            message=f"Your leave request has been {approval_status} by {user_role.replace('_', ' ').title()}",
+            notification_type='status_update',
+            reference_id=leave_request.id,
+            reference_type='leave'
+        )
         
         db.session.commit()
+        flash(f'Leave request has been {approval_status}.', 'success')
         return redirect(url_for('leave.index'))
     
     return render_template('leave/view.html',
@@ -283,27 +278,32 @@ def edit(id):
     return render_template('leave/create.html',
                           title='Edit Leave Request',
                           form=form,
-                          is_edit=True)
+                          is_edit=True,
+                          leave_request=leave_request)
 
 @leave_bp.route('/delete/<int:id>', methods=['POST'])
 @login_required
 def delete(id):
-    """Delete a leave request (only if it's still pending and belongs to current user)"""
+    """Delete a leave request (only if it's still pending and belongs to current user or if current user is admin)"""
     leave_request = LeaveRequest.query.get_or_404(id)
     
     # Check if user can delete this request
-    if leave_request.user_id != current_user.id:
+    if current_user.role == 'admin':
+        # Admins can delete any pending leave request
+        if leave_request.status != 'pending':
+            flash('Admins can only delete pending leave requests.', 'danger')
+            return redirect(url_for('leave.index'))
+    elif leave_request.user_id != current_user.id:
         flash('You can only delete your own leave requests.', 'danger')
         return redirect(url_for('leave.index'))
     
     if leave_request.status != 'pending':
         flash('You can only delete pending leave requests.', 'danger')
         return redirect(url_for('leave.index'))
-    
+
     db.session.delete(leave_request)
     db.session.commit()
-    
-    flash('Your leave request has been deleted successfully!', 'success')
+    flash('Leave request deleted successfully!', 'success')
     return redirect(url_for('leave.index'))
 
 

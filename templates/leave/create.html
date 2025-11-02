@@ -42,6 +42,12 @@
                             {% endif %}
                         </div>
                     </div>
+
+                    <!-- Leave Days Calculation -->
+                    <div class="mb-3">
+                        <label class="form-label">Number of Leave Days</label>
+                        <input type="text" class="form-control" id="leave_days" readonly>
+                    </div>
                     
                     <!-- Reason Field -->
                     <div class="mb-4">
@@ -89,22 +95,34 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Set minimum date for end date based on start date
         const startDateInput = document.getElementById('start_date');
         const endDateInput = document.getElementById('end_date');
+        const leaveDaysInput = document.getElementById('leave_days');
         
+        function calculateDays() {
+            if (startDateInput.value && endDateInput.value) {
+                const start = new Date(startDateInput.value);
+                const end = new Date(endDateInput.value);
+                const days = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+                leaveDaysInput.value = days + ' day' + (days > 1 ? 's' : '');
+            } else {
+                leaveDaysInput.value = '';
+            }
+        }
+
         if (startDateInput && endDateInput) {
             startDateInput.addEventListener('change', function() {
                 endDateInput.min = this.value;
                 if (endDateInput.value && endDateInput.value < this.value) {
                     endDateInput.value = this.value;
                 }
+                calculateDays();
             });
+
+            endDateInput.addEventListener('change', calculateDays);
             
-            // Initial setup if edit mode with existing values
-            if (startDateInput.value) {
-                endDateInput.min = startDateInput.value;
-            }
+            // Calculate initial value if dates are pre-filled (e.g., in edit mode)
+            calculateDays();
         }
     });
 </script>

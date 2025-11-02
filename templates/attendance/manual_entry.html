@@ -1,0 +1,147 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col">
+                <h1 class="m-0">Manual Attendance Entry</h1>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="content">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Manual Entry Form</h3>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('attendance.manual_entry') }}">
+                            <div class="form-group">
+                                <label for="user_id">Employee</label>
+                                <select class="form-control" id="user_id" name="user_id" required>
+                                    <option value="">Select Employee</option>
+                                    {% for user in users %}
+                                    <option value="{{ user.id }}">{{ user.get_full_name() }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="entry_type">Entry Type</label>
+                                <select class="form-control" id="entry_type" name="entry_type" required>
+                                    <option value="check-in">Check In</option>
+                                    <option value="check-out">Check Out</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="timestamp">Date & Time</label>
+                                <input type="datetime-local" class="form-control" id="timestamp" name="timestamp" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="reason">Reason for Manual Entry</label>
+                                <textarea class="form-control" id="reason" name="reason" rows="3" required
+                                          placeholder="Explain why manual entry is needed"></textarea>
+                            </div>
+                            
+                            <input type="hidden" id="failure_id" name="failure_id">
+                            
+                            <button type="submit" class="btn btn-primary">Submit Entry</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Unresolved Fingerprint Failures</h3>
+                    </div>
+                    <div class="card-body">
+                        {% if unresolved_failures %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Employee ID</th>
+                                        <th>Error Type</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for failure in unresolved_failures %}
+                                    <tr>
+                                        <td>{{ failure.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                        <td>{{ failure.employee_id or 'Unknown' }}</td>
+                                        <td>
+                                            <span class="badge bg-{{ 'danger' if failure.error_type == 'device_error' 
+                                                                else 'warning' if failure.error_type == 'unread'
+                                                                else 'info' }}">
+                                                {{ failure.error_type }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-primary" 
+                                                    onclick="resolveFailure('{{ failure.id }}', '{{ failure.employee_id }}')">
+                                                Resolve
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            No unresolved fingerprint failures.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function resolveFailure(failureId, employeeId) {
+    // Set the failure ID in the form
+    document.getElementById('failure_id').value = failureId;
+    
+    // If we have an employee ID, select it in the dropdown
+    if (employeeId) {
+        const userSelect = document.getElementById('user_id');
+        for (let option of userSelect.options) {
+            if (option.getAttribute('data-fingerprint') === employeeId) {
+                option.selected = true;
+                break;
+            }
+        }
+    }
+    
+    // Set current time as default
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('timestamp').value = now.toISOString().slice(0, 16);
+    
+    // Focus on the entry type dropdown
+    document.getElementById('entry_type').focus();
+}
+
+// Set default timestamp when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('timestamp').value = now.toISOString().slice(0, 16);
+});
+</script>
+{% endblock %} 

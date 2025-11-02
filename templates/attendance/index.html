@@ -1,0 +1,574 @@
+{% extends "layout.html" %}
+
+{% block extra_css %}
+<style>
+    .sync-button {
+        position: relative;
+    }
+    .sync-spinner {
+        display: none;
+        margin-left: 8px;
+    }
+    .syncing .sync-spinner {
+        display: inline-block;
+    }
+    .check-in {
+        color: #28a745;
+    }
+    .check-out {
+        color: #dc3545;
+    }
+    .unknown {
+        color: #6c757d;
+    }
+    .date-range-form {
+        margin-bottom: 1rem;
+    }
+    .badge.bg-info-light {
+        background-color: #0dcaf0;
+        color: #fff;
+    }
+    .badge.bg-blue {
+        background-color: #007bff;
+        color: #fff;
+    }
+    .sync-status {
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+    .latest-records {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+    .latest-record {
+        padding: 0.5rem;
+        border-bottom: 1px solid #eee;
+    }
+    .latest-record:last-child {
+        border-bottom: none;
+    }
+    .auto-sync-toggle {
+        margin-right: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Attendance Management</h5>
+            </div>
+                <div class="card-body">
+                    <!-- Sync Controls -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-subtitle mb-3">Device Status</h6>
+                                    <div id="deviceStatus" class="mb-3">
+                                        <div class="d-flex align-items-center">
+                                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                                            Checking device status...
+            </div>
+        </div>
+                                    <button id="syncButton" class="btn btn-primary" onclick="triggerSync()">
+                                        <i class="fas fa-sync-alt"></i> Sync Attendance Now
+                                    </button>
+                                    <a href="{{ url_for('attendance.device_settings') }}" class="btn btn-outline-primary ms-2">
+                                        <i class="fas fa-cog"></i> Device Settings
+                                    </a>
+                                    <div id="syncStatus" class="mt-2"></div>
+                                    <div id="nextSync" class="text-muted mt-2">
+                                        <small>Next automatic sync in: <span id="nextSyncTime">60</span> seconds</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+                    <!-- Date Range Filter -->
+
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <form class="date-range-form" method="get">
+                                <div class="row g-2">
+                                    <div class="col-auto">
+                                        <input type="date" class="form-control" name="start_date" value="{{ request.args.get('start_date', '') }}">
+                                    </div>
+                                    <div class="col-auto">
+                                        <input type="date" class="form-control" name="end_date" value="{{ request.args.get('end_date', '') }}">
+                                    </div>
+                                    
+                                    {% if is_admin %}
+                                    <div class="col-auto">
+                                        <select class="form-select" name="employee_id">
+                                            <option value="">All Employees</option>
+                                            {% for employee in employees %}
+                                            <option value="{{ employee.id }}" {% if request.args.get('employee_id')|int == employee.id %}selected{% endif %}>
+                                                {{ employee.get_full_name() }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <div class="col-auto">
+                                        <button type="submit" class="btn btn-primary">View Records</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    <!-- Absent Days Summary -->
+                    {% if user_absent_days %}
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Absent Days Summary</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Employee</th>
+                                                    <th>Absent Dates</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for employee_name, absent_dates in user_absent_days.items() %}
+                                                <tr>
+                                                    <td>{{ user_absent_days[employee_name]['user'].get_full_name() }}</td>
+                                                    <td>
+                                                         {% for date in absent_dates.absent_dates %}
+                                                         <span class="badge bg-danger me-1">{{ date }}</span>
+                                                         {% endfor %}
+                                                     </td>
+                                                </tr>
+                                                {% else %}
+                                                <tr>
+                                                    <td colspan="2">No absent days recorded for the selected period.</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if request.args.get('employee_id') and employee_data and attendance_summary %}
+                    <!-- Employee Summary -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Employee Summary: {{ employee_data.name }}</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <p><strong>Email:</strong> {{ employee_data.email }}</p>
+                                            <p><strong>Fingerprint ID:</strong> {{ employee_data.fingerprint_number or 'Not Assigned' }}</p>
+                                            <p><strong>Department:</strong> {{ employee_data.department }}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <h6 class="mb-3">Attendance Summary</h6>
+                                    <div class="row">
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h3>{{ attendance_summary.total_days }}</h3>
+                                                    <p class="mb-0">Total Days</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h3>{{ attendance_summary.present_days }}</h3>
+                                                    <p class="mb-0">Present Days</p>
+                    
+
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h3>{{ attendance_summary.absent_days }}</h3>
+                                                    <p class="mb-0">Absent Days</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h3>{{ attendance_summary.day_offs }}</h3>
+                                                    <p class="mb-0">Day-offs</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h3>{{ attendance_summary.leave_days }}</h3>
+                                                    <p class="mb-0">Leave Days</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h3>{{ attendance_summary.effective_days }}</h3>
+                                                    <p class="mb-0">Effective Days</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h3>{{ attendance_summary.extra_hours }}</h3>
+                                                    <p class="mb-0">Extra Hours</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h3>{{ attendance_summary.absent_days }}</h3>
+                                                    <p class="mb-0">Absent Days</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h3>{{ attendance_summary.day_offs }}</h3>
+                                                    <p class="mb-0">Day-offs</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h3>{{ attendance_summary.leave_days }}</h3>
+                                                    <p class="mb-0">Leave Days</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h3>{{ attendance_summary.effective_days }}</h3>
+                                                    <p class="mb-0">Effective Days</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h3>{{ attendance_summary.extra_hours }}</h3>
+                                                    <p class="mb-0">Extra Hours</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h3>{{ attendance_summary.absent_days }}</h3>
+                                                    <p class="mb-0">Absent Days</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h3>{{ attendance_summary.day_offs }}</h3>
+                                                    <p class="mb-0">Day-offs</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h3>{{ attendance_summary.leave_days }}</h3>
+                                                    <p class="mb-0">Leave Days</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h3>{{ attendance_summary.effective_days }}</h3>
+                                                    <p class="mb-0">Effective Days</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h3>{{ attendance_summary.extra_hours }}</h3>
+                                                    <p class="mb-0">Extra Hours</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card bg-light">
+                                                <div class="card-body text-center">
+                                                    <h3>{{ attendance_summary.total_days - attendance_summary.present_days - attendance_summary.absent_days - attendance_summary.paid_leave - attendance_summary.unpaid_leave }}</h3>
+                                                    <p class="mb-0">Day Off</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Today's Attendance -->
+                    {% if not request.args.get('start_date') or (request.args.get('start_date') == request.args.get('end_date') and request.args.get('start_date') == today.strftime('%Y-%m-%d')) %}
+                    <h6 class="card-subtitle mb-3">Today's Attendance</h6>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Fingerprint ID</th>
+                                <th>Employee</th>
+                                <th>Check In</th>
+                                <th>Check Out</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                            <tbody>
+                                {% for user_id, data in daily_attendance.items() %}
+                            <tr>
+                                <td>
+                                    {% if data['user'].fingerprint_number %}
+                                        <span class="badge bg-info">{{ data['user'].fingerprint_number }}</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Not Assigned</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ data['user'].get_full_name() }}</td>
+                                <td>
+                                        {% if data['check_in'] %}
+                                        {{ data['check_in'].timestamp.strftime('%I:%M %p') }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                        {% if data['check_out'] %}
+                                        {{ data['check_out'].timestamp.strftime('%I:%M %p') }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                    <td>{{ data['duration'] or '-' }}</td>
+                                <td>
+                                        {% if data['status'] == 'present' %}
+                                        <span class="badge bg-success">Present</span>
+                                        {% elif data['status'] == 'in_office' %}
+                                        <span class="badge bg-info">In Office</span>
+                                        {% elif data['status'] == 'Absent' %}
+                                        <span class="badge bg-danger">Absent</span>
+                                        {% elif data['status'] == 'DayOff' %}
+                                        <span class="badge bg-secondary">Day Off</span>
+                                        {% elif data['status'] == 'DayOff / Present' %}
+                                        <span class="badge bg-primary">Day Off / Present</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    </div>
+                    {% endif %}
+
+                    <!-- Historical Data -->
+                {% if historical_attendance %}
+                    <h6 class="card-subtitle mb-3 mt-4">Historical Attendance</h6>
+                    {% for date, attendance in historical_attendance.items() %}
+                    <h6 class="mt-3">{{ date }}</h6>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Fingerprint ID</th>
+                                <th>Employee</th>
+                                <th>Check In</th>
+                                <th>Check Out</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                                {% for user_id, data in attendance.items() %}
+                                <tr>
+                                    <td>
+                                        {% if data['user'].fingerprint_number %}
+                                            <span class="badge bg-info">{{ data['user'].fingerprint_number }}</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Not Assigned</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ data['user'].get_full_name() }}</td>
+                                    <td>
+                                        {% if data['check_in'] %}
+                                        {{ data['check_in'].timestamp.strftime('%I:%M %p') }}
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if data['check_out'] %}
+                                        {{ data['check_out'].timestamp.strftime('%I:%M %p') }}
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ data['duration'] or '-' }}</td>
+                                    <td>
+                                        {% if data['status'] == 'present' %}
+                                            <span class="badge bg-success">Present</span>
+                                        {% elif data['status'] == 'in_office' %}
+                                            <span class="badge bg-info">In Office</span>
+                                        {% elif data['status'] == 'Absent' %}
+                                            <span class="badge bg-danger">Absent</span>
+                                        {% elif data['status'] == 'DayOff' %}
+                                            <span class="badge bg-secondary">Day Off</span>
+                                        {% elif data['status'] == 'DayOff / Present' %}
+                                            <span class="badge bg-primary">Day Off / Present</span>
+                                        {% elif data['status'] == 'On Leave' or data['status'] == 'Leave Request' %}
+                                            <span class="badge bg-warning">Leave Request</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                    {% endfor %}
+                {% else %}
+                <div class="alert alert-info mt-3">
+                    Select a date range and click "View Records" to see historical attendance data.
+                </div>
+                {% endif %}
+
+                
+
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const syncButton = document.getElementById('syncButton');
+const deviceStatus = document.getElementById('deviceStatus');
+
+function updateSyncStatus(syncing) {
+    if (syncButton) {
+        syncButton.disabled = syncing;
+        if (syncing) {
+            syncButton.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Syncing...';
+        } else {
+            syncButton.innerHTML = '<i class="fas fa-sync-alt"></i> Sync Attendance Now';
+        }
+    }
+}
+
+async function triggerSync() {
+    try {
+        updateSyncStatus(true);
+        
+        // Get CSRF token from meta tag
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        
+        const response = await fetch('/attendance/manual-sync', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            credentials: 'same-origin'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            // Show success message
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show';
+            alertDiv.innerHTML = `
+                <strong>Success!</strong> ${data.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            deviceStatus.parentNode.insertBefore(alertDiv, deviceStatus);
+            
+            // Refresh the page after 2 seconds
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        } else {
+            throw new Error(data.message || 'Sync failed');
+        }
+    } catch (error) {
+        // Show error message
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+        alertDiv.innerHTML = `
+            <strong>Error!</strong> ${error.message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        deviceStatus.parentNode.insertBefore(alertDiv, deviceStatus);
+    } finally {
+        updateSyncStatus(false);
+    }
+}
+
+// Auto-refresh status every 30 seconds
+setInterval(() => {
+    fetch('/attendance/realtime-status')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                updateDeviceStatus(data);
+            }
+        })
+        .catch(error => console.error('Error updating status:', error));
+}, 30000);
+
+function updateDeviceStatus(data) {
+    if (deviceStatus) {
+        const lastSync = data.timestamp ? new Date(data.timestamp) : null;
+        const status = `
+            <div class="d-flex align-items-center mb-2">
+                <i class="fas fa-check-circle text-success me-2"></i>
+                <span>Device Connected</span>
+            </div>
+            <small class="text-muted">
+                Last sync: ${lastSync ? lastSync.toLocaleString() : 'Never'}
+            </small>
+        `;
+        deviceStatus.innerHTML = status;
+    }
+}
+</script>
+{% endblock %}

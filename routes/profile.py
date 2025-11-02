@@ -1,9 +1,10 @@
-from flask import Blueprint, render_template, redirect, url_for, flash
+from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from forms import ProfileEditForm
-from models import User
-from app import db
+from models import db, User
+from datetime import datetime, date, timedelta
+import calendar
 
 profile_bp = Blueprint('profile', __name__, url_prefix='/profile')
 
@@ -11,9 +12,15 @@ profile_bp = Blueprint('profile', __name__, url_prefix='/profile')
 @login_required
 def index():
     """Show user profile"""
-    return render_template('profile/index.html', 
-                           title='My Profile', 
-                           user=current_user)
+    today = date.today()
+    previous_month = (today.replace(day=1) - timedelta(days=1))
+    previous_month_days = calendar.monthrange(previous_month.year, previous_month.month)[1]
+    
+    return render_template('profile/index.html',
+                          title='My Profile',
+                          today=today,
+                          previous_month_days=previous_month_days,
+                          timedelta=timedelta)
 
 @profile_bp.route('/edit', methods=['GET', 'POST'])
 @login_required

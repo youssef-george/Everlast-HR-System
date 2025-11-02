@@ -7,7 +7,7 @@
         {% if current_user.role == 'manager' %}
             <!-- Manager-specific view control -->
             <div class="btn-group me-3">
-                <a href="{{ url_for('permission.index', view='my') }}" class="btn btn-light {{ 'active' if view_type == 'my' else '' }}">
+                <a href="{{ url_for('permission.index') }}" class="menu-link px-2">
                     <i class="fas fa-user me-1"></i> My Requests
                 </a>
                 <a href="{{ url_for('permission.index', view='team') }}" class="btn btn-light {{ 'active' if view_type == 'team' or not view_type else '' }}">

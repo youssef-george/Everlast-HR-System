@@ -1,0 +1,186 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col">
+                <h1 class="m-0">Fingerprint Failure Analysis</h1>
+            </div>
+            <div class="col-auto">
+                <a href="{{ url_for('attendance.manual_entry') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Manual Entry
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="content">
+    <div class="container-fluid">
+        <!-- Date Range Filter -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="GET" class="row align-items-end">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="start_date">Start Date</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" 
+                                   value="{{ start_date.strftime('%Y-%m-%d') if start_date else '' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="end_date">End Date</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date"
+                                   value="{{ end_date.strftime('%Y-%m-%d') if end_date else '' }}">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-primary">Apply Filter</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Statistics Summary -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3 class="card-title">Failure Statistics by Employee</h3>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Total Failures</th>
+                                <th>Unread</th>
+                                <th>No Match</th>
+                                <th>Device Error</th>
+                                <th>Resolved</th>
+                                <th>Manual Entries</th>
+                                <th>Resolution Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for employee_id, stat in stats.items() %}
+                            {% if employee_id in user_map %}
+                            <tr>
+                                <td>{{ user_map[employee_id].get_full_name() }}</td>
+                                <td>{{ stat['total_failures'] }}</td>
+                                <td>
+                                    {% if stat['unread'] > 0 %}
+                                    <span class="badge bg-warning">{{ stat['unread'] }}</span>
+                                    {% else %}
+                                    0
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if stat['no_match'] > 0 %}
+                                    <span class="badge bg-info">{{ stat['no_match'] }}</span>
+                                    {% else %}
+                                    0
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if stat['device_error'] > 0 %}
+                                    <span class="badge bg-danger">{{ stat['device_error'] }}</span>
+                                    {% else %}
+                                    0
+                                    {% endif %}
+                                </td>
+                                <td>{{ stat['resolved'] }}</td>
+                                <td>{{ stat['manual_entries'] }}</td>
+                                <td>
+                                    {% set resolution_rate = (stat['resolved'] / stat['total_failures'] * 100) if stat['total_failures'] > 0 else 0 %}
+                                    <div class="progress">
+                                        <div class="progress-bar bg-success" role="progressbar" 
+                                             style="width: {{ resolution_rate }}%"
+                                             aria-valuenow="{{ resolution_rate }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100">
+                                            {{ "%.1f"|format(resolution_rate) }}%
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Failure Logs -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Detailed Failure Logs</h3>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Employee</th>
+                                <th>Error Type</th>
+                                <th>Error Message</th>
+                                <th>Status</th>
+                                <th>Resolution</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for failure in failures %}
+                            <tr>
+                                <td>{{ failure.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                <td>
+                                    {% if failure.employee_id in user_map %}
+                                        {{ user_map[failure.employee_id].get_full_name() }}
+                                    {% else %}
+                                        Unknown (ID: {{ failure.employee_id or 'N/A' }})
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'danger' if failure.error_type == 'device_error' 
+                                                        else 'warning' if failure.error_type == 'unread'
+                                                        else 'info' }}">
+                                        {{ failure.error_type }}
+                                    </span>
+                                </td>
+                                <td>{{ failure.error_message }}</td>
+                                <td>
+                                    {% if failure.resolved %}
+                                        <span class="badge bg-success">Resolved</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Pending</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if failure.resolved %}
+                                        {% if failure.manual_entry %}
+                                            <span class="text-success">
+                                                <i class="fas fa-check"></i> Manual Entry
+                                            </span>
+                                        {% endif %}
+                                        {% if failure.resolution_note %}
+                                            <small class="text-muted d-block">{{ failure.resolution_note }}</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <a href="{{ url_for('attendance.manual_entry', failure_id=failure.id) }}" 
+                                           class="btn btn-sm btn-primary">
+                                            Resolve
+                                        </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

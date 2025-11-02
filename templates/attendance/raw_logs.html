@@ -1,0 +1,155 @@
+{% extends "layout.html" %}
+
+{% block extra_css %}
+<style>
+    .check-in { color: #28a745; }
+    .check-out { color: #dc3545; }
+    .unknown { color: #6c757d; }
+    .filter-form {
+        margin-bottom: 1.5rem;
+    }
+    .pagination-info {
+        margin: 1rem 0;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col">
+                <h1 class="m-0">Raw Attendance Logs</h1>
+            </div>
+            <div class="col-auto">
+                <a href="{{ url_for('attendance.index') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Summary
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="content">
+    <div class="container-fluid">
+        <div class="card">
+            <div class="card-body">
+                <!-- Filter Form -->
+                <form class="filter-form row" method="GET">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="user_id">Employee</label>
+                            <select class="form-control" id="user_id" name="user_id">
+                                <option value="">All Employees</option>
+                                {% for user in users %}
+                                <option value="{{ user.id }}" {% if user.id == selected_user_id %}selected{% endif %}>
+                                    {{ user.get_full_name() }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="start_date">Start Date</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" 
+                                   value="{{ start_date }}">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="end_date">End Date</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" 
+                                   value="{{ end_date }}">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                            <button type="submit" class="btn btn-primary d-block w-100">
+                                <i class="fas fa-filter"></i> Apply Filters
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Logs Table -->
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Fingerprint ID</th>
+                                <th>Employee</th>
+                                <th>Department</th>
+                                <th>Timestamp</th>
+                                <th>Type</th>
+                                <th>Device IP</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in logs.items %}
+                            <tr>
+                                <td>
+                                    {% if log.user.fingerprint_number %}
+                                        <span class="badge bg-info">{{ log.user.fingerprint_number }}</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Not Assigned</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ log.user.get_full_name() }}</td>
+                                <td>{{ log.user.department.department_name if log.user.department else '-' }}</td>
+                                <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                <td>
+                                    <span class="{{ log.scan_type }}">
+                                        {% if log.scan_type == 'check-in' %}
+                                            <i class="fas fa-sign-in-alt"></i>
+                                        {% elif log.scan_type == 'check-out' %}
+                                            <i class="fas fa-sign-out-alt"></i>
+                                        {% else %}
+                                            <i class="fas fa-question-circle"></i>
+                                        {% endif %}
+                                        {{ log.scan_type|title }}
+                                    </span>
+                                </td>
+                                <td>{{ log.device_ip }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center">No attendance logs found</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if logs.pages > 1 %}
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="pagination-info">
+                        Showing {{ logs.items|length }} of {{ logs.total }} records
+                    </div>
+                    <nav>
+                        <ul class="pagination">
+                            {% for page_num in logs.iter_pages(left_edge=2, left_current=2, right_current=3, right_edge=2) %}
+                            {% if page_num %}
+                                <li class="page-item {% if page_num == logs.page %}active{% endif %}">
+                                    <a class="page-link" href="{{ url_for('attendance.raw_logs', page=page_num, user_id=selected_user_id, start_date=start_date, end_date=end_date) }}">
+                                        {{ page_num }}
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            {% endif %}
+                            {% endfor %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
