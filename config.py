@@ -65,10 +65,14 @@ class Config:
     # Server configuration
     HOST = os.environ.get('HOST', '127.0.0.1')
     
-    # Device configuration for attendance data fetching
+    # Device configuration for attendance data fetching (Legacy - now handled by sync agent)
     DEVICE_IP = os.environ.get('DEVICE_IP', '192.168.11.253')
     DEVICE_PORT = int(os.environ.get('DEVICE_PORT', '4370'))
     DEVICE_URL = os.environ.get('DEVICE_URL', 'http://192.168.11.253/')
+    
+    # Sync Agent Configuration
+    SYNC_SECRET = os.environ.get('SYNC_SECRET', 'your-sync-secret-key')
+    ENABLE_DIRECT_DEVICE_SYNC = os.environ.get('ENABLE_DIRECT_DEVICE_SYNC', 'false').lower() == 'true'
     
     @staticmethod
     def init_app(app):

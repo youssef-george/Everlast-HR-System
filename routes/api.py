@@ -1,9 +1,12 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from datetime import datetime, date, timedelta
-from models import db, User, LeaveRequest, PermissionRequest, DailyAttendance, Department, LeaveBalance, LeaveType, PaidHoliday
+from models import db, User, LeaveRequest, PermissionRequest, DailyAttendance, Department, LeaveBalance, LeaveType, PaidHoliday, AttendanceLog
 from helpers import role_required, get_dashboard_stats, get_employees_for_manager
 import logging
+import hashlib
+import hmac
+import os
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -783,4 +786,138 @@ def upcoming_events():
         return jsonify({
             'status': 'error',
             'message': 'Failed to fetch upcoming events'
+        }), 500
+
+def verify_sync_signature(payload, signature):
+    """Verify HMAC signature for sync requests"""
+    sync_secret = os.environ.get('SYNC_SECRET', 'your-sync-secret-key')
+    expected_signature = hmac.new(
+        sync_secret.encode('utf-8'),
+        payload,
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(signature, expected_signature)
+
+@api_bp.route('/sync_logs', methods=['POST'])
+def sync_attendance_logs():
+    """
+    Secure endpoint for local sync agent to upload attendance logs
+    Expected payload:
+    {
+        "device_id": "device_001",
+        "logs": [
+            {
+                "user_id": 123,
+                "timestamp": "2024-01-15T09:30:00",
+                "action": "check_in"
+            }
+        ]
+    }
+    """
+    try:
+        # Verify signature
+        signature = request.headers.get('X-Sync-Signature')
+        if not signature:
+            return jsonify({
+                'status': 'error',
+                'message': 'Missing signature'
+            }), 401
+        
+        payload = request.get_data()
+        if not verify_sync_signature(payload, signature):
+            logging.warning(f"Invalid sync signature from IP: {request.remote_addr}")
+            return jsonify({
+                'status': 'error',
+                'message': 'Invalid signature'
+            }), 401
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'status': 'error',
+                'message': 'No JSON data provided'
+            }), 400
+        
+        device_id = data.get('device_id')
+        logs = data.get('logs', [])
+        
+        if not device_id or not logs:
+            return jsonify({
+                'status': 'error',
+                'message': 'Missing device_id or logs'
+            }), 400
+        
+        processed_logs = 0
+        skipped_logs = 0
+        errors = []
+        
+        for log_data in logs:
+            try:
+                user_id = log_data.get('user_id')
+                timestamp_str = log_data.get('timestamp')
+                action = log_data.get('action', 'check_in')
+                
+                if not user_id or not timestamp_str:
+                    errors.append(f"Missing user_id or timestamp in log: {log_data}")
+                    continue
+                
+                # Parse timestamp
+                try:
+                    timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                except ValueError:
+                    timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
+                
+                # Check if user exists
+                user = User.query.get(user_id)
+                if not user:
+                    errors.append(f"User {user_id} not found")
+                    continue
+                
+                # Check for duplicate log (same user, same timestamp, same action)
+                existing_log = AttendanceLog.query.filter_by(
+                    user_id=user_id,
+                    timestamp=timestamp,
+                    action=action
+                ).first()
+                
+                if existing_log:
+                    skipped_logs += 1
+                    continue
+                
+                # Create new attendance log
+                new_log = AttendanceLog(
+                    user_id=user_id,
+                    timestamp=timestamp,
+                    action=action,
+                    device_id=device_id,
+                    created_at=datetime.utcnow()
+                )
+                
+                db.session.add(new_log)
+                processed_logs += 1
+                
+            except Exception as log_error:
+                errors.append(f"Error processing log {log_data}: {str(log_error)}")
+                continue
+        
+        # Commit all changes
+        if processed_logs > 0:
+            db.session.commit()
+            logging.info(f"Sync successful: {processed_logs} logs processed from device {device_id}")
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'Sync completed',
+            'processed': processed_logs,
+            'skipped': skipped_logs,
+            'errors': len(errors),
+            'error_details': errors[:10]  # Limit error details
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Error in sync_logs endpoint: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': 'Internal server error during sync'
         }), 500

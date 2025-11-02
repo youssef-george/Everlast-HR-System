@@ -1,0 +1,5 @@
+# EverLast ERP - Sync Agent Dependencies
+requests>=2.31.0
+pyzk>=0.9
+schedule>=1.2.0
+configparser>=5.3.0
