@@ -9,19 +9,34 @@ class Config:
     # Database configuration
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///everlast.db?timeout=10000'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_recycle": 3600,  # Recycle connections after 1 hour instead of 5 minutes
-        "pool_pre_ping": True,  # Test connections before use
-        "pool_size": 10,  # Reduced pool size to prevent over-allocation
-        "max_overflow": 20,  # Reduced overflow to prevent connection exhaustion
-        "pool_timeout": 30,  # Reduced timeout for faster failure detection
-        "pool_reset_on_return": "rollback",  # Use rollback instead of commit for better cleanup
-        "echo": False,  # Set to True for debugging SQL queries
-        "connect_args": {
-            "timeout": 20,  # SQLite connection timeout
-            "check_same_thread": False  # Allow SQLite to be used across threads
+    # Database engine options - conditional based on database type
+    _db_url = os.environ.get('DATABASE_URL', 'sqlite:///everlast.db?timeout=10000')
+    if _db_url.startswith('postgresql://') or _db_url.startswith('postgres://'):
+        # PostgreSQL configuration
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "pool_recycle": 3600,
+            "pool_pre_ping": True,
+            "pool_size": 10,
+            "max_overflow": 20,
+            "pool_timeout": 30,
+            "pool_reset_on_return": "rollback",
+            "echo": False,
         }
-    }
+    else:
+        # SQLite configuration
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "pool_recycle": 3600,
+            "pool_pre_ping": True,
+            "pool_size": 10,
+            "max_overflow": 20,
+            "pool_timeout": 30,
+            "pool_reset_on_return": "rollback",
+            "echo": False,
+            "connect_args": {
+                "timeout": 20,
+                "check_same_thread": False
+            }
+        }
     
     # File upload configuration
     UPLOAD_FOLDER = 'uploads'
