@@ -1,4 +1,8 @@
 import os
+from dotenv import load_dotenv
+
+# Load environment variables before defining config
+load_dotenv()
 
 class Config:
     # Basic Flask configuration
@@ -7,10 +11,10 @@ class Config:
     WTF_CSRF_ENABLED = True
     
     # Database configuration
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///everlast.db?timeout=10000'
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'postgresql://postgres:password@localhost:5432/everlast'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     # Database engine options - conditional based on database type
-    _db_url = os.environ.get('DATABASE_URL', 'sqlite:///everlast.db?timeout=10000')
+    _db_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:password@localhost:5432/everlast')
     if _db_url.startswith('postgresql://') or _db_url.startswith('postgres://'):
         # PostgreSQL configuration
         SQLALCHEMY_ENGINE_OPTIONS = {

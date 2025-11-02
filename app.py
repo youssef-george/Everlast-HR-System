@@ -34,6 +34,15 @@ def create_app(config_name='default'):
     csrf = CSRFProtect(app)
     scheduler.init_app(app)
     
+    # Log database connection info
+    with app.app_context():
+        logging.info(f"=== DATABASE CONNECTION ===")
+        logging.info(f"Database URL: {db.engine.url}")
+        logging.info(f"Database Driver: {db.engine.url.drivername}")
+        logging.info(f"Database Host: {db.engine.url.host}")
+        logging.info(f"Database Name: {db.engine.url.database}")
+        logging.info(f"=============================")
+    
     # Configure logging
     logging.basicConfig(
         level=logging.INFO,
