@@ -623,29 +623,19 @@ def cleanup_duplicate_attendance_records():
         return 0
 
 def get_active_device():
-    """Get the active device settings or create default if none exists"""
+    """Get the active device settings. Returns None if no device exists - DO NOT create defaults."""
     device = DeviceSettings.query.filter_by(is_active=True).first()
-    
-    if not device:
-        # Create default device settings
-        device = DeviceSettings(
-            device_ip='192.168.11.2',
-            device_port=4370,
-            device_name='Default Device',
-            is_active=True
-        )
-        db.session.add(device)
-        try:
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            logging.error(f'Error creating default device settings: {str(e)}')
-    
     return device
 
 def test_device_connection():
     """Test connection to the fingerprint device with detailed diagnostics"""
     device = get_active_device()
+    if not device:
+        return {
+            'success': False,
+            'error': 'No active device configured',
+            'details': []
+        }
     device_ip = device.device_ip
     device_port = device.device_port
     
@@ -1931,6 +1921,9 @@ def sync_fingerprint():
     """Sync attendance records from the fingerprint device with enhanced error handling"""
     try:
         device = get_active_device()
+        if not device:
+            logging.error('No active device configured for attendance sync')
+            return None
         logging.info('Starting attendance sync process...')
         logging.info(f'Attempting to sync from device: {device.device_ip}:{device.device_port}')
         logging.debug('Inside sync_fingerprint function.')
@@ -3523,7 +3516,7 @@ def get_device_status_info():
     }
     
     if not device:
-        device_status['error'] = 'No active device settings found.'
+        device_status['error'] = 'No active device configured'
         logging.error('No active device settings found for get_device_status.')
         return device_status
 

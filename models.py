@@ -473,7 +473,7 @@ class DeviceSettings(db.Model):
     __tablename__ = 'device_settings'
 
     id = db.Column(db.Integer, primary_key=True)
-    device_ip = db.Column(db.String(15), nullable=False, default='192.168.11.2')
+    device_ip = db.Column(db.String(15), nullable=False)  # No default - must be set explicitly
     device_port = db.Column(db.Integer, nullable=False, default=4370)
     device_name = db.Column(db.String(100), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
