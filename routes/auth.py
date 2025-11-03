@@ -3,7 +3,7 @@ from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_wtf.csrf import CSRFError
 from forms import LoginForm, RegistrationForm
-from models import db, User, Department
+from models import db, User, Department, LeaveType, LeaveBalance
 from datetime import datetime
 import logging
 
@@ -22,51 +22,37 @@ def login():
         try:
             # Validate the form which will include CSRF check
             if form.validate_on_submit():
-                try:
-                    user = User.query.filter_by(email=form.email.data).first()
-                except Exception as e:
-                    logging.error(f'Database error during login query: {str(e)}', exc_info=True)
-                    flash('Database connection error. Please try again.', 'danger')
-                    return render_template('auth/login.html', form=form, title='Login')
+                user = User.query.filter_by(email=form.email.data).first()
                 
                 if user and check_password_hash(user.password_hash, form.password.data):
                     if user.status != 'active':
                         flash('Your account is inactive. Please contact an administrator.', 'danger')
+                        logging.warning(f'Login attempt for inactive user: {form.email.data}')
                         return redirect(url_for('auth.login'))
                     
-                    try:
-                        # Login the user
-                        login_result = login_user(user, remember=form.remember.data)
-                        logging.info(f'User {user.email} logged in successfully. Login result: {login_result}')
-                        
-                        # Force session save
-                        from flask import session as flask_session
-                        flask_session.permanent = True
-                        
-                        next_page = request.args.get('next')
-                        
-                        # Redirect to dashboard based on role
-                        if not next_page or not next_page.startswith('/'):
-                            logging.info(f'Redirecting user {user.email} to dashboard')
-                            return redirect(url_for('dashboard.index'))
-                        
-                        logging.info(f'Redirecting user {user.email} to {next_page}')
-                        return redirect(next_page)
-                    except Exception as e:
-                        logging.error(f'Error during login_user call: {str(e)}', exc_info=True)
-                        flash('An error occurred during login. Please try again.', 'danger')
-                        return render_template('auth/login.html', form=form, title='Login')
+                    login_user(user, remember=form.remember.data)
+                    logging.info(f'User logged in successfully: {user.email}')
+                    
+                    next_page = request.args.get('next')
+                    
+                    # Redirect to dashboard based on role
+                    if not next_page or not next_page.startswith('/'):
+                        return redirect(url_for('dashboard.index'))
+                    
+                    return redirect(next_page)
                 else:
+                    logging.warning(f'Login failed for email: {form.email.data}')
                     flash('Login failed. Please check your email and password.', 'danger')
             else:
                 # Form validation failed, check if there are form errors to display
+                logging.warning(f'Form validation failed: {form.errors}')
                 for field, errors in form.errors.items():
                     for error in errors:
                         flash(f"{field}: {error}", 'danger')
         except Exception as e:
             # Catch any other exceptions
+            logging.error(f'Login error: {str(e)}', exc_info=True)
             flash(f'An error occurred: {str(e)}', 'danger')
-            logging.error(f'Login error: {str(e)}')
     
     # For GET request or if form validation fails
     return render_template('auth/login.html', form=form, title='Login')
@@ -127,17 +113,17 @@ def register():
 
             # Initialize leave balances for the new active user
             current_year = datetime.now().year
-            leave_types = models.LeaveType.query.all()
+            leave_types = LeaveType.query.all()
             for lt in leave_types:
                 # Check if a LeaveBalance already exists for this user, leave type, and year
-                existing_balance = models.LeaveBalance.query.filter_by(
+                existing_balance = LeaveBalance.query.filter_by(
                     user_id=new_user.id,
                     leave_type_id=lt.id,
                     year=current_year
                 ).first()
                 
                 if not existing_balance:
-                    new_balance = models.LeaveBalance(
+                    new_balance = LeaveBalance(
                         user_id=new_user.id,
                         leave_type_id=lt.id,
                         year=current_year,

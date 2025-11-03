@@ -14,8 +14,7 @@ from extensions import db, scheduler
 from routes.attendance import sync_attendance_task
 from flask_apscheduler import APScheduler
 from datetime import datetime
-# Sync service no longer needed - PostgreSQL is primary
-# from working_sync_service import working_sync_service
+from working_sync_service import working_sync_service
 
 # Load environment variables
 load_dotenv()
@@ -23,32 +22,59 @@ load_dotenv()
 # Initialize scheduler
 scheduler = APScheduler()
 
-def create_app(config_name='default'):
+def create_app(config_name=None):
     app = Flask(__name__)
+    
+    # Auto-detect config based on environment if not specified
+    if config_name is None:
+        flask_env = os.environ.get('FLASK_ENV', 'development').lower()
+        if flask_env == 'production':
+            config_name = 'production'
+        else:
+            config_name = 'default'
     
     # Load config
     app.config.from_object(config[config_name])
     
+    # Apply ProxyFix middleware for deployment behind reverse proxy
+    # This is important for correct request handling (scheme, host, etc.)
+    if config_name == 'production' or os.environ.get('PROXY_FIX_ENABLED', 'false').lower() == 'true':
+        app.wsgi_app = ProxyFix(
+            app.wsgi_app,
+            x_for=1,  # Trust 1 X-Forwarded-For header
+            x_proto=1,  # Trust 1 X-Forwarded-Proto header
+            x_host=1,  # Trust 1 X-Forwarded-Host header
+            x_port=1   # Trust 1 X-Forwarded-Port header
+        )
+    
     # Initialize extensions
-    # Note: Flask-SQLAlchemy 3.x uses SQLALCHEMY_ENGINE_OPTIONS from config
     db.init_app(app)
     migrate = Migrate(app, db)
     Session(app)
     csrf = CSRFProtect(app)
     scheduler.init_app(app)
     
-    # Sync service disabled - PostgreSQL is now primary database
-    # working_sync_service.init_app(app)  # Disabled - no sync needed
+    # Initialize sync service
+    working_sync_service.init_app(app)
     
     # Log database connection info
     with app.app_context():
-        logging.info(f"=== DATABASE CONNECTION ===")
-        logging.info(f"Primary DB: PostgreSQL")
-        logging.info(f"Database URL: {db.engine.url}")
-        logging.info(f"Driver: {db.engine.url.drivername}")
-        logging.info(f"Host: {db.engine.url.host}")
-        logging.info(f"Port: {db.engine.url.port}")
-        logging.info(f"Database: {db.engine.url.database}")
+        logging.info(f"=== DATABASE CONNECTIONS ===")
+        logging.info(f"Primary DB URL: {db.engine.url}")
+        logging.info(f"Primary DB Driver: {db.engine.url.drivername}")
+        logging.info(f"Primary DB Host: {db.engine.url.host}")
+        logging.info(f"Primary DB Name: {db.engine.url.database}")
+        
+        # Log PostgreSQL connection info
+        if working_sync_service.postgres_engine:
+            logging.info(f"PostgreSQL URL: {working_sync_service.postgres_engine.url}")
+            logging.info(f"PostgreSQL Driver: {working_sync_service.postgres_engine.url.drivername}")
+            logging.info(f"PostgreSQL Host: {working_sync_service.postgres_engine.url.host}")
+            logging.info(f"PostgreSQL DB: {working_sync_service.postgres_engine.url.database}")
+            logging.info(f"Sync Enabled: {working_sync_service.sync_enabled}")
+        else:
+            logging.warning("PostgreSQL connection not available")
+        
         logging.info(f"=============================")
     
     # Configure logging
@@ -64,23 +90,18 @@ def create_app(config_name='default'):
     login_manager.login_message = 'Please log in to access this page.'
     login_manager.login_message_category = 'info'
     
+    # Configure Flask-Login cookie settings for production
+    if config_name == 'production':
+        login_manager.session_protection = 'strong'
+        # Configure remember cookie security (Flask-Login reads from app config)
+        app.config.setdefault('REMEMBER_COOKIE_SECURE', True)
+        app.config.setdefault('REMEMBER_COOKIE_HTTPONLY', True)
+        app.config.setdefault('REMEMBER_COOKIE_SAMESITE', 'Lax')
+    
     @login_manager.user_loader
     def load_user(user_id):
-        """Load user from database by ID."""
-        try:
-            from models import User
-            # Use query.get() which works with Flask-SQLAlchemy
-            try:
-                user_id_int = int(user_id)
-            except (ValueError, TypeError):
-                logging.error(f'Invalid user_id format in load_user: {user_id}')
-                return None
-            
-            user = User.query.get(user_id_int)
-            return user
-        except Exception as e:
-            logging.error(f'Error loading user {user_id}: {str(e)}', exc_info=True)
-            return None
+        from models import User
+        return User.query.get(int(user_id))
     
     # Add template filters
     @app.template_filter('datetime')
@@ -211,11 +232,19 @@ def create_app(config_name='default'):
                 'overflow': getattr(pool, 'overflow', lambda: 'N/A')()
             }
             
-            # PostgreSQL is primary - no separate connection needed
+            # Test PostgreSQL connection
+            postgres_status = 'disconnected'
+            if working_sync_service.postgres_engine:
+                try:
+                    postgres_status = 'connected' if working_sync_service.test_postgres_connection() else 'failed'
+                except:
+                    postgres_status = 'error'
+            
             return jsonify({
                 'status': 'healthy',
-                'primary_database': 'postgresql',
-                'database_status': 'connected',
+                'primary_database': 'connected',
+                'postgres_database': postgres_status,
+                'sync_enabled': working_sync_service.sync_enabled,
                 'pool_status': pool_status
             }), 200
             
