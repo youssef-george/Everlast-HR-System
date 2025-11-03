@@ -41,12 +41,17 @@ class Config:
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_recycle": 3600,
         "pool_pre_ping": True,
-        "pool_size": 10,
-        "max_overflow": 20,
-        "pool_timeout": 30,
+        "pool_size": 10,  # Pool size for connections
+        "max_overflow": 20,  # Max overflow connections
+        "pool_timeout": 30,  # Timeout for getting connection from pool
         "pool_reset_on_return": "rollback",
         "echo": False,
-        "connect_args": connect_args
+        "connect_args": {
+            **connect_args,
+            "connect_timeout": 10,  # Connection timeout in seconds
+            "command_timeout": 30,  # Query timeout in seconds
+            "application_name": "everlast_erp"  # Helpful for database monitoring
+        }
     }
     
     # File upload configuration

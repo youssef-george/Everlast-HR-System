@@ -66,8 +66,21 @@ def create_app(config_name='default'):
     
     @login_manager.user_loader
     def load_user(user_id):
-        from models import User
-        return User.query.get(int(user_id))
+        """Load user from database by ID."""
+        try:
+            from models import User
+            # Use query.get() which works with Flask-SQLAlchemy
+            try:
+                user_id_int = int(user_id)
+            except (ValueError, TypeError):
+                logging.error(f'Invalid user_id format in load_user: {user_id}')
+                return None
+            
+            user = User.query.get(user_id_int)
+            return user
+        except Exception as e:
+            logging.error(f'Error loading user {user_id}: {str(e)}', exc_info=True)
+            return None
     
     # Add template filters
     @app.template_filter('datetime')

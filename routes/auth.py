@@ -22,21 +22,40 @@ def login():
         try:
             # Validate the form which will include CSRF check
             if form.validate_on_submit():
-                user = User.query.filter_by(email=form.email.data).first()
+                try:
+                    user = User.query.filter_by(email=form.email.data).first()
+                except Exception as e:
+                    logging.error(f'Database error during login query: {str(e)}', exc_info=True)
+                    flash('Database connection error. Please try again.', 'danger')
+                    return render_template('auth/login.html', form=form, title='Login')
                 
                 if user and check_password_hash(user.password_hash, form.password.data):
                     if user.status != 'active':
                         flash('Your account is inactive. Please contact an administrator.', 'danger')
                         return redirect(url_for('auth.login'))
                     
-                    login_user(user, remember=form.remember.data)
-                    next_page = request.args.get('next')
-                    
-                    # Redirect to dashboard based on role
-                    if not next_page or not next_page.startswith('/'):
-                        return redirect(url_for('dashboard.index'))
-                    
-                    return redirect(next_page)
+                    try:
+                        # Login the user
+                        login_result = login_user(user, remember=form.remember.data)
+                        logging.info(f'User {user.email} logged in successfully. Login result: {login_result}')
+                        
+                        # Force session save
+                        from flask import session as flask_session
+                        flask_session.permanent = True
+                        
+                        next_page = request.args.get('next')
+                        
+                        # Redirect to dashboard based on role
+                        if not next_page or not next_page.startswith('/'):
+                            logging.info(f'Redirecting user {user.email} to dashboard')
+                            return redirect(url_for('dashboard.index'))
+                        
+                        logging.info(f'Redirecting user {user.email} to {next_page}')
+                        return redirect(next_page)
+                    except Exception as e:
+                        logging.error(f'Error during login_user call: {str(e)}', exc_info=True)
+                        flash('An error occurred during login. Please try again.', 'danger')
+                        return render_template('auth/login.html', form=form, title='Login')
                 else:
                     flash('Login failed. Please check your email and password.', 'danger')
             else:
