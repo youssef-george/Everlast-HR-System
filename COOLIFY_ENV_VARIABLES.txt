@@ -1,0 +1,46 @@
+EXACT ENVIRONMENT VARIABLES FOR COOLIFY DASHBOARD
+==================================================
+
+Copy each line below and paste into Coolify Dashboard → Your App → Environment Variables:
+
+DATABASE_URL=postgresql://postgres:levGakzw2E9IyxGS676Cm8VdIYbYmxRMV1TV6dWf6XkDxErMWXXfhGI543Ew1dPK@192.168.11.253:5444/postgresql-database-hr
+
+FLASK_ENV=production
+
+SECRET_KEY=everlast-production-secret-key-2024-secure-change-this
+
+CSRF_SECRET=everlast-csrf-secret-key-2024-secure-change-this
+
+HOST=0.0.0.0
+
+PORT=5000
+
+DEBUG=False
+
+SYNC_SECRET=everlast-sync-secret-key-2024-change-in-production
+
+DEVICE_IP=192.168.11.253
+
+DEVICE_PORT=4370
+
+DEVICE_URL=http://192.168.11.253/
+
+==================================================
+INSTRUCTIONS:
+1. Go to Coolify Dashboard
+2. Click on your EverLast ERP app
+3. Go to "Environment Variables" tab
+4. Add each variable above (one per line)
+5. Click "Save"
+6. Go to "Deployments" tab
+7. Click "Deploy" to restart with new variables
+8. Test login: admin@everlast.com / admin123
+==================================================
+
+IMPORTANT NOTES:
+- Your database is on local IP (192.168.11.253:5444)
+- Coolify might not be able to reach this local IP
+- If login still fails, you'll need a cloud database
+- Check Coolify logs for "connection refused" errors
+
+
