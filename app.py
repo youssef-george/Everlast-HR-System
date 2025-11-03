@@ -14,6 +14,7 @@ from extensions import db, scheduler
 from routes.attendance import sync_attendance_task
 from flask_apscheduler import APScheduler
 from datetime import datetime
+from working_sync_service import working_sync_service
 
 # Load environment variables
 load_dotenv()
@@ -34,13 +35,27 @@ def create_app(config_name='default'):
     csrf = CSRFProtect(app)
     scheduler.init_app(app)
     
+    # Initialize sync service
+    working_sync_service.init_app(app)
+    
     # Log database connection info
     with app.app_context():
-        logging.info(f"=== DATABASE CONNECTION ===")
-        logging.info(f"Database URL: {db.engine.url}")
-        logging.info(f"Database Driver: {db.engine.url.drivername}")
-        logging.info(f"Database Host: {db.engine.url.host}")
-        logging.info(f"Database Name: {db.engine.url.database}")
+        logging.info(f"=== DATABASE CONNECTIONS ===")
+        logging.info(f"Primary DB URL: {db.engine.url}")
+        logging.info(f"Primary DB Driver: {db.engine.url.drivername}")
+        logging.info(f"Primary DB Host: {db.engine.url.host}")
+        logging.info(f"Primary DB Name: {db.engine.url.database}")
+        
+        # Log PostgreSQL connection info
+        if working_sync_service.postgres_engine:
+            logging.info(f"PostgreSQL URL: {working_sync_service.postgres_engine.url}")
+            logging.info(f"PostgreSQL Driver: {working_sync_service.postgres_engine.url.drivername}")
+            logging.info(f"PostgreSQL Host: {working_sync_service.postgres_engine.url.host}")
+            logging.info(f"PostgreSQL DB: {working_sync_service.postgres_engine.url.database}")
+            logging.info(f"Sync Enabled: {working_sync_service.sync_enabled}")
+        else:
+            logging.warning("PostgreSQL connection not available")
+        
         logging.info(f"=============================")
     
     # Configure logging
@@ -176,26 +191,33 @@ def create_app(config_name='default'):
         """Health check endpoint to monitor database connection pool status"""
         try:
             from extensions import db
-            from connection_manager import is_sync_running
-            
-            # Test database connection
             from sqlalchemy import text
+            
+            # Test primary database connection
             db.session.execute(text('SELECT 1'))
             
             # Get connection pool status
             pool = db.engine.pool
             pool_status = {
-                'pool_size': pool.size(),
-                'checked_in': pool.checkedin(),
-                'checked_out': pool.checkedout(),
-                'overflow': pool.overflow(),
-                'invalid': pool.invalid(),
-                'sync_running': is_sync_running()
+                'pool_size': getattr(pool, 'size', lambda: 'N/A')(),
+                'checked_in': getattr(pool, 'checkedin', lambda: 'N/A')(),
+                'checked_out': getattr(pool, 'checkedout', lambda: 'N/A')(),
+                'overflow': getattr(pool, 'overflow', lambda: 'N/A')()
             }
+            
+            # Test PostgreSQL connection
+            postgres_status = 'disconnected'
+            if working_sync_service.postgres_engine:
+                try:
+                    postgres_status = 'connected' if working_sync_service.test_postgres_connection() else 'failed'
+                except:
+                    postgres_status = 'error'
             
             return jsonify({
                 'status': 'healthy',
-                'database': 'connected',
+                'primary_database': 'connected',
+                'postgres_database': postgres_status,
+                'sync_enabled': working_sync_service.sync_enabled,
                 'pool_status': pool_status
             }), 200
             
@@ -203,7 +225,8 @@ def create_app(config_name='default'):
             logging.error(f"Health check failed: {str(e)}")
             return jsonify({
                 'status': 'unhealthy',
-                'database': 'disconnected',
+                'primary_database': 'disconnected',
+                'postgres_database': 'unknown',
                 'error': str(e)
             }), 500
     

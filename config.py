@@ -10,37 +10,50 @@ class Config:
     WTF_CSRF_SECRET_KEY = os.environ.get('CSRF_SECRET') or 'your-csrf-secret-here'
     WTF_CSRF_ENABLED = True
     
-    # Database configuration
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'postgresql://postgres:password@localhost:5432/everlast'
+    # Dual Database Configuration
+    # Primary database (SQLite) - used for main operations during transition
+    _base_dir = os.path.abspath(os.path.dirname(__file__))
+    _sqlite_path = os.path.join(_base_dir, 'instance', 'everlast.db')
+    # Convert Windows backslashes to forward slashes for SQLite URI
+    _sqlite_path_uri = _sqlite_path.replace('\\', '/')
+    SQLALCHEMY_DATABASE_URI = os.environ.get('SQLITE_DATABASE_URL') or f'sqlite:///{_sqlite_path_uri}'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    # Database engine options - conditional based on database type
-    _db_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:password@localhost:5432/everlast')
-    if _db_url.startswith('postgresql://') or _db_url.startswith('postgres://'):
-        # PostgreSQL configuration
-        SQLALCHEMY_ENGINE_OPTIONS = {
-            "pool_recycle": 3600,
-            "pool_pre_ping": True,
-            "pool_size": 10,
-            "max_overflow": 20,
-            "pool_timeout": 30,
-            "pool_reset_on_return": "rollback",
-            "echo": False,
+    
+    # PostgreSQL database configuration for sync
+    POSTGRES_DATABASE_URI = os.environ.get('POSTGRES_DATABASE_URL') or \
+        'postgresql+psycopg2://postgres:1TJQKLGMKdZisAEtJ96ZQC9vh9iZL8zvnrqAXLZOanFANPy5QSHgW4uCm7PA4oRq@196.219.160.253:5444/postgres?sslmode=require'
+    
+    # Database binds for multiple databases
+    SQLALCHEMY_BINDS = {
+        'postgres': POSTGRES_DATABASE_URI
+    }
+    
+    # Database sync configuration
+    ENABLE_DB_SYNC = os.environ.get('ENABLE_DB_SYNC', 'true').lower() == 'true'
+    SYNC_BATCH_SIZE = int(os.environ.get('SYNC_BATCH_SIZE', '100'))
+    SYNC_RETRY_ATTEMPTS = int(os.environ.get('SYNC_RETRY_ATTEMPTS', '3'))
+    SYNC_RETRY_DELAY = int(os.environ.get('SYNC_RETRY_DELAY', '5'))  # seconds
+    
+    # Primary database engine options (SQLite)
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,
+        "echo": False,
+        "connect_args": {
+            "timeout": 20,
+            "check_same_thread": False
         }
-    else:
-        # SQLite configuration
-        SQLALCHEMY_ENGINE_OPTIONS = {
-            "pool_recycle": 3600,
-            "pool_pre_ping": True,
-            "pool_size": 10,
-            "max_overflow": 20,
-            "pool_timeout": 30,
-            "pool_reset_on_return": "rollback",
-            "echo": False,
-            "connect_args": {
-                "timeout": 20,
-                "check_same_thread": False
-            }
-        }
+    }
+    
+    # PostgreSQL engine options
+    POSTGRES_ENGINE_OPTIONS = {
+        "pool_recycle": 3600,
+        "pool_pre_ping": True,
+        "pool_size": 10,
+        "max_overflow": 20,
+        "pool_timeout": 30,
+        "pool_reset_on_return": "rollback",
+        "echo": False,
+    }
     
     # File upload configuration
     UPLOAD_FOLDER = 'uploads'
