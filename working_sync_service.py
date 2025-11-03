@@ -76,7 +76,13 @@ class WorkingSyncService:
         @event.listens_for(Session, 'before_flush')
         def capture_changes(session, flush_context, instances):
             """Capture changes before flush."""
-            if not self.sync_enabled or session.bind != db.engine:
+            if not self.sync_enabled:
+                return
+            
+            # Check if this is the primary SQLite session (not PostgreSQL)
+            # Allow if bind is None (Flask-SQLAlchemy default) or if bind matches db.engine
+            session_bind = getattr(session, 'bind', None)
+            if session_bind is not None and session_bind != db.engine:
                 return
             
             # Initialize thread-local storage
@@ -93,6 +99,7 @@ class WorkingSyncService:
                     serialized = self._serialize_instance(instance, 'insert')
                     if serialized:
                         self.local_data.pending_changes['new'].append(serialized)
+                        logger.debug(f"Captured new {instance.__tablename__} record for sync")
             
             # Capture dirty instances
             for instance in session.dirty:
@@ -100,6 +107,7 @@ class WorkingSyncService:
                     serialized = self._serialize_instance(instance, 'update')
                     if serialized:
                         self.local_data.pending_changes['dirty'].append(serialized)
+                        logger.debug(f"Captured updated {instance.__tablename__} record for sync")
             
             # Capture deleted instances
             for instance in session.deleted:
@@ -107,18 +115,30 @@ class WorkingSyncService:
                     serialized = self._serialize_instance(instance, 'delete')
                     if serialized:
                         self.local_data.pending_changes['deleted'].append(serialized)
+                        logger.debug(f"Captured deleted {instance.__tablename__} record for sync")
         
         @event.listens_for(Session, 'after_commit')
         def sync_after_commit(session):
             """Sync changes to PostgreSQL after successful commit."""
-            if not self.sync_enabled or session.bind != db.engine:
+            if not self.sync_enabled:
+                return
+            
+            # Check if this is the primary SQLite session (not PostgreSQL)
+            # After commit, bind might be None, so we allow None too
+            session_bind = getattr(session, 'bind', None)
+            if session_bind is not None and session_bind != db.engine:
                 return
             
             try:
                 if hasattr(self.local_data, 'pending_changes'):
                     changes = self.local_data.pending_changes
-                    if any(changes.values()):  # If there are any changes
+                    total_changes = len(changes.get('new', [])) + len(changes.get('dirty', [])) + len(changes.get('deleted', []))
+                    
+                    if total_changes > 0:
+                        logger.info(f"Syncing {total_changes} changes to PostgreSQL: {len(changes.get('new', []))} inserts, {len(changes.get('dirty', []))} updates, {len(changes.get('deleted', []))} deletes")
                         self._sync_changes_to_postgres(changes)
+                    else:
+                        logger.debug("No pending changes to sync after commit")
                     
                     # Clear pending changes
                     self.local_data.pending_changes = {
@@ -127,7 +147,7 @@ class WorkingSyncService:
                         'deleted': []
                     }
             except Exception as e:
-                logger.error(f"Sync after commit failed: {str(e)}")
+                logger.error(f"Sync after commit failed: {str(e)}", exc_info=True)
         
         @event.listens_for(Session, 'after_rollback')
         def clear_changes_after_rollback(session):
@@ -181,26 +201,61 @@ class WorkingSyncService:
         with self.sync_lock:
             try:
                 with self.get_postgres_session() as pg_session:
-                    # Process deletions first
-                    for change in changes['deleted']:
-                        self._process_change(pg_session, change)
+                    # Track sync results
+                    sync_results = {
+                        'inserted': 0,
+                        'updated': 0,
+                        'deleted': 0,
+                        'errors': []
+                    }
+                    
+                    # Process deletions first (to avoid foreign key constraint issues)
+                    for change in changes.get('deleted', []):
+                        try:
+                            self._process_change(pg_session, change)
+                            sync_results['deleted'] += 1
+                        except Exception as e:
+                            error_msg = f"Delete failed for {change.get('table_name', 'unknown')}: {str(e)}"
+                            logger.error(error_msg)
+                            sync_results['errors'].append(error_msg)
                     
                     # Process updates
-                    for change in changes['dirty']:
-                        self._process_change(pg_session, change)
+                    for change in changes.get('dirty', []):
+                        try:
+                            self._process_change(pg_session, change)
+                            sync_results['updated'] += 1
+                        except Exception as e:
+                            error_msg = f"Update failed for {change.get('table_name', 'unknown')}: {str(e)}"
+                            logger.error(error_msg)
+                            sync_results['errors'].append(error_msg)
                     
-                    # Process inserts last
-                    for change in changes['new']:
-                        self._process_change(pg_session, change)
+                    # Process inserts last (to ensure foreign keys exist)
+                    for change in changes.get('new', []):
+                        try:
+                            self._process_change(pg_session, change)
+                            sync_results['inserted'] += 1
+                        except Exception as e:
+                            error_msg = f"Insert failed for {change.get('table_name', 'unknown')}: {str(e)}"
+                            logger.error(error_msg)
+                            sync_results['errors'].append(error_msg)
                     
-                    total_changes = len(changes['new']) + len(changes['dirty']) + len(changes['deleted'])
+                    # Commit all changes to PostgreSQL
+                    pg_session.commit()
+                    
+                    total_changes = sync_results['inserted'] + sync_results['updated'] + sync_results['deleted']
                     if total_changes > 0:
-                        logger.info(f"Synced {total_changes} changes: {len(changes['new'])} inserts, "
-                                   f"{len(changes['dirty'])} updates, {len(changes['deleted'])} deletes")
+                        logger.info(f"Successfully synced {total_changes} changes to PostgreSQL: "
+                                   f"{sync_results['inserted']} inserts, {sync_results['updated']} updates, "
+                                   f"{sync_results['deleted']} deletes")
+                    
+                    # Log any errors but don't fail the entire sync
+                    if sync_results['errors']:
+                        logger.warning(f"Sync completed with {len(sync_results['errors'])} errors: {sync_results['errors']}")
                     
             except Exception as e:
-                logger.error(f"Failed to sync changes to PostgreSQL: {str(e)}")
+                logger.error(f"Failed to sync changes to PostgreSQL: {str(e)}", exc_info=True)
                 self._handle_sync_error(changes, e)
+                raise
     
     def _process_change(self, pg_session: Session, change: Dict[str, Any]):
         """Process a single change."""
@@ -229,7 +284,7 @@ class WorkingSyncService:
             
             # Set attributes
             for key, value in record_data.items():
-                if hasattr(pg_record, key):
+                if hasattr(pg_record, key) and value is not None:
                     # Convert ISO format strings back to datetime if needed
                     if isinstance(value, str) and 'T' in value and ':' in value:
                         try:
@@ -241,71 +296,95 @@ class WorkingSyncService:
                     setattr(pg_record, key, value)
             
             pg_session.add(pg_record)
-            pg_session.flush()
+            pg_session.flush()  # Flush to get the ID if auto-increment
+            logger.debug(f"Inserted {model_class.__tablename__} record into PostgreSQL")
             
         except IntegrityError as e:
             # Handle duplicate key errors - try update instead
-            logger.warning(f"Insert failed due to integrity error, attempting update: {str(e)}")
+            logger.warning(f"Insert failed due to integrity error (duplicate key), attempting update: {str(e)}")
             pg_session.rollback()
             
             # Try to find and update existing record
             primary_key = self._get_primary_key_value(model_class, record_data)
             if primary_key:
                 self._update_record(pg_session, model_class, record_data, primary_key)
+            else:
+                raise ValueError(f"Cannot update record without primary key value")
+        except Exception as e:
+            logger.error(f"Failed to insert record into PostgreSQL: {str(e)}")
+            raise
     
     def _update_record(self, pg_session: Session, model_class, record_data: Dict[str, Any], primary_key: Any):
         """Update a record in PostgreSQL."""
-        # Find existing record
-        if isinstance(primary_key, dict):
-            # Composite primary key
-            filters = {col: val for col, val in primary_key.items()}
-            pg_record = pg_session.query(model_class).filter_by(**filters).first()
-        else:
-            # Single primary key
-            pk_column = self._get_primary_key_column(model_class)
-            pg_record = pg_session.query(model_class).filter(
-                getattr(model_class, pk_column) == primary_key
-            ).first()
-        
-        if pg_record:
-            # Update attributes
-            for key, value in record_data.items():
-                if hasattr(pg_record, key):
-                    # Convert ISO format strings back to datetime if needed
-                    if isinstance(value, str) and 'T' in value and ':' in value:
-                        try:
-                            from datetime import datetime
-                            value = datetime.fromisoformat(value.replace('Z', '+00:00'))
-                        except:
-                            pass
-                    
-                    setattr(pg_record, key, value)
+        try:
+            # Find existing record
+            if isinstance(primary_key, dict):
+                # Composite primary key
+                filters = {col: val for col, val in primary_key.items()}
+                pg_record = pg_session.query(model_class).filter_by(**filters).first()
+            else:
+                # Single primary key
+                pk_column = self._get_primary_key_column(model_class)
+                pg_record = pg_session.query(model_class).filter(
+                    getattr(model_class, pk_column) == primary_key
+                ).first()
             
-            pg_session.flush()
-        else:
-            # Record doesn't exist, insert it
-            logger.warning(f"Record not found for update, inserting instead")
-            self._insert_record(pg_session, model_class, record_data)
+            if pg_record:
+                # Update attributes
+                updated_fields = []
+                for key, value in record_data.items():
+                    if hasattr(pg_record, key):
+                        # Convert ISO format strings back to datetime if needed
+                        if isinstance(value, str) and 'T' in value and ':' in value:
+                            try:
+                                from datetime import datetime
+                                value = datetime.fromisoformat(value.replace('Z', '+00:00'))
+                            except:
+                                pass
+                        
+                        # Only update if value has changed
+                        current_value = getattr(pg_record, key, None)
+                        if current_value != value:
+                            setattr(pg_record, key, value)
+                            updated_fields.append(key)
+                
+                if updated_fields:
+                    pg_session.flush()
+                    logger.debug(f"Updated {model_class.__tablename__} record (primary key: {primary_key}, fields: {updated_fields})")
+                else:
+                    logger.debug(f"No changes detected for {model_class.__tablename__} record (primary key: {primary_key})")
+            else:
+                # Record doesn't exist, insert it
+                logger.warning(f"Record not found for update in PostgreSQL (primary key: {primary_key}), inserting instead")
+                self._insert_record(pg_session, model_class, record_data)
+        except Exception as e:
+            logger.error(f"Failed to update record in PostgreSQL: {str(e)}")
+            raise
     
     def _delete_record(self, pg_session: Session, model_class, primary_key: Any):
         """Delete a record from PostgreSQL."""
-        # Find and delete record
-        if isinstance(primary_key, dict):
-            # Composite primary key
-            filters = {col: val for col, val in primary_key.items()}
-            pg_record = pg_session.query(model_class).filter_by(**filters).first()
-        else:
-            # Single primary key
-            pk_column = self._get_primary_key_column(model_class)
-            pg_record = pg_session.query(model_class).filter(
-                getattr(model_class, pk_column) == primary_key
-            ).first()
-        
-        if pg_record:
-            pg_session.delete(pg_record)
-            pg_session.flush()
-        else:
-            logger.warning(f"Record not found for deletion: {primary_key}")
+        try:
+            # Find and delete record
+            if isinstance(primary_key, dict):
+                # Composite primary key
+                filters = {col: val for col, val in primary_key.items()}
+                pg_record = pg_session.query(model_class).filter_by(**filters).first()
+            else:
+                # Single primary key
+                pk_column = self._get_primary_key_column(model_class)
+                pg_record = pg_session.query(model_class).filter(
+                    getattr(model_class, pk_column) == primary_key
+                ).first()
+            
+            if pg_record:
+                pg_session.delete(pg_record)
+                pg_session.flush()
+                logger.debug(f"Deleted {model_class.__tablename__} record with primary key: {primary_key}")
+            else:
+                logger.warning(f"Record not found for deletion in PostgreSQL: {primary_key} (may have been already deleted)")
+        except Exception as e:
+            logger.error(f"Error deleting record from PostgreSQL: {str(e)}")
+            raise
     
     def _get_primary_key_column(self, model_class) -> str:
         """Get the primary key column name for a model."""
@@ -339,10 +418,15 @@ class WorkingSyncService:
         session = self.postgres_session_factory()
         try:
             yield session
-            session.commit()
+            # Commit is now handled by _sync_changes_to_postgres
+            # But we ensure it's committed here as a safety measure
+            if session.is_active:
+                session.commit()
+                logger.debug("PostgreSQL session committed successfully")
         except Exception as e:
-            session.rollback()
-            logger.error(f"PostgreSQL session error: {str(e)}")
+            if session.is_active:
+                session.rollback()
+            logger.error(f"PostgreSQL session error: {str(e)}", exc_info=True)
             raise
         finally:
             session.close()
