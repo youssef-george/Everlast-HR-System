@@ -486,6 +486,17 @@ code {
                         </div>
                     </div>
                     <div class="card-body p-0">
+                        {% if device_statuses %}
+                            {% set has_unreachable = device_statuses.values() | selectattr('network_unreachable') | list | length > 0 %}
+                            {% if has_unreachable %}
+                            <div class="alert alert-info m-3 mb-0" role="alert">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Note:</strong> Some devices are on private networks (192.168.x.x) and may not be reachable from cloud deployments. 
+                                These devices will show as "Network Unreachable" but can still be managed. 
+                                For cloud deployments, consider using a VPN or sync agent to access devices on private networks.
+                            </div>
+                            {% endif %}
+                        {% endif %}
                         {% if devices %}
                         <div class="table-responsive">
                             <table class="table table-hover mb-0">
@@ -550,8 +561,14 @@ code {
                                                 <span class="badge bg-success-subtle text-success border border-success-subtle">
                                                     <i class="fas fa-check-circle me-1"></i>Connected
                                                 </span>
+                                            {% elif status.network_unreachable %}
+                                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle" 
+                                                      title="{{ status.error or 'Device on private network - not reachable from cloud deployment' }}">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i>Network Unreachable
+                                                </span>
                                             {% else %}
-                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle"
+                                                      title="{{ status.error or 'Connection failed' }}">
                                                     <i class="fas fa-times-circle me-1"></i>Disconnected
                                                 </span>
                                             {% endif %}

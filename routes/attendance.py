@@ -3785,14 +3785,48 @@ def force_sync():
             'timestamp': datetime.now().isoformat()
         }), 500
 
+def is_private_ip(ip):
+    """Check if an IP address is in a private network range"""
+    try:
+        import ipaddress
+        ip_obj = ipaddress.ip_address(ip)
+        return ip_obj.is_private
+    except:
+        # Fallback: check common private IP ranges
+        parts = ip.split('.')
+        if len(parts) == 4:
+            first = int(parts[0])
+            second = int(parts[1])
+            # 192.168.x.x, 10.x.x.x, 172.16-31.x.x
+            return (first == 192 and second == 168) or \
+                   (first == 10) or \
+                   (first == 172 and 16 <= second <= 31)
+        return False
+
 def get_device_status(device_ip, device_port):
     """Get basic device status for a specific IP and port"""
     device_status = {
         'connected': False,
         'device_info': None,
         'last_sync': None,
-        'error': None
+        'error': None,
+        'network_unreachable': False
     }
+    
+    # Check if device is on private network and we might be in cloud
+    if is_private_ip(device_ip):
+        # Check if we're likely in a cloud environment
+        # (Coolify sets certain environment variables or we can check hostname)
+        import os
+        is_cloud = os.environ.get('COOLIFY', '').lower() == 'true' or \
+                   os.environ.get('COOLIFY_DEPLOYMENT', '').lower() == 'true' or \
+                   'coolify' in os.environ.get('HOSTNAME', '').lower()
+        
+        if is_cloud:
+            device_status['error'] = 'Device on private network - not reachable from cloud deployment'
+            device_status['network_unreachable'] = True
+            logging.info(f'Device {device_ip}:{device_port} is on private network and not reachable from cloud')
+            return device_status
     
     try:
         zk = ZK(device_ip, port=device_port, timeout=5)
@@ -3833,8 +3867,17 @@ def get_device_status(device_ip, device_port):
         else:
             device_status['error'] = 'Could not connect to device'
     except Exception as e:
-        device_status['error'] = str(e)
-        logging.error(f'Error connecting to device {device_ip}:{device_port}: {str(e)}')
+        error_msg = str(e)
+        # Check for common network errors
+        if 'timeout' in error_msg.lower() or 'connection' in error_msg.lower():
+            if is_private_ip(device_ip):
+                device_status['error'] = 'Device on private network - connection timeout (may not be reachable from this network)'
+                device_status['network_unreachable'] = True
+            else:
+                device_status['error'] = error_msg
+        else:
+            device_status['error'] = error_msg
+        logging.error(f'Error connecting to device {device_ip}:{device_port}: {error_msg}')
     
     return device_status
 
