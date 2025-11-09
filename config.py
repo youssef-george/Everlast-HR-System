@@ -12,11 +12,22 @@ class Config:
     
     # PostgreSQL Database Configuration (Primary)
     # SSL mode: require (as per Coolify requirements)
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'postgresql+psycopg2://postgres:1TJQKLGMKdZisAEtJ96ZQC9vh9iZL8zvnrqAXLZOanFANPy5QSHgW4uCm7PA4oRq@196.219.160.253:5444/postgres?sslmode=require'
+    # Get DATABASE_URL from environment, with fallback to default
+    _default_db_url = 'postgresql+psycopg2://postgres:1TJQKLGMKdZisAEtJ96ZQC9vh9iZL8zvnrqAXLZOanFANPy5QSHgW4uCm7PA4oRq@196.219.160.253:5444/postgres?sslmode=require'
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or _default_db_url
+    
+    # Validate DATABASE_URL doesn't contain device IP (common misconfiguration)
+    if '192.168.11.253' in SQLALCHEMY_DATABASE_URI:
+        import warnings
+        warnings.warn(
+            f"WARNING: DATABASE_URL appears to use device IP (192.168.11.253). "
+            f"Using default database URL instead. Current DATABASE_URL: {SQLALCHEMY_DATABASE_URI[:50]}..."
+        )
+        SQLALCHEMY_DATABASE_URI = _default_db_url
+    
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    # PostgreSQL engine options
+    # PostgreSQL engine options with improved timeout settings
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_recycle": 3600,
         "pool_pre_ping": True,
@@ -26,7 +37,12 @@ class Config:
         "pool_reset_on_return": "rollback",
         "echo": False,
         "connect_args": {
-            "sslmode": "require"
+            "sslmode": "require",
+            "connect_timeout": 10,  # Connection timeout in seconds
+            "keepalives": 1,
+            "keepalives_idle": 30,
+            "keepalives_interval": 10,
+            "keepalives_count": 5
         }
     }
     

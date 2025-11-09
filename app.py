@@ -35,13 +35,44 @@ def create_app(config_name='default'):
     csrf = CSRFProtect(app)
     scheduler.init_app(app)
     
-    # Log database connection info
+    # Log database connection info and validate connection
     with app.app_context():
+        db_url = app.config.get('SQLALCHEMY_DATABASE_URI', 'Not set')
+        # Mask password in logs
+        if '@' in db_url:
+            parts = db_url.split('@')
+            if len(parts) > 1:
+                masked_url = parts[0].split('//')[0] + '//***@' + parts[1]
+            else:
+                masked_url = db_url
+        else:
+            masked_url = db_url
+        
         logging.info(f"=== DATABASE CONNECTION ===")
-        logging.info(f"Database URL: {db.engine.url}")
+        logging.info(f"Database URL: {masked_url}")
         logging.info(f"Database Driver: {db.engine.url.drivername}")
         logging.info(f"Database Host: {db.engine.url.host}")
+        logging.info(f"Database Port: {db.engine.url.port}")
         logging.info(f"Database Name: {db.engine.url.database}")
+        
+        # Validate database URL doesn't use device IP
+        if '192.168.11.253' in db_url:
+            logging.error("⚠️  WARNING: Database URL appears to use device IP (192.168.11.253)")
+            logging.error("⚠️  This is likely a misconfiguration. Check your DATABASE_URL environment variable.")
+        
+        # Test database connection
+        try:
+            from sqlalchemy import text
+            db.session.execute(text('SELECT 1'))
+            db.session.commit()
+            logging.info("✅ Database connection test successful")
+        except Exception as e:
+            logging.error(f"❌ Database connection test failed: {str(e)}")
+            logging.error("⚠️  The application may not work correctly. Please check:")
+            logging.error("   1. DATABASE_URL environment variable is set correctly")
+            logging.error("   2. Database server is accessible from this host")
+            logging.error("   3. Network/firewall allows connections to the database")
+        
         logging.info(f"=============================")
     
     # Configure logging
@@ -302,6 +333,65 @@ def create_app(config_name='default'):
         flash('Your session has expired or is invalid. Please log in again.', 'danger')
         return redirect(url_for('auth.login'))
     
+    # Handle database connection errors specifically
+    @app.errorhandler(500)
+    def handle_internal_error(e):
+        """Handle internal errors including database connection issues"""
+        from psycopg2 import OperationalError
+        from sqlalchemy.exc import OperationalError as SQLAlchemyOperationalError
+        
+        # Check if it's a database connection error
+        error_str = str(e)
+        is_db_error = (
+            isinstance(e, (OperationalError, SQLAlchemyOperationalError)) or 
+            ('connection' in error_str.lower() and 'timeout' in error_str.lower()) or
+            ('psycopg2.OperationalError' in error_str)
+        )
+        
+        if is_db_error:
+            logging.error(f"Database connection error: {str(e)}")
+            db_url = app.config.get('SQLALCHEMY_DATABASE_URI', 'Not set')
+            # Mask password in logs
+            if '@' in db_url:
+                parts = db_url.split('@')
+                if len(parts) > 1:
+                    db_url = parts[0].split('//')[0] + '//***@' + parts[1]
+            logging.error(f"Database URL being used: {db_url[:100]}...")
+            
+            # Try to rollback any pending transaction
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            
+            # If user is authenticated, show error message
+            if current_user.is_authenticated:
+                flash('Database connection failed. Please contact the administrator or try again later.', 'danger')
+                return render_template('error.html', 
+                    error_message="Database connection failed",
+                    error_details=str(e) if app.config.get('DEBUG') else "Unable to connect to database. Please try again later."
+                ), 503
+            
+            # If not authenticated, redirect to login with error
+            flash('Database connection error. Please try again later.', 'danger')
+            return redirect(url_for('auth.login'))
+        
+        # For other 500 errors, use default handling
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        
+        # Log the full error with traceback
+        import traceback
+        logging.error(f"Internal server error: {str(e)}")
+        logging.error(traceback.format_exc())
+        
+        return render_template('error.html', 
+            error_message="An internal error occurred",
+            error_details=str(e) if app.config.get('DEBUG') else "Please try again later."
+        ), 500
+    
     @app.route('/health')
     def health_check():
         """Health check endpoint to monitor database connection pool status"""
@@ -345,49 +435,6 @@ def create_app(config_name='default'):
             db.session.close()
         except Exception as e:
             logging.warning(f"Error closing database session: {str(e)}")
-    
-    @app.errorhandler(500)
-    def handle_internal_error(e):
-        """Handle internal errors and rollback transactions"""
-        try:
-            db.session.rollback()
-        except Exception:
-            pass
-        
-        # Log the full error with traceback
-        import traceback
-        error_details = traceback.format_exc()
-        logging.error(f"Internal error: {str(e)}", exc_info=True)
-        logging.error(f"Full traceback:\n{error_details}")
-        
-        # Get original exception if available
-        original_error = str(e)
-        if hasattr(e, 'original_exception') and e.original_exception:
-            original_error = str(e.original_exception)
-        
-        # Return JSON for API requests (POST requests, JSON accept header, or API routes)
-        is_api_request = (
-            request.method == 'POST' or 
-            request.accept_mimetypes.accept_json or
-            request.path.startswith('/attendance/') or
-            request.path.startswith('/api/')
-        )
-        
-        if is_api_request:
-            error_message = original_error
-            # In development, include more details
-            if app.config.get('DEBUG', False):
-                error_message = f"{original_error}\n\nTraceback:\n{error_details}"
-            return jsonify({
-                'status': 'error',
-                'message': f'Internal server error: {original_error}',
-                'details': error_details if app.config.get('DEBUG', False) else None
-            }), 500
-        
-        # Return HTML for regular page requests
-        if app.config.get('DEBUG', False):
-            return f"<h1>Internal Server Error</h1><pre>{error_details}</pre>", 500
-        return "Internal Server Error", 500
     
     return app
 

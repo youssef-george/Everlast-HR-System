@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Error{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-exclamation-triangle"></i> Error
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <h5 class="text-danger">{{ error_message }}</h5>
+                    {% if error_details %}
+                    <div class="alert alert-info mt-3">
+                        <strong>Details:</strong>
+                        <pre class="mb-0 mt-2" style="white-space: pre-wrap; word-wrap: break-word;">{{ error_details }}</pre>
+                    </div>
+                    {% endif %}
+                    <div class="mt-4">
+                        <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">
+                            <i class="fas fa-home"></i> Go to Dashboard
+                        </a>
+                        <a href="javascript:history.back()" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Go Back
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
