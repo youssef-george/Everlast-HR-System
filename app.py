@@ -60,18 +60,34 @@ def create_app(config_name='default'):
             logging.error("⚠️  WARNING: Database URL appears to use device IP (192.168.11.253)")
             logging.error("⚠️  This is likely a misconfiguration. Check your DATABASE_URL environment variable.")
         
-        # Test database connection
-        try:
-            from sqlalchemy import text
-            db.session.execute(text('SELECT 1'))
-            db.session.commit()
-            logging.info("✅ Database connection test successful")
-        except Exception as e:
-            logging.error(f"❌ Database connection test failed: {str(e)}")
-            logging.error("⚠️  The application may not work correctly. Please check:")
-            logging.error("   1. DATABASE_URL environment variable is set correctly")
-            logging.error("   2. Database server is accessible from this host")
-            logging.error("   3. Network/firewall allows connections to the database")
+        # Test database connection with retry logic
+        max_retries = 3
+        retry_delay = 5  # seconds
+        connection_successful = False
+        
+        for attempt in range(1, max_retries + 1):
+            try:
+                from sqlalchemy import text
+                db.session.execute(text('SELECT 1'))
+                db.session.commit()
+                logging.info("✅ Database connection test successful")
+                connection_successful = True
+                break
+            except Exception as e:
+                if attempt < max_retries:
+                    logging.warning(f"⚠️  Database connection attempt {attempt}/{max_retries} failed: {str(e)}")
+                    logging.info(f"⏳ Retrying in {retry_delay} seconds...")
+                    import time
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    logging.error(f"❌ Database connection test failed after {max_retries} attempts: {str(e)}")
+                    logging.error("⚠️  The application will start but may not work correctly. Please check:")
+                    logging.error("   1. DATABASE_URL environment variable is set correctly")
+                    logging.error("   2. Database server is accessible from this host")
+                    logging.error("   3. Network/firewall allows connections to the database")
+                    logging.error("   4. Database server is running and accepting connections")
+                    logging.warning("⚠️  Application will continue to start. Database connections will be retried on first request.")
         
         logging.info(f"=============================")
     
@@ -186,6 +202,8 @@ def create_app(config_name='default'):
         _tables_initialized = True
         try:
             from sqlalchemy import text
+            from psycopg2 import OperationalError
+            from sqlalchemy.exc import OperationalError as SQLAlchemyOperationalError
             
             # Create employee_attachments table if missing
             try:
@@ -210,6 +228,11 @@ def create_app(config_name='default'):
                 """))
                 db.session.commit()
                 logging.info("✅ employee_attachments table checked/created")
+            except (OperationalError, SQLAlchemyOperationalError) as e:
+                # Connection errors - don't log as warning, just skip silently
+                # The connection will be retried on actual database operations
+                db.session.rollback()
+                return  # Skip remaining operations if we can't connect
             except Exception as e:
                 logging.warning(f"employee_attachments table check: {e}")
                 db.session.rollback()
@@ -233,13 +256,25 @@ def create_app(config_name='default'):
                 db.session.execute(text(f"SELECT setval('departments_id_seq', GREATEST({max_id}, 1), false)"))
                 db.session.commit()
                 logging.info(f"✅ Department sequence fixed")
+            except (OperationalError, SQLAlchemyOperationalError) as e:
+                # Connection errors - skip silently
+                db.session.rollback()
             except Exception as e:
                 logging.warning(f"Department sequence fix: {e}")
                 db.session.rollback()
                 
+        except (OperationalError, SQLAlchemyOperationalError) as e:
+            # Connection errors - skip silently, connection will be retried later
+            try:
+                db.session.rollback()
+            except:
+                pass
         except Exception as e:
             logging.warning(f"Table/sequence check: {e}")
-            db.session.rollback()
+            try:
+                db.session.rollback()
+            except:
+                pass
     
     # Run on first request
     @app.before_request
