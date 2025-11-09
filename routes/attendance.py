@@ -33,9 +33,18 @@ sync_lock = threading.Lock()
 
 def protect_admin_routes():
     """Protect admin-only attendance routes"""
+    # Routes that should be excluded from IS_ADMIN_INSTANCE check
+    # (they have their own role-based access control)
+    excluded_routes = [
+        'attendance.my_attendance',
+        'attendance.my_attendance_sync_status',
+        'attendance.index',
+        'attendance.device_settings',  # Has @role_required(['admin', 'product_owner'])
+    ]
+    
     if (request.endpoint 
         and request.endpoint.startswith('attendance.') 
-        and request.endpoint not in ['attendance.my_attendance', 'attendance.my_attendance_sync_status']
+        and request.endpoint not in excluded_routes
         and not current_app.config.get('IS_ADMIN_INSTANCE', False)):
         flash('This feature is only available on the admin portal.', 'error')
         return redirect(url_for('dashboard.index'))
@@ -43,8 +52,14 @@ def protect_admin_routes():
 # Apply protection to admin routes
 @attendance_bp.before_request
 def before_request():
-    # Skip protection for my_attendance routes and index route
-    if request.endpoint in ['attendance.my_attendance', 'attendance.my_attendance_sync_status', 'attendance.index']:
+    # Skip protection for excluded routes
+    excluded_routes = [
+        'attendance.my_attendance',
+        'attendance.my_attendance_sync_status',
+        'attendance.index',
+        'attendance.device_settings',  # Has its own role-based access control
+    ]
+    if request.endpoint in excluded_routes:
         return None
     return protect_admin_routes()
 

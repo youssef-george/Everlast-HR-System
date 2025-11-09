@@ -96,6 +96,13 @@ class Config:
         'ENABLE_DIRECT_DEVICE_SYNC', 'false'
     ).lower() == 'true'
 
+    # ------------------------
+    # Admin Instance Flag
+    # ------------------------
+    # Set to True to enable admin features (device settings, etc.)
+    # Can be overridden via environment variable
+    IS_ADMIN_INSTANCE = os.environ.get('IS_ADMIN_INSTANCE', 'true').lower() == 'true'
+
     @staticmethod
     def init_app(app):
         pass
