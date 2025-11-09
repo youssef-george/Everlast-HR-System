@@ -1,0 +1,106 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Flask
+instance/
+flask_session_data/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Test files
+test_*.py
+*_test.py
+
+# Migration scripts (temporary)
+*_migration*.py
+migrate_*.py
+fix_*.py
+check_*.py
+verify_*.py
+complete_*.py
+cleanup_*.py
+diagnose_*.py
+create_*.py
+remove_*.py
+setup_*.py
+transfer_*.py
+reprocess_*.py
+update_*.py
+find_*.py
+view_*.py
+list_*.py
+quick_*.py
+simple_*.py
+final_*.py
+fresh_*.py
+resumable_*.py
+robust_*.py
+fast_*.py
+continue_*.py
+
+# Output files
+*.txt
+*.log
+*.xlsx
+check_output.txt
+migration_log.txt
+migration.log
+startup_output.txt
+output.log
+flask_startup.log
+flask_error.log
+
+# Documentation (temporary migration docs)
+*_MIGRATION*.md
+*_STATUS*.md
+*_GUIDE*.md
+*_COMPLETE*.md
+*_TROUBLESHOOTING*.md
+*_INSTRUCTIONS*.md
+*_REPORT*.md
+*_SUMMARY*.md
+*_SETUP*.md
+*_DEPLOYMENT*.md
+*_ENV*.txt
+READY_TO_RESTART.md
+RESTART_INSTRUCTIONS.md
+
+# Scripts
+*.ps1
+activate_devices.py
+run_migration_background.ps1
+
+# Attachments
+attached_assets/
+uploads/
+

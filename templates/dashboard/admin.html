@@ -2114,7 +2114,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         </div>
                                     </td>
                                     <td>{{ leave.user.department.department_name if leave.user.department else 'No Department' }}</td>
-                                    <td>{{ leave.start_date.strftime('%d/%m/%Y') }} - {{ leave.end_date.strftime('%d/%m/%Y') }}</td>
+                                    <td>{{ leave.start_date|safe_datetime('%d/%m/%Y') }} - {{ leave.end_date|safe_datetime('%d/%m/%Y') }}</td>
                                     <td>
                                         <a href="{{ url_for('leave.view', id=leave.id) }}" class="btn btn-sm btn-primary">Review</a>
                                     </td>
@@ -2178,7 +2178,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         </div>
                                     </td>
                                     <td>{{ permission.user.department.department_name if permission.user.department else 'No Department' }}</td>
-                                    <td>{{ permission.start_time.strftime('%d/%m/%Y %I:%M %p') }} - {{ permission.end_time.strftime('%I:%M %p') }}</td>
+                                    <td>{{ permission.start_time|safe_datetime('%d/%m/%Y %I:%M %p') }} - {{ permission.end_time|safe_datetime('%I:%M %p') }}</td>
                                     <td>
                                         <a href="{{ url_for('permission.view', id=permission.id) }}" class="btn btn-sm btn-primary">Review</a>
                                     </td>
@@ -2249,7 +2249,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         </div>
                                     </td>
                                     <td>{{ leave.user.department.department_name if leave.user.department else 'No Department' }}</td>
-                                    <td>{{ leave.start_date.strftime('%d/%m/%Y') }} - {{ leave.end_date.strftime('%d/%m/%Y') }}</td>
+                                    <td>{{ leave.start_date|safe_datetime('%d/%m/%Y') }} - {{ leave.end_date|safe_datetime('%d/%m/%Y') }}</td>
                                     <td>
                                         {% if leave.status == 'pending' %}
                                             <span class="badge badge-light-warning">Pending</span>
@@ -2259,7 +2259,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <span class="badge badge-light-danger">Rejected</span>
                                         {% endif %}
                                     </td>
-                                    <td>{{ leave.updated_at.strftime('%d/%m/%Y %I:%M %p') }}</td>
+                                    <td>{{ leave.updated_at|safe_datetime('%d/%m/%Y %I:%M %p') }}</td>
                                     <td>
                                         <a href="{{ url_for('leave.view', id=leave.id) }}" class="btn btn-sm btn-icon btn-light" data-bs-toggle="tooltip" title="View Details">
                                             <i class="fas fa-eye"></i>
@@ -2309,7 +2309,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         </div>
                                     </td>
                                     <td>{{ permission.user.department.department_name if permission.user.department else 'No Department' }}</td>
-                                    <td>{{ permission.start_time.strftime('%d/%m/%Y %I:%M %p') }} - {{ permission.end_time.strftime('%I:%M %p') }}</td>
+                                    <td>{{ permission.start_time|safe_datetime('%d/%m/%Y %I:%M %p') }} - {{ permission.end_time|safe_datetime('%I:%M %p') }}</td>
                                     <td>
                                         {% if permission.status == 'pending' %}
                                             <span class="badge badge-light-warning">Pending</span>
@@ -2319,7 +2319,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <span class="badge badge-light-danger">Rejected</span>
                                         {% endif %}
                                     </td>
-                                    <td>{{ permission.updated_at.strftime('%d/%m/%Y %I:%M %p') }}</td>
+                                    <td>{{ permission.updated_at|safe_datetime('%d/%m/%Y %I:%M %p') }}</td>
                                     <td>
                                         <a href="{{ url_for('permission.view', id=permission.id) }}" class="btn btn-sm btn-icon btn-light" data-bs-toggle="tooltip" title="View Details">
                                             <i class="fas fa-eye"></i>
@@ -2494,7 +2494,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <tr>
                                     <td>
                                         <span class="badge bg-info">
-                                            {{ holiday.date.strftime('%B %d, %Y') }}
+                                            {{ holiday.date|safe_datetime('%B %d, %Y') }}
                                         </span>
                                     </td>
                                     <td>{{ holiday.description }}</td>

@@ -58,24 +58,51 @@ def format_duration(duration):
         return f"{hours}h {minutes}m"
     return f"{minutes}m"
 
+def safe_db_query(query_func, default=None):
+    """Execute a database query with automatic rollback on error"""
+    try:
+        return query_func()
+    except Exception as e:
+        # Check if it's a transaction error
+        error_str = str(e).lower()
+        if 'infailedsqltransaction' in error_str or 'transaction is aborted' in error_str:
+            logging.warning(f"Transaction aborted, rolling back: {e}")
+            try:
+                db.session.rollback()
+            except Exception as rollback_error:
+                logging.error(f"Error during rollback: {rollback_error}")
+        else:
+            logging.error(f"Database query error: {e}")
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+        return default
+
 def cleanup_orphaned_paid_holiday_records():
     """Remove DailyAttendance records that reference deleted paid holidays"""
     try:
         from models import PaidHoliday
         
         # Find all DailyAttendance records with paid_holiday_id that don't exist in PaidHoliday table
-        orphaned_records = DailyAttendance.query.filter(
+        orphaned_records = safe_db_query(
+            lambda: DailyAttendance.query.filter(
             DailyAttendance.paid_holiday_id.isnot(None),
             ~DailyAttendance.paid_holiday_id.in_(
                 db.session.query(PaidHoliday.id)
             )
-        ).all()
+            ).all(),
+            default=[]
+        )
         
         # Find all DailyAttendance records with paid_holiday status but no paid_holiday_id
-        orphaned_status_records = DailyAttendance.query.filter(
+        orphaned_status_records = safe_db_query(
+            lambda: DailyAttendance.query.filter(
             DailyAttendance.paid_holiday_id.is_(None),
             DailyAttendance.status == 'paid_holiday'
-        ).all()
+            ).all(),
+            default=[]
+        )
         
         total_orphaned = len(orphaned_records) + len(orphaned_status_records)
         
@@ -83,18 +110,25 @@ def cleanup_orphaned_paid_holiday_records():
             logging.info(f"Found {len(orphaned_records)} orphaned paid holiday records with paid_holiday_id")
             logging.info(f"Found {len(orphaned_status_records)} orphaned paid holiday records with paid_holiday status")
             
-            for record in orphaned_records:
-                db.session.delete(record)
-            
-            for record in orphaned_status_records:
-                db.session.delete(record)
-            
-            db.session.commit()
-            logging.info(f"Cleaned up {total_orphaned} orphaned paid holiday records")
+            try:
+                for record in orphaned_records:
+                    db.session.delete(record)
+                
+                for record in orphaned_status_records:
+                    db.session.delete(record)
+                
+                db.session.commit()
+                logging.info(f"Cleaned up {total_orphaned} orphaned paid holiday records")
+            except Exception as e:
+                logging.error(f"Error committing orphaned record cleanup: {str(e)}")
+                db.session.rollback()
         
     except Exception as e:
         logging.error(f"Error cleaning up orphaned paid holiday records: {str(e)}")
-        db.session.rollback()
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
 
 def determine_attendance_type(timestamp):
     """Simple fallback for legacy code - determines type based on time of day"""
@@ -623,19 +657,29 @@ def cleanup_duplicate_attendance_records():
         return 0
 
 def get_active_device():
-    """Get the active device settings. Returns None if no device exists - DO NOT create defaults."""
+    """Get the active device settings or create default if none exists"""
     device = DeviceSettings.query.filter_by(is_active=True).first()
+    
+    if not device:
+        # Create default device settings
+        device = DeviceSettings(
+            device_ip='192.168.11.2',
+            device_port=4370,
+            device_name='Default Device',
+            is_active=True
+        )
+        db.session.add(device)
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f'Error creating default device settings: {str(e)}')
+    
     return device
 
 def test_device_connection():
     """Test connection to the fingerprint device with detailed diagnostics"""
     device = get_active_device()
-    if not device:
-        return {
-            'success': False,
-            'error': 'No active device configured',
-            'details': []
-        }
     device_ip = device.device_ip
     device_port = device.device_port
     
@@ -748,20 +792,53 @@ def sync_attendance_from_device(device):
     try:
         logging.info(f'Syncing data from device {device.get_display_name()} ({device.device_ip}:{device.device_port})')
         
-        # Connect to device
-        zk = ZK(device.device_ip, port=device.device_port, timeout=5)
-        conn = zk.connect()
+        # Connect to device with increased timeout protection (30 seconds for large datasets)
+        zk = ZK(device.device_ip, port=device.device_port, timeout=30)
+        try:
+            conn = zk.connect()
+        except Exception as conn_error:
+            error_msg = f'Connection error to device {device.get_display_name()}: {str(conn_error)}'
+            logging.error(error_msg)
+            return {
+                'status': 'error',
+                'message': error_msg,
+                'records_added': 0,
+                'records_updated': 0
+            }
+        
         if not conn:
             error_msg = f'Could not connect to device {device.get_display_name()}'
             logging.error(error_msg)
             return {
                 'status': 'error',
                 'message': error_msg,
-                'records_added': 0
+                'records_added': 0,
+                'records_updated': 0
             }
         
-        # Get attendance records from device
-        attendance_records = conn.get_attendance()
+        # Get attendance records from device with error handling and timeout protection
+        try:
+            logging.info(f'Fetching attendance records from {device.get_display_name()}...')
+            attendance_records = conn.get_attendance()
+            total_records = len(attendance_records) if attendance_records else 0
+            logging.info(f'Retrieved {total_records} records from {device.get_display_name()}')
+            
+            # Log date range to verify we're getting all available data
+            if attendance_records and total_records > 0:
+                timestamps = [r.timestamp for r in attendance_records]
+                oldest = min(timestamps)
+                newest = max(timestamps)
+                days_span = (newest - oldest).days
+                logging.info(f'Date range in device records: {oldest.strftime("%Y-%m-%d %H:%M:%S")} to {newest.strftime("%Y-%m-%d %H:%M:%S")} ({days_span} days)')
+        except Exception as get_error:
+            error_msg = f'Error retrieving attendance from device {device.get_display_name()}: {str(get_error)}'
+            logging.error(error_msg, exc_info=True)
+            return {
+                'status': 'error',
+                'message': error_msg,
+                'records_added': 0,
+                'records_updated': 0
+            }
         if not attendance_records:
             return {
                 'status': 'success',
@@ -769,60 +846,169 @@ def sync_attendance_from_device(device):
                 'records_added': 0
             }
         
-        # Process records
+        # Process records in batches for better performance
         records_added = 0
         records_updated = 0
         unmatched_records = 0
+        batch_size = 500  # Increased batch size for better performance
         
-        for record in attendance_records:
-            # Find user by fingerprint number
-            user = find_user_for_device_record(device, record.user_id)
+        total_records = len(attendance_records) if attendance_records else 0
+        logging.info(f'Processing {total_records} records from device {device.get_display_name()} in batches of {batch_size}')
+        
+        # Log progress periodically to help debug long-running syncs
+        progress_interval = max(1000, total_records // 10)  # Log every 10% or every 1000 records, whichever is larger
+        
+        # Pre-cache user lookups by fingerprint number for better performance
+        user_cache = {}
+        fingerprint_numbers = set(str(r.user_id) for r in attendance_records)
+        if fingerprint_numbers:
+            cached_users = safe_db_query(
+                lambda: User.query.filter(User.fingerprint_number.in_(fingerprint_numbers)).all(),
+                default=[]
+            )
+            user_cache = {str(u.fingerprint_number): u for u in cached_users if u.fingerprint_number}
+        
+        # Pre-fetch existing records in batches to reduce queries
+        new_records = []
+        
+        for idx, record in enumerate(attendance_records):
+            # Find user from cache
+            user = user_cache.get(str(record.user_id))
             
             if not user:
-                # Skip records that don't match any user
-                unmatched_records += 1
-                logging.warning(f'No user found for fingerprint number {record.user_id} on device {device.get_display_name()}')
-                continue
-            
-            # Check if record already exists (check across all devices for same user and timestamp)
-            existing_record = AttendanceLog.query.filter_by(
-                user_id=user.id,
-                timestamp=record.timestamp
-            ).first()
-            
-            if existing_record:
-                # Update existing record with current device info if it's from a different device
-                if existing_record.device_id != device.id:
-                    existing_record.device_ip = device.device_ip
-                    existing_record.device_id = device.id
-                    records_updated += 1
+                # Try to find user (fallback)
+                user = find_user_for_device_record(device, record.user_id)
+                if user:
+                    user_cache[str(record.user_id)] = user
                 else:
-                    # Same device, just update scan type
-                    existing_record.scan_type = determine_attendance_type(record.timestamp)
-                    records_updated += 1
-            else:
-                # Create new attendance log
-                attendance_log = AttendanceLog(
-                    user_id=user.id,
-                    timestamp=record.timestamp,
-                    scan_type=determine_attendance_type(record.timestamp),
-                    device_ip=device.device_ip,
-                    device_id=device.id
+                    unmatched_records += 1
+                    if unmatched_records <= 5:
+                        logging.warning(f'No user found for fingerprint number {record.user_id} on device {device.get_display_name()}')
+                    continue
+            
+            # Collect records for batch processing
+            new_records.append({
+                'user_id': user.id,
+                'timestamp': record.timestamp,
+                'scan_type': determine_attendance_type(record.timestamp),
+                'device_ip': device.device_ip,
+                'device_id': device.id
+            })
+            
+            # Commit in batches
+            if len(new_records) >= batch_size:
+                # Batch check for existing records
+                timestamps = [r['timestamp'] for r in new_records]
+                user_ids = list(set(r['user_id'] for r in new_records))
+                
+                existing_records = safe_db_query(
+                    lambda: AttendanceLog.query.filter(
+                        AttendanceLog.user_id.in_(user_ids),
+                        AttendanceLog.timestamp.in_(timestamps)
+                    ).all(),
+                    default=[]
                 )
-                db.session.add(attendance_log)
-                records_added += 1
+                
+                existing_map = {(r.user_id, r.timestamp): r for r in existing_records}
+                
+                # Process batch
+                for rec_data in new_records:
+                    key = (rec_data['user_id'], rec_data['timestamp'])
+                    existing = existing_map.get(key)
+                    
+                    if existing:
+                        if existing.device_id != device.id:
+                            existing.device_ip = rec_data['device_ip']
+                            existing.device_id = rec_data['device_id']
+                            records_updated += 1
+                        else:
+                            existing.scan_type = rec_data['scan_type']
+                            records_updated += 1
+                    else:
+                        attendance_log = AttendanceLog(**rec_data)
+                        db.session.add(attendance_log)
+                        records_added += 1
+                
+                # Commit batch
+                try:
+                    db.session.commit()
+                    # Log progress periodically
+                    if (idx + 1) % progress_interval == 0 or (idx + 1) == total_records:
+                        logging.info(f'Progress: {idx + 1}/{total_records} records processed ({records_added} added, {records_updated} updated)')
+                except Exception as commit_error:
+                    db.session.rollback()
+                    logging.error(f'Error committing batch: {str(commit_error)}')
+                    # Continue with next batch
+                
+                new_records = []
         
-        # Commit all changes
-        db.session.commit()
+        # Process remaining records
+        if new_records:
+            timestamps = [r['timestamp'] for r in new_records]
+            user_ids = list(set(r['user_id'] for r in new_records))
+            
+            existing_records = safe_db_query(
+                lambda: AttendanceLog.query.filter(
+                    AttendanceLog.user_id.in_(user_ids),
+                    AttendanceLog.timestamp.in_(timestamps)
+                ).all(),
+                default=[]
+            )
+            
+            existing_map = {(r.user_id, r.timestamp): r for r in existing_records}
+            
+            for rec_data in new_records:
+                key = (rec_data['user_id'], rec_data['timestamp'])
+                existing = existing_map.get(key)
+                
+                if existing:
+                    if existing.device_id != device.id:
+                        existing.device_ip = rec_data['device_ip']
+                        existing.device_id = rec_data['device_id']
+                        records_updated += 1
+                    else:
+                        existing.scan_type = rec_data['scan_type']
+                        records_updated += 1
+                else:
+                    attendance_log = AttendanceLog(**rec_data)
+                    db.session.add(attendance_log)
+                    records_added += 1
         
-        logging.info(f'Sync completed for {device.get_display_name()}: {records_added} added, {records_updated} updated, {unmatched_records} unmatched')
+        # Commit remaining changes
+        if new_records:
+            try:
+                db.session.commit()
+                logging.info(f'Committed final batch: {total_records} records processed')
+            except Exception as commit_error:
+                db.session.rollback()
+                error_msg = f'Error committing final batch: {str(commit_error)}'
+                logging.error(error_msg)
+                raise Exception(error_msg)
+        
+        # Calculate summary statistics
+        total_fetched = total_records
+        total_processed = records_added + records_updated
+        total_skipped = unmatched_records
+        
+        logging.info(f'Sync completed for {device.get_display_name()}:')
+        logging.info(f'  Total fetched from device: {total_fetched}')
+        logging.info(f'  Records added: {records_added}')
+        logging.info(f'  Records updated: {records_updated}')
+        logging.info(f'  Total processed: {total_processed}')
+        logging.info(f'  Unmatched (skipped): {unmatched_records}')
+        
+        if total_fetched > 0:
+            processing_rate = (total_processed / total_fetched) * 100
+            logging.info(f'  Processing rate: {processing_rate:.1f}% ({total_processed}/{total_fetched})')
         
         return {
             'status': 'success',
-            'message': f'Synced {records_added} records from {device.get_display_name()}',
+            'message': f'Synced {records_added} new records from {device.get_display_name()} (fetched {total_fetched}, processed {total_processed}, unmatched {unmatched_records})',
             'records_added': records_added,
             'records_updated': records_updated,
-            'unmatched': unmatched_records
+            'unmatched': unmatched_records,
+            'total_fetched': total_fetched,
+            'total_processed': total_processed
         }
         
     except Exception as e:
@@ -834,25 +1020,39 @@ def sync_attendance_from_device(device):
             'records_added': 0
         }
     finally:
+        # Always disconnect from device, even if there was an error
         if conn:
-            conn.disconnect()
+            try:
+                conn.disconnect()
+                logging.info(f'Disconnected from device {device.get_display_name()}')
+            except Exception as disconnect_error:
+                logging.warning(f'Error disconnecting from device {device.get_display_name()}: {str(disconnect_error)}')
 
 def find_user_for_device_record(device, device_user_id):
     """Find system user for a device record using fingerprint number"""
     try:
         # Direct match by fingerprint number
-        user = User.query.filter_by(fingerprint_number=str(device_user_id)).first()
+        user = safe_db_query(
+            lambda: User.query.filter_by(fingerprint_number=str(device_user_id)).first(),
+            default=None
+        )
         if user:
             return user
         
         # Check if there's a processed device user with this fingerprint ID
-        device_user = DeviceUser.query.filter_by(
+        device_user = safe_db_query(
+            lambda: DeviceUser.query.filter_by(
             device_user_id=str(device_user_id),
             is_processed=True
-        ).first()
+            ).first(),
+            default=None
+        )
         
         if device_user and device_user.system_user_id:
-            return User.query.get(device_user.system_user_id)
+            return safe_db_query(
+                lambda: User.query.get(device_user.system_user_id),
+                default=None
+            )
         
         # If no match, automatically create a system user for this fingerprint
         try:
@@ -894,7 +1094,10 @@ def sync_attendance_task(full_sync=False):
             cleanup_orphaned_paid_holiday_records()
             
             # Get all active devices
-            active_devices = DeviceSettings.query.filter_by(is_active=True).all()
+            active_devices = safe_db_query(
+                lambda: DeviceSettings.query.filter_by(is_active=True).all(),
+                default=[]
+            )
             if not active_devices:
                 error_msg = 'No active devices found'
                 logging.error(error_msg)
@@ -1094,7 +1297,10 @@ def manual_sync():
     # The connection manager already handles sync conflicts
 
     # Check if there are any active devices
-    active_devices = DeviceSettings.query.filter_by(is_active=True).all()
+    active_devices = safe_db_query(
+        lambda: DeviceSettings.query.filter_by(is_active=True).all(),
+        default=[]
+    )
     if not active_devices:
         return jsonify({
             'status': 'error',
@@ -1122,14 +1328,97 @@ def manual_sync():
         
         # Run sync with timeout protection
         logging.info(f'Starting manual sync for {len(active_devices)} devices')
-        sync_results = sync_attendance_task(full_sync=True)
-        logging.info(f'Manual sync completed: {sync_results}')
+        
+        sync_results = None
+        try:
+            # Ensure we have a clean session before sync
+            db.session.rollback()
+            
+            # Call sync with explicit error handling and timeout protection
+            try:
+                # Use a signal or timeout wrapper if needed (for very long operations)
+                # For now, we rely on proper error handling and logging
+                sync_results = sync_attendance_task(full_sync=True)
+                
+                # Log completion
+                if sync_results:
+                    logging.info(f'Manual sync completed: status={sync_results.get("status")}, records_added={sync_results.get("records_added", 0)}')
+                else:
+                    logging.warning('Manual sync returned None')
+                
+                # Ensure session is clean after sync
+                try:
+                    db.session.commit()
+                except Exception as commit_err:
+                    db.session.rollback()
+                    logging.warning(f'Session commit warning after sync: {commit_err}')
+            except KeyboardInterrupt:
+                # Handle user interruption
+                logging.warning('Sync interrupted by user')
+                db.session.rollback()
+                sync_results = {
+                    'status': 'error',
+                    'message': 'Sync was interrupted. Please try again.'
+                }
+            except Exception as sync_inner_error:
+                logging.error(f'Error in sync_attendance_task: {str(sync_inner_error)}', exc_info=True)
+                db.session.rollback()
+                # Create a proper error response
+                error_msg = str(sync_inner_error)[:200]
+                sync_results = {
+                    'status': 'error',
+                    'message': f'Sync failed: {error_msg}'
+                }
+        except Exception as sync_error:
+            logging.error(f'Error calling sync_attendance_task: {str(sync_error)}', exc_info=True)
+            # Rollback any failed transaction
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            # Return error response - ensure it's a valid JSON response
+            try:
+                return jsonify({
+                    'status': 'error',
+                    'message': f'Sync task failed: {str(sync_error)[:200]}'
+                }), 500
+            except Exception as json_error:
+                logging.error(f'Error creating JSON response: {str(json_error)}')
+                # Fallback: return simple text response
+                from flask import Response
+                return Response(
+                    f'{{"status":"error","message":"Sync task failed: {str(sync_error)[:200]}"}}',
+                    status=500,
+                    mimetype='application/json'
+                )
+        
+        # Validate sync_results - ensure we always have a response
+        if not sync_results:
+            logging.error('sync_attendance_task returned None - creating fallback response')
+            sync_results = {
+                'status': 'error',
+                'message': 'Sync failed: No response from sync task. The sync may have timed out or encountered an error. Check server logs for details.'
+            }
+        
+        if not isinstance(sync_results, dict):
+            logging.error(f'sync_attendance_task returned invalid type: {type(sync_results)}')
+            return jsonify({
+                'status': 'error',
+                'message': f'Sync failed: Invalid response from sync task. Check server logs for details.'
+            }), 500
+        
+        if 'status' not in sync_results:
+            logging.error(f'sync_attendance_task returned invalid response: {sync_results}')
+            return jsonify({
+                'status': 'error',
+                'message': 'Sync failed: Invalid response format from sync task. Check server logs for details.'
+            }), 500
         
         # Return results based on sync status
         if sync_results['status'] == 'success':
             return jsonify({
                 'status': 'success',
-                'message': sync_results['message'],
+                'message': sync_results.get('message', 'Sync completed successfully'),
                 'records_added': sync_results.get('records_added', 0),
                 'records_updated': sync_results.get('records_updated', 0),
                 'devices_count': len(active_devices)
@@ -1137,7 +1426,7 @@ def manual_sync():
         elif sync_results['status'] == 'skipped':
             return jsonify({
                 'status': 'info',
-                'message': sync_results['message']
+                'message': sync_results.get('message', 'Sync was skipped')
             }), 200
         else:
             return jsonify({
@@ -1147,10 +1436,26 @@ def manual_sync():
             
     except Exception as e:
         logging.error(f'Error in manual sync: {str(e)}', exc_info=True)
-        return jsonify({
-            'status': 'error',
-            'message': f'Sync failed: {str(e)}'
-        }), 500
+        # Rollback any failed transaction
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        # Always return a valid JSON response, even on unexpected errors
+        try:
+            return jsonify({
+                'status': 'error',
+                'message': f'Sync failed: {str(e)[:500]}'  # Limit message length
+            }), 500
+        except Exception as json_error:
+            # Last resort: return a simple text response
+            logging.error(f'Failed to create JSON response: {str(json_error)}')
+            from flask import Response
+            return Response(
+                '{"status":"error","message":"Sync failed due to an internal error. Check server logs for details."}',
+                status=500,
+                mimetype='application/json'
+            )
 
 @attendance_bp.route('/test-sync', methods=['POST'])
 @login_required
@@ -1304,53 +1609,68 @@ def index():
     
     try:
         # Get today's attendance logs
-        today_logs = AttendanceLog.query\
+        today_logs = safe_db_query(
+            lambda: AttendanceLog.query\
             .filter(AttendanceLog.timestamp.between(start_datetime, end_datetime))\
             .order_by(AttendanceLog.timestamp.desc())\
-            .all()
+                .all(),
+            default=[]
+        )
         
         # Get users based on role
         if current_user.role in ['admin', 'product_owner', 'director']:
             # Admins, Product Owners, and directors can see all users
-            all_active_users = User.query.filter_by(status='active').filter(
+            all_active_users = safe_db_query(
+                lambda: User.query.filter_by(status='active').filter(
                 User.fingerprint_number != None,
                 User.fingerprint_number != '',
                 User.first_name != None,
                 User.first_name != '',
                 User.last_name != None,
                 User.last_name != ''
-            ).order_by(User.first_name.desc(), User.last_name.desc()).all()
+                ).order_by(User.first_name.desc(), User.last_name.desc()).all(),
+                default=[]
+            )
         elif current_user.role == 'manager':
             # Managers can see all employees in their department
             if current_user.department_id:
-                all_active_users = User.query.filter_by(status='active', department_id=current_user.department_id).filter(
+                all_active_users = safe_db_query(
+                    lambda: User.query.filter_by(status='active', department_id=current_user.department_id).filter(
                     User.fingerprint_number != None,
                     User.fingerprint_number != '',
                     User.first_name != None,
                     User.first_name != '',
                     User.last_name != None,
                     User.last_name != ''
-                ).order_by(User.first_name.desc(), User.last_name.desc()).all()
+                    ).order_by(User.first_name.desc(), User.last_name.desc()).all(),
+                    default=[]
+                )
             else:
                 # If manager has no department assigned, they can only see themselves
-                all_active_users = User.query.filter_by(id=current_user.id, status='active').filter(
+                all_active_users = safe_db_query(
+                    lambda: User.query.filter_by(id=current_user.id, status='active').filter(
                     User.fingerprint_number != None,
                     User.fingerprint_number != '',
                     User.first_name != None,
                     User.first_name != '',
                     User.last_name != None,
                     User.last_name != ''
-                ).order_by(User.first_name.desc(), User.last_name.desc()).all()
+                    ).order_by(User.first_name.desc(), User.last_name.desc()).all(),
+                    default=[]
+                )
         else:
             # Employees can only see their own attendance
-            all_active_users = User.query.filter_by(id=current_user.id, status='active').filter(
+            all_active_users = safe_db_query(
+                lambda: User.query.filter_by(id=current_user.id, status='active').filter(
                 User.fingerprint_number != None,
                 User.fingerprint_number != '',
                 User.first_name != None,
                 User.first_name != '',
                 User.last_name != None,
                 User.last_name != ''
-            ).order_by(User.first_name.desc(), User.last_name.desc()).all()
+                ).order_by(User.first_name.desc(), User.last_name.desc()).all(),
+                default=[]
+            )
 
         # Process today's logs
         processed_logs = process_attendance_logs(today_logs)
@@ -1380,49 +1700,51 @@ def index():
             continue
             
         # Check if user has an approved leave for today
-        leave_request = None
-        try:
-            leave_request = LeaveRequest.query.filter(
+        leave_request = safe_db_query(
+            lambda: LeaveRequest.query.filter(
                 LeaveRequest.user_id == user.id,
                 LeaveRequest.status == 'approved',
                 LeaveRequest.start_date <= today,
                 LeaveRequest.end_date >= today
-            ).first()
-            is_on_leave = leave_request is not None
-        except Exception as e:
-            logging.error(f'Error checking leave request for user {user.id}: {str(e)}')
-            is_on_leave = False
+            ).first(),
+            default=None
+        )
+        is_on_leave = leave_request is not None
         
         # Check if user has an approved permission for today
-        permission_request = None
-        try:
-            permission_request = PermissionRequest.query.filter(
+        permission_request = safe_db_query(
+            lambda: PermissionRequest.query.filter(
                 PermissionRequest.user_id == user.id,
                 PermissionRequest.status == 'approved',
                 func.date(PermissionRequest.start_time) == today
-            ).first()
-            has_permission = permission_request is not None
-        except Exception as e:
-            logging.error(f'Error checking permission request for user {user.id}: {str(e)}')
-            has_permission = False
+            ).first(),
+            default=None
+        )
+        has_permission = permission_request is not None
         
         # Check if user has a daily attendance record for today
-        daily_record = DailyAttendance.query.filter_by(
+        daily_record = safe_db_query(
+            lambda: DailyAttendance.query.filter_by(
             user_id=user.id,
             date=today
-        ).first()
+            ).first(),
+            default=None
+        )
         
         if daily_record and daily_record.status in ['leave', 'permission', 'paid_holiday']:
             # User has a daily attendance record with leave, permission, or paid holiday status
             if daily_record.status == 'leave':
                 status = 'leave'
                 # Get the leave request details
-                leave_request = LeaveRequest.query.filter(
+                leave_request = safe_db_query(
+                    lambda: LeaveRequest.query.filter(
                     LeaveRequest.user_id == user.id,
                     LeaveRequest.status == 'approved',
                     LeaveRequest.start_date <= today,
                     LeaveRequest.end_date >= today
-                ).first()
+                    ).first(),
+                    default=None
+                )
                 absent_users[user.id] = {
                     'user': user,
                     'check_in': None,
@@ -1921,9 +2243,6 @@ def sync_fingerprint():
     """Sync attendance records from the fingerprint device with enhanced error handling"""
     try:
         device = get_active_device()
-        if not device:
-            logging.error('No active device configured for attendance sync')
-            return None
         logging.info('Starting attendance sync process...')
         logging.info(f'Attempting to sync from device: {device.device_ip}:{device.device_port}')
         logging.debug('Inside sync_fingerprint function.')
@@ -3516,7 +3835,7 @@ def get_device_status_info():
     }
     
     if not device:
-        device_status['error'] = 'No active device configured'
+        device_status['error'] = 'No active device settings found.'
         logging.error('No active device settings found for get_device_status.')
         return device_status
 

@@ -864,6 +864,14 @@
     color: white;
     padding: 12px 20px;
     border-bottom: 1px solid #e9ecef;
+    overflow: hidden;
+    word-wrap: break-word;
+}
+
+.detailed-logs-header h6 {
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .detailed-logs-content {
@@ -872,11 +880,16 @@
 
 .logs-table-container {
     padding: 0;
+    overflow-x: auto;
+    width: 100%;
 }
 
 .logs-table-container table {
     margin: 0;
     font-size: 0.9rem;
+    width: 100%;
+    table-layout: auto;
+    min-width: 100%;
 }
 
 .logs-table-container th {
@@ -987,8 +1000,19 @@
         padding: 8px 15px;
     }
     
+    .detailed-logs-header h6 {
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+    
+    .logs-table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
     .logs-table-container table {
         font-size: 0.8rem;
+        min-width: 600px;
     }
     
     .logs-table-container th,
@@ -1282,7 +1306,7 @@
                                                                 <th><i class="fas fa-sign-out-alt me-1"></i>Check Out</th>
                                                                 <th><i class="fas fa-clock me-1"></i>Duration</th>
                                                                 <th><i class="fas fa-info-circle me-1"></i>Status</th>
-                                                                <th><i class="fas fa-cog me-1"></i>Actions</th>
+                                                                <th><i class="fas fa-clock me-1"></i>Hours</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody class="logs-tbody">
@@ -1532,6 +1556,16 @@ function printReport() {
     border-bottom: 2px solid #dee2e6;
     color: #495057;
     white-space: nowrap;
+}
+
+.logs-table-container .table th:last-child {
+    min-width: 120px;
+    white-space: nowrap;
+}
+
+.logs-table-container .table td:last-child {
+    white-space: nowrap;
+    min-width: 120px;
 }
 
 .logs-table-container .table td {
@@ -2321,11 +2355,12 @@ function loadEmployeeLogs(userId, startDate, endDate, expandableRow) {
                     const checkInTime = dayData.check_in ? formatTimeToAMPM(dayData.check_in) : null;
                     const checkOutTime = dayData.check_out ? formatTimeToAMPM(dayData.check_out) : null;
                     
-                    // Format duration
+                    // Format duration - use raw_hours_worked for numeric calculations
                     let duration = '-';
-                    if (dayData.hours_worked > 0) {
-                        const hours = Math.floor(dayData.hours_worked);
-                        const minutes = Math.floor((dayData.hours_worked - hours) * 60);
+                    const hoursWorkedNum = dayData.raw_hours_worked || (typeof dayData.hours_worked === 'number' ? dayData.hours_worked : 0);
+                    if (hoursWorkedNum > 0) {
+                        const hours = Math.floor(hoursWorkedNum);
+                        const minutes = Math.floor((hoursWorkedNum - hours) * 60);
                         
                         if (hours > 0) {
                             duration = `${hours}h ${minutes}m`;
@@ -2389,18 +2424,19 @@ function loadEmployeeLogs(userId, startDate, endDate, expandableRow) {
                         <td>${duration}</td>
                         <td>${status}</td>
                         <td>
-                            ${dayData.hours_worked > 0 ? 
-                                `<span class="badge bg-primary">${dayData.hours_worked.toFixed(1)}h</span>` : 
+                            ${(dayData.raw_hours_worked || (typeof dayData.hours_worked === 'number' ? dayData.hours_worked : 0)) > 0 ? 
+                                `<span class="badge bg-primary">${(dayData.raw_hours_worked || dayData.hours_worked || 0).toFixed(1)}h</span>` : 
                                 '<span class="text-muted">-</span>'
                             }
                         </td>
-                        <td>
+                        <td style="white-space: nowrap; min-width: 120px;">
                             <button class="btn btn-sm btn-outline-primary day-expand-btn" 
                                     data-date="${dayData.date}" 
                                     data-user-id="${userId}"
                                     data-bs-toggle="collapse" data-bs-target="#logs-${userId}-${dayData.date}" 
-                                    aria-expanded="false" aria-controls="logs-${userId}-${dayData.date}">
-                                <i class="fas fa-chevron-down"></i> ${(dayData.all_logs || []).length} Logs
+                                    aria-expanded="false" aria-controls="logs-${userId}-${dayData.date}"
+                                    style="white-space: nowrap;">
+                                <i class="fas fa-chevron-down"></i> ${(dayData.logs || dayData.all_logs || []).length} Logs
                             </button>
                         </td>
                     `;
@@ -2412,33 +2448,39 @@ function loadEmployeeLogs(userId, startDate, endDate, expandableRow) {
                     detailRow.setAttribute('data-date', dayData.date);
                     detailRow.style.display = 'none';
                     
-                    // Use extra time from the calculated data
+                    // Use extra time from the calculated data - prefer formatted version if available
                     let extraTimeDisplay = '-';
-                    if (dayData.extra_time !== 0) {
-                        const formatExtraTime = (hours) => {
-                            if (hours === 0) return "0h 0m";
+                    if (dayData.extra_time !== 0 || (dayData.extra_time_formatted && dayData.extra_time_formatted !== '0h 0m')) {
+                        if (dayData.extra_time_formatted) {
+                            // Use pre-formatted version from backend
+                            extraTimeDisplay = (dayData.extra_time > 0 ? '+' : '') + dayData.extra_time_formatted;
+                        } else {
+                            // Fallback: format in JavaScript if not provided
+                            const formatExtraTime = (hours) => {
+                                if (hours === 0) return "0h 0m";
+                                
+                                const isNegative = hours < 0;
+                                hours = Math.abs(hours);
+                                
+                                const wholeHours = Math.floor(hours);
+                                const minutes = Math.floor((hours - wholeHours) * 60);
+                                
+                                let result;
+                                if (wholeHours > 0 && minutes > 0) {
+                                    result = `${wholeHours}h ${minutes}m`;
+                                } else if (wholeHours > 0) {
+                                    result = `${wholeHours}h 0m`;
+                                } else if (minutes > 0) {
+                                    result = `0h ${minutes}m`;
+                                } else {
+                                    result = "0h 0m";
+                                }
+                                
+                                return isNegative ? `-${result}` : (dayData.extra_time > 0 ? `+${result}` : result);
+                            };
                             
-                            const isNegative = hours < 0;
-                            hours = Math.abs(hours);
-                            
-                            const wholeHours = Math.floor(hours);
-                            const minutes = Math.floor((hours - wholeHours) * 60);
-                            
-                            let result;
-                            if (wholeHours > 0 && minutes > 0) {
-                                result = `${wholeHours}h ${minutes}m`;
-                            } else if (wholeHours > 0) {
-                                result = `${wholeHours}h 0m`;
-                            } else if (minutes > 0) {
-                                result = `0h ${minutes}m`;
-                            } else {
-                                result = "0h 0m";
-                            }
-                            
-                            return isNegative ? `-${result}` : (dayData.extra_time > 0 ? `+${result}` : result);
-                        };
-                        
-                        extraTimeDisplay = formatExtraTime(dayData.extra_time);
+                            extraTimeDisplay = formatExtraTime(dayData.extra_time);
+                        }
                     }
                     
                     console.log('📝 Creating detail row for date:', dayData.date);
@@ -2454,11 +2496,11 @@ function loadEmployeeLogs(userId, startDate, endDate, expandableRow) {
                                         <div class="log-summary-badges d-flex align-items-center">
                                             <span class="badge badge-light-primary me-2 total-hours-badge">
                                                 <i class="ki-duotone ki-time fs-4 me-1"></i>
-                                                Total: ${dayData.hours_worked > 0 ? dayData.hours_worked.toFixed(1) + 'h' : '-'}
+                                                Total: ${(dayData.raw_hours_worked || (typeof dayData.hours_worked === 'number' ? dayData.hours_worked : 0)) > 0 ? (dayData.raw_hours_worked || dayData.hours_worked || 0).toFixed(1) + 'h' : '-'}
                                             </span>
                                             <span class="badge badge-light-info extra-time-badge">
                                                 <i class="ki-duotone ki-hourglass-2 fs-4 me-1"></i>
-                                                Extra: ${dayData.extra_time !== 0 ? (dayData.extra_time > 0 ? '+' : '') + dayData.extra_time.toFixed(1) + 'h' : '-'}
+                                                Extra: ${extraTimeDisplay}
                                             </span>
                                         </div>
                                     </div>
@@ -2473,35 +2515,62 @@ function loadEmployeeLogs(userId, startDate, endDate, expandableRow) {
                                             </tr>
                                         </thead>
                                         <tbody class="day-logs-tbody">
-                                            ${dayData.logs.map((log, index) => {
-                                                let durationFromPrevious = '-';
-                                                if (index > 0) {
-                                                    const prevTime = new Date(`${dayData.date} ${dayData.logs[index - 1].time}`);
-                                                    const currentTime = new Date(`${dayData.date} ${log.time}`);
-                                                    const diffMs = currentTime - prevTime;
-                                                    if (diffMs > 0) {
-                                                        const hours = Math.floor(diffMs / (1000 * 60 * 60));
-                                                        const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                                                        if (hours > 0) {
-                                                            durationFromPrevious = `${hours}h ${minutes}m`;
-                                                        } else {
-                                                            durationFromPrevious = `${minutes}m`;
+                                            ${(() => {
+                                                // Sort logs chronologically (oldest first) to ensure proper duration calculation
+                                                const logs = (dayData.logs || dayData.all_logs || []).slice();
+                                                logs.sort((a, b) => {
+                                                    const timeA = a.time || (a.timestamp ? a.timestamp.split(' ')[1] : '00:00:00');
+                                                    const timeB = b.time || (b.timestamp ? b.timestamp.split(' ')[1] : '00:00:00');
+                                                    return timeA.localeCompare(timeB);
+                                                });
+                                                
+                                                return logs.map((log, index, logsArray) => {
+                                                    let durationFromPrevious = '-';
+                                                    if (index > 0 && logsArray[index - 1]) {
+                                                        try {
+                                                            const prevTimeStr = logsArray[index - 1].time || (logsArray[index - 1].timestamp ? logsArray[index - 1].timestamp.split(' ')[1] : '');
+                                                            const currentTimeStr = log.time || (log.timestamp ? log.timestamp.split(' ')[1] : '');
+                                                            
+                                                            if (prevTimeStr && currentTimeStr) {
+                                                                const prevTime = new Date(`${dayData.date} ${prevTimeStr}`);
+                                                                const currentTime = new Date(`${dayData.date} ${currentTimeStr}`);
+                                                                const diffMs = currentTime - prevTime;
+                                                                if (diffMs > 0 && !isNaN(diffMs)) {
+                                                                    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+                                                                    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                                                                    if (hours > 0) {
+                                                                        durationFromPrevious = `${hours}h ${minutes}m`;
+                                                                    } else if (minutes > 0) {
+                                                                        durationFromPrevious = `${minutes}m`;
+                                                                    } else {
+                                                                        const seconds = Math.floor(diffMs / 1000);
+                                                                        if (seconds > 0) {
+                                                                            durationFromPrevious = `${seconds}s`;
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        } catch (e) {
+                                                            console.warn('Error calculating duration from previous:', e);
                                                         }
                                                     }
-                                                }
                                                 
-                                                return `
-                                                    <tr>
-                                                        <td><span class="badge bg-info">${formatTimeToAMPM(log.time)}</span></td>
-                                                        <td>
-                                                            <span class="badge ${log.scan_type === 'check-in' ? 'bg-success' : 'bg-warning'}">
-                                                                ${log.scan_type === 'check-in' ? 'Check In' : 'Check Out'}
-                                                            </span>
-                                                        </td>
-                                                        <td class="fw-bold">${durationFromPrevious}</td>
-                                                    </tr>
-                                                `;
-                                            }).join('')}
+                                                    const logTime = log.time || (log.timestamp ? log.timestamp.split(' ')[1] : '');
+                                                    const scanType = log.scan_type || log.type || 'unknown';
+                                                    
+                                                    return `
+                                                        <tr>
+                                                            <td><span class="badge bg-info">${logTime ? formatTimeToAMPM(logTime) : '-'}</span></td>
+                                                            <td>
+                                                                <span class="badge ${scanType === 'check-in' ? 'bg-success' : 'bg-warning'}">
+                                                                    ${scanType === 'check-in' ? 'Check In' : 'Check Out'}
+                                                                </span>
+                                                            </td>
+                                                            <td class="fw-bold">${durationFromPrevious}</td>
+                                                        </tr>
+                                                    `;
+                                                }).join('');
+                                            })()}
                                         </tbody>
                                     </table>
                                     

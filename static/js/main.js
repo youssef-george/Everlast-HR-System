@@ -28,13 +28,34 @@
     const originalObserve = OriginalMutationObserver.prototype.observe;
     OriginalMutationObserver.prototype.observe = function(target, options) {
         try {
-            if (!target || !(target instanceof Node)) {
-                // Silently ignore invalid targets to prevent console spam
+            // Enhanced validation - check multiple conditions
+            if (!target) {
+                console.warn('MutationObserver.observe: target is null/undefined, skipping');
                 return;
             }
+            
+            // Check if it's a valid Node
+            if (!(target instanceof Node)) {
+                console.warn('MutationObserver.observe: target is not a Node:', typeof target, target);
+                return;
+            }
+            
+            // Check nodeType to ensure it's a valid DOM node
+            if (typeof target.nodeType === 'undefined') {
+                console.warn('MutationObserver.observe: target has no nodeType property');
+                return;
+            }
+            
+            // Check if node is connected to the document
+            if (target.nodeType === Node.ELEMENT_NODE && !document.contains(target)) {
+                console.warn('MutationObserver.observe: target element is not in document, skipping');
+                return;
+            }
+            
             return originalObserve.call(this, target, options);
         } catch (error) {
             // Silently ignore MutationObserver errors from external scripts
+            console.warn('MutationObserver.observe error caught:', error.message);
             return;
         }
     };

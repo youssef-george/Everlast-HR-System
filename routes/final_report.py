@@ -14,6 +14,7 @@ import io
 import os
 # Import shared calculation function
 from report_helpers.report_calculations import calculate_unified_report_data, calculate_multiple_users_report_data
+from helpers import format_hours_minutes
 
 final_report_bp = Blueprint('final_report', __name__)
 
@@ -579,13 +580,24 @@ def final_report():
 
         # Add attendance records
         for record in user_report.attendance_records:
+            # Use pre-calculated values from unified calculation function
+            # This ensures consistency with all other reports
+            hours_worked = getattr(record, 'hours_worked', 0.0)
+            extra_time = getattr(record, 'extra_time', 0.0)
+            
+            # If not set by unified function, calculate using same logic
+            if hours_worked == 0.0 and record.first_check_in and record.last_check_out:
+                time_diff = record.last_check_out - record.first_check_in
+                hours_worked = time_diff.total_seconds() / 3600
+                extra_time = hours_worked - 9  # Standard working hours is 9
+            
             report_data.append({
                 'date': record.date,
                 'status': record.status,
                 'check_in': record.first_check_in,
                 'check_out': record.last_check_out,
-                'hours_worked': (record.last_check_out - record.first_check_in).total_seconds() / 3600 if record.first_check_in and record.last_check_out else 0,
-                'extra_time': (record.last_check_out - record.first_check_in).total_seconds() / 3600 - 9 if record.first_check_in and record.last_check_out else 0
+                'hours_worked': hours_worked,
+                'extra_time': extra_time
             })
 
         # Add leave requests
@@ -746,7 +758,9 @@ def export_final_report():
         ws.cell(row=row, column=10, value=metrics.paid_leave_days).border = border
         ws.cell(row=row, column=11, value=metrics.permission_hours).border = border
         ws.cell(row=row, column=12, value=metrics.incomplete_days).border = border
-        ws.cell(row=row, column=13, value=metrics.extra_time_hours).border = border
+        # Format extra time as hours and minutes for Excel
+        extra_time_formatted = format_hours_minutes(metrics.extra_time_hours)
+        ws.cell(row=row, column=13, value=extra_time_formatted).border = border
     
     # Add summary row
     if all_user_reports:
@@ -763,7 +777,10 @@ def export_final_report():
         ws.cell(row=summary_row, column=10, value=sum(r.summary_metrics.paid_leave_days for r in all_user_reports)).border = border
         ws.cell(row=summary_row, column=11, value=sum(r.summary_metrics.permission_hours for r in all_user_reports)).border = border
         ws.cell(row=summary_row, column=12, value=sum(r.summary_metrics.incomplete_days for r in all_user_reports)).border = border
-        ws.cell(row=summary_row, column=13, value=sum(r.summary_metrics.extra_time_hours for r in all_user_reports)).border = border
+        # Format total extra time as hours and minutes
+        total_extra_time = sum(r.summary_metrics.extra_time_hours for r in all_user_reports)
+        total_extra_time_formatted = format_hours_minutes(total_extra_time)
+        ws.cell(row=summary_row, column=13, value=total_extra_time_formatted).border = border
     
     # Auto-adjust column widths
     for column in ws.columns:
@@ -956,6 +973,10 @@ def get_employee_logs(user_id):
                 'device_ip': log.device_ip,
                 'is_extra_scan': log.is_extra_scan
             })
+        
+        # Sort logs within each date chronologically (oldest first)
+        for date_key in logs_by_date:
+            logs_by_date[date_key].sort(key=lambda x: x['time'])
         logging.info(f"Grouped raw logs into {len(logs_by_date)} unique dates.")
 
         # Format daily data for JSON response
@@ -991,13 +1012,14 @@ def get_employee_logs(user_id):
                 )
                 logging.debug(f"  Permission request found: {permission_request is not None}")
 
-                # Determine status and other details
-                status = 'Absent'
-                check_in = None
-                check_out = None
+                # Initialize variables
                 hours_worked = 0.0
                 extra_time = 0.0
+                check_in = None
+                check_out = None
+                status = 'Absent'
                 day_of_week = current_date.strftime('%A')
+                
                 # Get logs for this date
                 daily_logs = logs_by_date.get(current_date, [])
                 logging.debug(f"  Daily logs count: {len(daily_logs)}")
@@ -1022,13 +1044,28 @@ def get_employee_logs(user_id):
                     if paid_holiday:
                         if attendance_record and (attendance_record.first_check_in or attendance_record.last_check_out):
                             status = f"Present - {paid_holiday.description}"
+                            # Use pre-calculated values from unified calculation
+                            if attendance_record:
+                                hours_worked = getattr(attendance_record, 'hours_worked', 0.0)
+                                extra_time = getattr(attendance_record, 'extra_time', 0.0)
+                                check_in = attendance_record.first_check_in
+                                check_out = attendance_record.last_check_out
                         else:
                             status = paid_holiday.description
                     elif attendance_record and (attendance_record.first_check_in or attendance_record.last_check_out):
-                        # User has attendance logs
+                        # User has attendance logs - use pre-calculated values from unified calculation
                         check_in = attendance_record.first_check_in
                         check_out = attendance_record.last_check_out
+                        hours_worked = getattr(attendance_record, 'hours_worked', 0.0)
+                        extra_time = getattr(attendance_record, 'extra_time', 0.0)
                         
+                        # Only recalculate if values are not set (fallback)
+                        if hours_worked == 0.0 and check_in and check_out:
+                            time_diff = check_out - check_in
+                            hours_worked = time_diff.total_seconds() / 3600
+                            extra_time = hours_worked - 9  # Standard working hours is 9
+                        
+                        # Determine status based on day and leave/permission
                         if current_date.weekday() in [4, 5]:  # Friday/Saturday
                             status = 'Day Off / Present'
                         elif leave_request:
@@ -1037,76 +1074,25 @@ def get_employee_logs(user_id):
                         elif permission_request:
                             status = 'Present / Permission'
                         else:
-                            status = 'Present'
-                        
-                        # Determine attendance status and calculate hours based on the new rules
-                        # Check if the day is marked as incomplete in the database (meaning only one log was found)
-                        if attendance_record and attendance_record.is_incomplete_day:
-                            # This day has only one log entry in the database, so it's truly incomplete.
-                            status = 'Incomplete'
-                            # For incomplete days, assign 9 hours as per business rule
-                            hours_worked = 9.0
-                            extra_time = 0.0
-                        elif check_in and check_out and check_in != check_out:
-                            # If there are valid, distinct check-in and check-out, it's a present day with calculated hours
-                            status = 'Present'
-                            time_diff = check_out - check_in
-                            hours_worked = time_diff.total_seconds() / 3600
-                            extra_time = hours_worked - 9
-                        elif check_in and check_out and check_in == check_out:
-                            # Multiple logs with same timestamp - treat as present with 9 hours
-                            status = 'Present'
-                            hours_worked = 9.0
-                            extra_time = 0.0
-                        else:
-                            # This block implies no attendance_record or no check_in/check_out on an attendance_record
-                            # If there are actual daily_logs, it should be considered present or incomplete, not absent.
-                            if daily_logs:
-                                # If there are logs, but no proper check_in/check_out detected by daily_attendance record
-                                # This means it's likely an an incomplete day (single log) or some data inconsistency
-                                # The is_incomplete_day flag from the attendance_record should dictate this.
-                                if attendance_record and attendance_record.is_incomplete_day:
-                                    status = 'Incomplete'
-                                    hours_worked = 9.0 # As per rule for single log
-                                    extra_time = 0.0
-                                else:
-                                    # Fallback for unexpected scenarios with logs but no clear status
-                                    status = 'Present (Logs Found)' # Indicate logs were found, but attendance_record was ambiguous
-                                    # Recalculate hours based on actual logs if possible
-                                    if daily_logs:
-                                        first_log = daily_logs[0]['timestamp']
-                                        last_log = daily_logs[-1]['timestamp']
-                                        # Convert timestamps back to datetime objects for calculation
-                                        first_log_dt = datetime.strptime(first_log, '%Y-%m-%d %H:%M:%S')
-                                        last_log_dt = datetime.strptime(last_log, '%Y-%m-%d %H:%M:%S')
-                                        time_diff = last_log_dt - first_log_dt
-                                        hours_worked = time_diff.total_seconds() / 3600
-                                        extra_time = hours_worked - 9
-                                    else:
-                                        # Should not happen if this path is taken, but for safety
-                                        hours_worked = 0.0
-                                        extra_time = 0.0
-                            else:
-                                # Truly no logs for the day, mark as absent
-                                status = 'Absent'
-                                hours_worked = 0.0
-                                extra_time = 0.0
-                                check_in = None # Ensure explicit None
-                                check_out = None # Ensure explicit None
+                            status = attendance_record.status if attendance_record.status else 'Present'
+                    elif daily_logs and len(daily_logs) > 0:
+                        # Has logs but no attendance record - calculate from logs
+                        first_log = daily_logs[0]['timestamp']
+                        last_log = daily_logs[-1]['timestamp']
+                        first_log_dt = datetime.strptime(first_log, '%Y-%m-%d %H:%M:%S')
+                        last_log_dt = datetime.strptime(last_log, '%Y-%m-%d %H:%M:%S')
+                        time_diff = last_log_dt - first_log_dt
+                        hours_worked = time_diff.total_seconds() / 3600
+                        extra_time = hours_worked - 9  # Standard working hours is 9
+                        status = 'Present (Logs Found)'
                     else:
-                        # If no attendance_record exists at all, assume absent unless it's a day off or future date
+                        # No attendance record or logs
                         if current_date.weekday() in [4, 5]:  # Friday/Saturday
                             status = 'Day Off'
-                            check_in = None # Ensure explicit None
-                            check_out = None # Ensure explicit None
-                        elif current_date > datetime.today().date():
-                            status = 'Future Date'
-                            check_in = None # Ensure explicit None
-                            check_out = None # Ensure explicit None
                         else:
                             status = 'Absent'
-                            check_in = None # Ensure explicit None
-                            check_out = None # Ensure explicit None
+                        hours_worked = 0.0
+                        extra_time = 0.0
 
                 # Prepare permission request info for this date
                 permission_info = None
@@ -1127,6 +1113,9 @@ def get_employee_logs(user_id):
                 m, _ = divmod(remainder, 60)
                 formatted_hours_worked = f"{h:02}:{m:02}" if (h > 0 or m > 0) else "-"
 
+                # Format extra_time as hours and minutes
+                extra_time_formatted = format_hours_minutes(extra_time)
+                
                 daily_data.append({
                     'date': current_date.strftime('%Y-%m-%d'),
                     'day_of_week': current_date.strftime('%A'),
@@ -1135,11 +1124,10 @@ def get_employee_logs(user_id):
                     'check_out': check_out.strftime('%H:%M:%S') if check_out else None,
                     'hours_worked': formatted_hours_worked,  # Use formatted hours
                     'raw_hours_worked': round(hours_worked, 1), # Keep raw for calculations if needed
-                    'extra_time': round(extra_time, 1),
-                    'all_logs': [{
-                        'timestamp': log['timestamp'],
-                        'type': log['scan_type']
-                    } for log in daily_logs],
+                    'extra_time': extra_time,  # Keep raw decimal for calculations
+                    'extra_time_formatted': extra_time_formatted,  # Formatted as "Xh Ym"
+                    'logs': daily_logs,  # Send logs with correct structure (has 'time' and 'scan_type')
+                    'all_logs': daily_logs,  # Keep for backward compatibility
                     'logs_count': len(daily_logs),
                     'permission_request': permission_info
                 })
@@ -1158,7 +1146,9 @@ def get_employee_logs(user_id):
                     'hours_worked': '-',
                     'raw_hours_worked': 0.0,
                     'extra_time': 0.0,
-                    'all_logs': [],
+                    'extra_time_formatted': '0h 0m',
+                    'logs': [],  # Ensure logs field exists
+                    'all_logs': [],  # Keep for backward compatibility
                     'logs_count': 0,
                     'permission_request': None,
                     'error_message': str(e)
@@ -1281,7 +1271,9 @@ def export_detailed_attendance_report():
         ws.cell(row=row, column=11, value=metrics.paid_leave_days).border = border
         ws.cell(row=row, column=12, value=metrics.permission_hours).border = border
         ws.cell(row=row, column=13, value=metrics.incomplete_days).border = border
-        ws.cell(row=row, column=14, value=metrics.extra_time_hours).border = border
+        # Format extra time as hours and minutes for Excel
+        extra_time_formatted = format_hours_minutes(metrics.extra_time_hours)
+        ws.cell(row=row, column=14, value=extra_time_formatted).border = border
         ws.cell(row=row, column=15, value=f"{metrics.attendance_percentage}%").border = border
     
     # Add summary row
@@ -1300,7 +1292,10 @@ def export_detailed_attendance_report():
         ws.cell(row=summary_row, column=11, value=sum(r.summary_metrics.paid_leave_days for r in all_user_reports)).border = border
         ws.cell(row=summary_row, column=12, value=sum(r.summary_metrics.permission_hours for r in all_user_reports)).border = border
         ws.cell(row=summary_row, column=13, value=sum(r.summary_metrics.incomplete_days for r in all_user_reports)).border = border
-        ws.cell(row=summary_row, column=14, value=sum(r.summary_metrics.extra_time_hours for r in all_user_reports)).border = border
+        # Format total extra time as hours and minutes
+        total_extra_time = sum(r.summary_metrics.extra_time_hours for r in all_user_reports)
+        total_extra_time_formatted = format_hours_minutes(total_extra_time)
+        ws.cell(row=summary_row, column=14, value=total_extra_time_formatted).border = border
         ws.cell(row=summary_row, column=15, value="").border = border
     
     # Auto-adjust column widths

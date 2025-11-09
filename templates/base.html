@@ -18,6 +18,57 @@
     <!-- Toastr CSS -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
     
+    <!-- Early MutationObserver Protection - Must run before any external scripts -->
+    <script>
+    (function() {
+        'use strict';
+        // Protect MutationObserver before any external scripts load
+        if (typeof MutationObserver !== 'undefined') {
+            const OriginalMutationObserver = window.MutationObserver;
+            const originalObserve = OriginalMutationObserver.prototype.observe;
+            
+            // Override observe method with comprehensive validation
+            OriginalMutationObserver.prototype.observe = function(target, options) {
+                try {
+                    // Validate target is a valid Node
+                    if (!target || !(target instanceof Node)) {
+                        console.warn('MutationObserver.observe: Invalid target (not a Node), skipping');
+                        return;
+                    }
+                    
+                    // Check nodeType exists
+                    if (typeof target.nodeType === 'undefined') {
+                        console.warn('MutationObserver.observe: Target has no nodeType, skipping');
+                        return;
+                    }
+                    
+                    return originalObserve.call(this, target, options);
+                } catch (error) {
+                    console.warn('MutationObserver.observe error handled:', error.message);
+                    return;
+                }
+            };
+        }
+        
+        // Global error handler for MutationObserver errors
+        window.addEventListener('error', function(event) {
+            if (event.message && event.message.includes('MutationObserver') && event.message.includes('parameter 1 is not of type')) {
+                console.warn('MutationObserver error from external script caught and handled');
+                event.preventDefault();
+                return false;
+            }
+        }, true);
+        
+        // Handle unhandled promise rejections
+        window.addEventListener('unhandledrejection', function(event) {
+            if (event.reason && event.reason.message && event.reason.message.includes('MutationObserver')) {
+                console.warn('MutationObserver promise rejection caught and handled');
+                event.preventDefault();
+            }
+        });
+    })();
+    </script>
+    
     {% block extra_css %}{% endblock %}
 </head>
 
@@ -453,17 +504,45 @@
                 });
             };
             
-            // Override observe method to validate nodes
+            // Override observe method to validate nodes with comprehensive checks
             const originalObserve = OriginalMutationObserver.prototype.observe;
             OriginalMutationObserver.prototype.observe = function(target, options) {
                 try {
-                    if (!target || typeof target.nodeType === 'undefined' || target.nodeType !== Node.ELEMENT_NODE) {
-                        console.warn('MutationObserver: Invalid target node, skipping observation');
+                    // Comprehensive validation
+                    if (!target) {
+                        console.warn('MutationObserver.observe: target is null/undefined, skipping');
                         return;
                     }
+                    
+                    // Check if it's a valid Node instance
+                    if (!(target instanceof Node)) {
+                        console.warn('MutationObserver.observe: target is not a Node instance:', typeof target);
+                        return;
+                    }
+                    
+                    // Check nodeType exists and is valid
+                    if (typeof target.nodeType === 'undefined') {
+                        console.warn('MutationObserver.observe: target has no nodeType property');
+                        return;
+                    }
+                    
+                    // Valid nodeType values: 1 (ELEMENT), 3 (TEXT), 8 (COMMENT), 11 (DOCUMENT_FRAGMENT)
+                    const validNodeTypes = [Node.ELEMENT_NODE || 1, Node.TEXT_NODE || 3, Node.COMMENT_NODE || 8, Node.DOCUMENT_FRAGMENT_NODE || 11];
+                    if (!validNodeTypes.includes(target.nodeType)) {
+                        console.warn('MutationObserver.observe: invalid nodeType:', target.nodeType);
+                        return;
+                    }
+                    
+                    // For element nodes, check if connected to document
+                    if (target.nodeType === (Node.ELEMENT_NODE || 1) && target.ownerDocument && !target.ownerDocument.contains(target)) {
+                        console.warn('MutationObserver.observe: target element is not in document');
+                        return;
+                    }
+                    
                     return originalObserve.call(this, target, options);
                 } catch (e) {
                     console.warn('MutationObserver.observe error caught and suppressed:', e.message);
+                    return;
                 }
             };
         }

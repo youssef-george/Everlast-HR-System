@@ -719,13 +719,19 @@ table thead th * {
                                     </td>
                                     <td>{{ permission.user.department.department_name if permission.user.department else 'No Department' }}</td>
                                     {% endif %}
-                                    <td>{{ permission.start_time.strftime('%d/%m/%Y') }}</td>
-                                    <td>{{ permission.start_time.strftime('%I:%M %p') }} - {{ permission.end_time.strftime('%I:%M %p') }}</td>
+                                    <td>{{ permission.start_time|safe_datetime('%d/%m/%Y') }}</td>
+                                    <td>{{ permission.start_time|safe_datetime('%I:%M %p') }} - {{ permission.end_time|safe_datetime('%I:%M %p') }}</td>
                                     <td>
-                                        {% set duration_seconds = (permission.end_time - permission.start_time).total_seconds() %}
-                                        {% set hours = (duration_seconds // 3600)|int %}
-                                        {% set minutes = ((duration_seconds % 3600) // 60)|int %}
-                                        {{ hours }}h {{ minutes }}m
+                                        {% set start_dt = permission.start_time|to_datetime %}
+                                        {% set end_dt = permission.end_time|to_datetime %}
+                                        {% if start_dt and end_dt %}
+                                            {% set duration_seconds = (end_dt - start_dt).total_seconds() %}
+                                            {% set hours = (duration_seconds // 3600)|int %}
+                                            {% set minutes = ((duration_seconds % 3600) // 60)|int %}
+                                            {{ hours }}h {{ minutes }}m
+                                        {% else %}
+                                            -
+                                        {% endif %}
                                     </td>
                                     <td>{{ permission.reason|truncate(30) }}</td>
                                     <td>
@@ -749,7 +755,7 @@ table thead th * {
                                             </div>
                                         </div>
                                     </td>
-                                    <td>{{ permission.created_at.strftime('%d/%m/%Y') }}</td>
+                                    <td>{{ permission.created_at|safe_datetime('%d/%m/%Y') }}</td>
                                     <td>
                                         <a href="{{ url_for('permission.view', id=permission.id) }}" class="btn btn-sm btn-icon btn-light me-1" data-bs-toggle="tooltip" title="View Details">
                                             <i class="fas fa-eye"></i>

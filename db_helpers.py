@@ -1,6 +1,6 @@
 """
 Database Helper Functions
-Provides convenient functions for database operations with automatic sync support.
+Provides convenient functions for database operations.
 """
 
 import logging
@@ -9,18 +9,17 @@ from flask import current_app
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from extensions import db
-from working_sync_service import working_sync_service, manual_sync_record
 
 logger = logging.getLogger(__name__)
 
 
 class DatabaseManager:
-    """Manages database operations with automatic sync to PostgreSQL."""
+    """Manages database operations."""
     
     @staticmethod
     def create_record(model_class: Type[db.Model], **kwargs) -> Optional[db.Model]:
         """
-        Create a new record with automatic sync to PostgreSQL.
+        Create a new record.
         
         Args:
             model_class: SQLAlchemy model class
@@ -35,9 +34,6 @@ class DatabaseManager:
             db.session.add(record)
             db.session.commit()
             
-            # Sync to PostgreSQL (handled automatically by event listeners)
-            # Manual sync is not needed as the working_sync_service handles this automatically
-            
             logger.info(f"Created {model_class.__tablename__} record with ID {record.id}")
             return record
             
@@ -49,7 +45,7 @@ class DatabaseManager:
     @staticmethod
     def update_record(record: db.Model, **kwargs) -> bool:
         """
-        Update an existing record with automatic sync to PostgreSQL.
+        Update an existing record.
         
         Args:
             record: Model instance to update
@@ -66,9 +62,6 @@ class DatabaseManager:
             
             db.session.commit()
             
-            # Sync to PostgreSQL (handled automatically by event listeners)
-            # Manual sync is not needed as the working_sync_service handles this automatically
-            
             logger.info(f"Updated {record.__class__.__tablename__} record with ID {record.id}")
             return True
             
@@ -80,7 +73,7 @@ class DatabaseManager:
     @staticmethod
     def delete_record(record: db.Model) -> bool:
         """
-        Delete a record with automatic sync to PostgreSQL.
+        Delete a record.
         
         Args:
             record: Model instance to delete
@@ -92,12 +85,8 @@ class DatabaseManager:
             record_id = record.id
             table_name = record.__class__.__tablename__
             
-            # Delete from SQLite
             db.session.delete(record)
             db.session.commit()
-            
-            # Sync to PostgreSQL (handled automatically by event listeners)
-            # Manual sync is not needed as the working_sync_service handles this automatically
             
             logger.info(f"Deleted {table_name} record with ID {record_id}")
             return True
@@ -110,7 +99,7 @@ class DatabaseManager:
     @staticmethod
     def bulk_create_records(model_class: Type[db.Model], records_data: List[Dict[str, Any]]) -> List[db.Model]:
         """
-        Create multiple records with automatic sync to PostgreSQL.
+        Create multiple records.
         
         Args:
             model_class: SQLAlchemy model class
@@ -122,16 +111,12 @@ class DatabaseManager:
         created_records = []
         
         try:
-            # Create records in SQLite
             for record_data in records_data:
                 record = model_class(**record_data)
                 db.session.add(record)
                 created_records.append(record)
             
             db.session.commit()
-            
-            # Sync to PostgreSQL (handled automatically by event listeners)
-            # Manual sync is not needed as the working_sync_service handles this automatically
             
             logger.info(f"Created {len(created_records)} {model_class.__tablename__} records")
             return created_records
@@ -144,7 +129,7 @@ class DatabaseManager:
     @staticmethod
     def bulk_update_records(model_class: Type[db.Model], updates: List[Dict[str, Any]]) -> int:
         """
-        Update multiple records with automatic sync to PostgreSQL.
+        Update multiple records.
         
         Args:
             model_class: SQLAlchemy model class
@@ -172,88 +157,56 @@ class DatabaseManager:
         logger.info(f"Updated {updated_count}/{len(updates)} {model_class.__tablename__} records")
         return updated_count
     
-    @staticmethod
-    def get_sync_status() -> Dict[str, Any]:
-        """Get current sync service status."""
-        return working_sync_service.get_sync_stats()
-    
-    @staticmethod
-    def enable_sync():
-        """Enable database synchronization."""
-        working_sync_service.enable_sync()
-        logger.info("Database sync enabled")
-    
-    @staticmethod
-    def disable_sync():
-        """Disable database synchronization."""
-        working_sync_service.disable_sync()
-        logger.info("Database sync disabled")
 
 
 # Convenience functions for common operations
 def create_user(**kwargs):
-    """Create a new user with sync."""
+    """Create a new user."""
     from models import User
     return DatabaseManager.create_record(User, **kwargs)
 
 
 def update_user(user, **kwargs):
-    """Update a user with sync."""
+    """Update a user."""
     return DatabaseManager.update_record(user, **kwargs)
 
 
 def delete_user(user):
-    """Delete a user with sync."""
+    """Delete a user."""
     return DatabaseManager.delete_record(user)
 
 
 def create_attendance_record(**kwargs):
-    """Create an attendance record with sync."""
+    """Create an attendance record."""
     from models import AttendanceData
     return DatabaseManager.create_record(AttendanceData, **kwargs)
 
 
 def create_leave_request(**kwargs):
-    """Create a leave request with sync."""
+    """Create a leave request."""
     from models import LeaveRequest
     return DatabaseManager.create_record(LeaveRequest, **kwargs)
 
 
 def update_leave_request(leave_request, **kwargs):
-    """Update a leave request with sync."""
+    """Update a leave request."""
     return DatabaseManager.update_record(leave_request, **kwargs)
 
 
 def create_permission_request(**kwargs):
-    """Create a permission request with sync."""
+    """Create a permission request."""
     from models import PermissionRequest
     return DatabaseManager.create_record(PermissionRequest, **kwargs)
 
 
 def update_permission_request(permission_request, **kwargs):
-    """Update a permission request with sync."""
+    """Update a permission request."""
     return DatabaseManager.update_record(permission_request, **kwargs)
 
 
-# Context manager for batch operations without sync
-class BatchOperationContext:
-    """Context manager for batch operations that temporarily disables sync."""
-    
-    def __enter__(self):
-        self.original_sync_state = working_sync_service.sync_enabled
-        working_sync_service.disable_sync()
-        logger.info("Batch operation started - sync disabled")
-        return self
-    
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.original_sync_state:
-            working_sync_service.enable_sync()
-        logger.info("Batch operation completed - sync restored")
-
-
 # Example usage functions
-def example_create_user_with_sync():
-    """Example of creating a user with automatic sync."""
+def example_create_user():
+    """Example of creating a user."""
     user = create_user(
         first_name="John",
         last_name="Doe",
@@ -271,21 +224,17 @@ def example_create_user_with_sync():
 
 
 def example_batch_operation():
-    """Example of batch operation without sync."""
-    with BatchOperationContext():
-        # Create multiple users without triggering sync for each one
-        users_data = [
-            {"first_name": "Alice", "last_name": "Smith", "email": "alice@example.com", "password_hash": "hash1", "role": "employee"},
-            {"first_name": "Bob", "last_name": "Johnson", "email": "bob@example.com", "password_hash": "hash2", "role": "employee"},
-            {"first_name": "Carol", "last_name": "Williams", "email": "carol@example.com", "password_hash": "hash3", "role": "manager"}
-        ]
-        
-        from models import User
-        created_users = DatabaseManager.bulk_create_records(User, users_data)
-        print(f"Created {len(created_users)} users in batch")
+    """Example of batch operation."""
+    users_data = [
+        {"first_name": "Alice", "last_name": "Smith", "email": "alice@example.com", "password_hash": "hash1", "role": "employee"},
+        {"first_name": "Bob", "last_name": "Johnson", "email": "bob@example.com", "password_hash": "hash2", "role": "employee"},
+        {"first_name": "Carol", "last_name": "Williams", "email": "carol@example.com", "password_hash": "hash3", "role": "manager"}
+    ]
     
-    # Sync will be re-enabled after the context manager exits
-    print("Batch operation completed, sync re-enabled")
+    from models import User
+    created_users = DatabaseManager.bulk_create_records(User, users_data)
+    print(f"Created {len(created_users)} users in batch")
+    print("Batch operation completed")
 
 
 if __name__ == "__main__":
@@ -297,4 +246,3 @@ if __name__ == "__main__":
     print("- create_attendance_record()")
     print("- create_leave_request(), update_leave_request()")
     print("- create_permission_request(), update_permission_request()")
-    print("- BatchOperationContext for batch operations")

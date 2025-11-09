@@ -3,6 +3,11 @@ from flask_login import login_required, current_user
 from forms import DepartmentForm, DeleteForm
 from models import db, Department, User
 from helpers import role_required, admin_required
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy import text
+import logging
+
+logger = logging.getLogger(__name__)
 
 departments_bp = Blueprint('departments', __name__, url_prefix='/departments')
 
@@ -30,10 +35,45 @@ def create():
         )
         
         db.session.add(department)
-        db.session.commit()
         
-        flash(f'Department {department.department_name} has been created successfully!', 'success')
-        return redirect(url_for('departments.index'))
+        try:
+            db.session.commit()
+            flash(f'Department {department.department_name} has been created successfully!', 'success')
+            return redirect(url_for('departments.index'))
+        except IntegrityError as e:
+            db.session.rollback()
+            
+            # Check if this is a sequence issue (duplicate key on primary key)
+            error_str = str(e.orig) if hasattr(e, 'orig') else str(e)
+            if 'duplicate key value violates unique constraint' in error_str and '_pkey' in error_str:
+                logger.warning(f"Sequence conflict detected: {error_str}. Attempting to fix sequence...")
+                
+                try:
+                    # Fix the sequence by setting it to max(id) + 1
+                    result = db.session.execute(text("SELECT COALESCE(MAX(id), 0) FROM departments"))
+                    max_id = result.scalar() or 0
+                    next_val = max(max_id, 1)
+                    
+                    # Reset the sequence
+                    db.session.execute(text(f"SELECT setval('departments_id_seq', {next_val}, true)"))
+                    db.session.commit()
+                    
+                    logger.info(f"Sequence fixed: set to {next_val}")
+                    
+                    # Retry the insertion
+                    db.session.add(department)
+                    db.session.commit()
+                    
+                    flash(f'Department {department.department_name} has been created successfully!', 'success')
+                    return redirect(url_for('departments.index'))
+                except Exception as fix_error:
+                    db.session.rollback()
+                    logger.error(f"Error fixing sequence: {fix_error}")
+                    flash('An error occurred while creating the department. Please try again.', 'danger')
+            else:
+                # Other integrity errors (e.g., duplicate department name)
+                logger.error(f"Integrity error: {error_str}")
+                flash('An error occurred while creating the department. It may already exist.', 'danger')
     
     return render_template('departments/edit.html', 
                            title='Create Department', 

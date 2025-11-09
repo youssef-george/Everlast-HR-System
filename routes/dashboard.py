@@ -2,11 +2,83 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 import os
 import logging
 from flask_login import login_required, current_user
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+from sqlalchemy import cast
+from sqlalchemy.dialects.postgresql import DATE as PostgresDate, TIMESTAMP as PostgresTimestamp, BOOLEAN as PostgresBoolean
 from app import db
 from models import User, LeaveRequest, PermissionRequest, DailyAttendance, Department, SMTPConfiguration, LeaveBalance, PaidHoliday, LeaveType
 from helpers import role_required, get_dashboard_stats
 from forms import UserEditForm, EmployeeAttachmentForm, SMTPConfigurationForm # Assuming UserEditForm is defined in forms.py
+
+# Helper function to cast date columns for PostgreSQL compatibility
+def cast_date_column(column):
+    """Cast a date column for PostgreSQL compatibility if needed.
+    This function should only be called within a Flask application context.
+    """
+    try:
+        # Check if we're using PostgreSQL
+        # db.engine requires an application context, which should exist when called from routes
+        drivername = db.engine.url.drivername
+        if drivername in ['postgresql', 'postgresql+psycopg2']:
+            return cast(column, PostgresDate)
+    except (RuntimeError, AttributeError, Exception):
+        # If we can't determine the driver (no app context or other error), return column as-is
+        # This allows the code to work even if called outside app context
+        pass
+    return column
+
+def cast_timestamp_column(column):
+    """Cast a timestamp/datetime column for PostgreSQL compatibility if needed.
+    This function should only be called within a Flask application context.
+    """
+    try:
+        # Check if we're using PostgreSQL
+        # db.engine requires an application context, which should exist when called from routes
+        drivername = db.engine.url.drivername
+        if drivername in ['postgresql', 'postgresql+psycopg2']:
+            return cast(column, PostgresTimestamp)
+    except (RuntimeError, AttributeError, Exception):
+        # If we can't determine the driver (no app context or other error), return column as-is
+        # This allows the code to work even if called outside app context
+        pass
+    return column
+
+def cast_boolean_column(column):
+    """Cast a boolean column for PostgreSQL compatibility if needed.
+    If the column is stored as bigint/integer (0/1), we compare to integer instead of casting.
+    This function should only be called within a Flask application context.
+    """
+    try:
+        # Check if we're using PostgreSQL
+        drivername = db.engine.url.drivername
+        if drivername in ['postgresql', 'postgresql+psycopg2']:
+            # For PostgreSQL, if column is stored as bigint/integer, we need to compare to integer
+            # Return the column as-is - we'll handle the comparison value instead
+            return column
+    except (RuntimeError, AttributeError, Exception):
+        # If we can't determine the driver, return column as-is
+        pass
+    return column
+
+def boolean_filter_value(column, value):
+    """Convert boolean comparison value for PostgreSQL compatibility.
+    If column is stored as bigint/integer, convert True/False to 1/0.
+    """
+    try:
+        drivername = db.engine.url.drivername
+        if drivername in ['postgresql', 'postgresql+psycopg2']:
+            # For PostgreSQL, if column is bigint/integer, convert boolean to integer
+            # We'll use CASE expression to handle the conversion safely
+            from sqlalchemy import case
+            if value is True:
+                # PostgreSQL boolean comparison - use True/False directly
+                return column == True
+            elif value is False:
+                return column == False
+    except (RuntimeError, AttributeError, Exception):
+        pass
+    # Default: return the value as-is for non-PostgreSQL or if conversion fails
+    return value
 
 dashboard_bp = Blueprint('dashboard', __name__, url_prefix='/dashboard')
 
@@ -47,48 +119,61 @@ def employee():
     current_year = today.year
     
     # Monthly leave and permission statistics
+    # Cast date columns for PostgreSQL compatibility if column is TEXT
+    leave_start_date_col = cast_date_column(LeaveRequest.start_date)
+    
     monthly_leaves = LeaveRequest.query.filter(
         LeaveRequest.user_id == current_user.id,
-        LeaveRequest.start_date >= current_month_start,
-        LeaveRequest.start_date <= today
+        leave_start_date_col >= current_month_start,
+        leave_start_date_col <= today
     ).count()
     
+    # Cast timestamp columns for PostgreSQL compatibility
+    perm_start_time_col = cast_timestamp_column(PermissionRequest.start_time)
     monthly_permissions = PermissionRequest.query.filter(
         PermissionRequest.user_id == current_user.id,
-        PermissionRequest.start_time >= datetime.combine(current_month_start, datetime.min.time()),
-        PermissionRequest.start_time <= datetime.combine(today, datetime.max.time())
+        perm_start_time_col >= datetime.combine(current_month_start, datetime.min.time()),
+        perm_start_time_col <= datetime.combine(today, datetime.max.time())
     ).count()
     
     # Yearly statistics
     year_start = date(current_year, 1, 1)
     yearly_leaves = LeaveRequest.query.filter(
         LeaveRequest.user_id == current_user.id,
-        LeaveRequest.start_date >= year_start,
-        LeaveRequest.start_date <= today
+        leave_start_date_col >= year_start,
+        leave_start_date_col <= today
     ).count()
     
+    # Cast timestamp columns for PostgreSQL compatibility
+    perm_start_time_col = cast_timestamp_column(PermissionRequest.start_time)
     yearly_permissions = PermissionRequest.query.filter(
         PermissionRequest.user_id == current_user.id,
-        PermissionRequest.start_time >= datetime.combine(year_start, datetime.min.time()),
-        PermissionRequest.start_time <= datetime.combine(today, datetime.max.time())
+        perm_start_time_col >= datetime.combine(year_start, datetime.min.time()),
+        perm_start_time_col <= datetime.combine(today, datetime.max.time())
     ).count()
     
     # Total days used in current year
+    # PostgreSQL: Date subtraction gives integer days directly (no julianday needed)
+    # In PostgreSQL, subtracting two DATE columns gives an INTEGER (days)
+    # Add 1 to include both start and end dates
     total_leave_days_used = db.session.query(
         db.func.coalesce(db.func.sum(
-            db.func.julianday(LeaveRequest.end_date) - db.func.julianday(LeaveRequest.start_date) + 1
+            db.cast(LeaveRequest.end_date, db.Date) - db.cast(LeaveRequest.start_date, db.Date) + 1
         ), 0)
     ).filter(
         LeaveRequest.user_id == current_user.id,
         LeaveRequest.status == 'approved',
-        LeaveRequest.start_date >= year_start
+        leave_start_date_col >= year_start
     ).scalar() or 0
     
     # Attendance statistics for current month
+    # Cast date columns for PostgreSQL compatibility if column is TEXT
+    daily_date_col = cast_date_column(DailyAttendance.date)
+    
     monthly_attendance = DailyAttendance.query.filter(
         DailyAttendance.user_id == current_user.id,
-        DailyAttendance.date >= current_month_start,
-        DailyAttendance.date <= today
+        daily_date_col >= current_month_start,
+        daily_date_col <= today
     ).all()
     
     present_days = sum(1 for record in monthly_attendance if record.status in ['present', 'half-day'])
@@ -96,11 +181,12 @@ def employee():
     
     # Leave type breakdown
     leave_type_breakdown = []
-    for leave_type in LeaveType.query.filter_by(is_active=True).all():
+    # Query active leave types (PostgreSQL boolean comparison)
+    for leave_type in LeaveType.query.filter(LeaveType.is_active == True).all():
         type_requests = LeaveRequest.query.filter(
             LeaveRequest.user_id == current_user.id,
             LeaveRequest.leave_type_id == leave_type.id,
-            LeaveRequest.start_date >= year_start
+            leave_start_date_col >= year_start
         ).all()
         
         total_requests = len(type_requests)
@@ -125,10 +211,12 @@ def employee():
         'long': 0    # > 4 hours
     }
     
+    # Cast timestamp columns for PostgreSQL compatibility
+    perm_start_time_col = cast_timestamp_column(PermissionRequest.start_time)
     all_permissions = PermissionRequest.query.filter(
         PermissionRequest.user_id == current_user.id,
         PermissionRequest.status == 'approved',
-        PermissionRequest.start_time >= datetime.combine(year_start, datetime.min.time())
+        perm_start_time_col >= datetime.combine(year_start, datetime.min.time())
     ).all()
     
     for perm in all_permissions:
@@ -145,13 +233,16 @@ def employee():
     upcoming_leaves = LeaveRequest.query.filter(
         LeaveRequest.user_id == current_user.id,
         LeaveRequest.status == 'approved',
-        LeaveRequest.start_date >= today
+        leave_start_date_col >= today
     ).order_by(LeaveRequest.start_date.asc()).limit(10).all()
     
     # Get upcoming paid holidays
     from models import PaidHoliday
+    # Cast date columns for PostgreSQL compatibility if column is TEXT
+    holiday_start_date_col = cast_date_column(PaidHoliday.start_date)
+    
     upcoming_holidays = PaidHoliday.query.filter(
-        PaidHoliday.start_date >= today
+        holiday_start_date_col >= today
     ).order_by(PaidHoliday.start_date.asc()).limit(5).all()
     
     # Add enhanced statistics to stats
@@ -330,6 +421,44 @@ def admin():
         recent_leaves = LeaveRequest.query.order_by(LeaveRequest.updated_at.desc()).limit(5).all()
         recent_permissions = PermissionRequest.query.order_by(PermissionRequest.updated_at.desc()).limit(5).all()
     
+    # Convert date strings to date objects for templates (if dates are stored as TEXT in PostgreSQL)
+    from datetime import datetime as dt
+    for leave in recent_leaves:
+        if isinstance(leave.start_date, str):
+            try:
+                leave.start_date = dt.strptime(leave.start_date, '%Y-%m-%d').date()
+            except (ValueError, AttributeError):
+                try:
+                    leave.start_date = dt.fromisoformat(leave.start_date).date()
+                except (ValueError, AttributeError):
+                    pass
+        if isinstance(leave.end_date, str):
+            try:
+                leave.end_date = dt.strptime(leave.end_date, '%Y-%m-%d').date()
+            except (ValueError, AttributeError):
+                try:
+                    leave.end_date = dt.fromisoformat(leave.end_date).date()
+                except (ValueError, AttributeError):
+                    pass
+    
+    for leave in pending_leave_requests:
+        if isinstance(leave.start_date, str):
+            try:
+                leave.start_date = dt.strptime(leave.start_date, '%Y-%m-%d').date()
+            except (ValueError, AttributeError):
+                try:
+                    leave.start_date = dt.fromisoformat(leave.start_date).date()
+                except (ValueError, AttributeError):
+                    pass
+        if isinstance(leave.end_date, str):
+            try:
+                leave.end_date = dt.strptime(leave.end_date, '%Y-%m-%d').date()
+            except (ValueError, AttributeError):
+                try:
+                    leave.end_date = dt.fromisoformat(leave.end_date).date()
+                except (ValueError, AttributeError):
+                    pass
+    
     # Get all users for the admin view (including active and inactive)
     # Filter by department if admin has specific department assignments
     if current_user.managed_department:
@@ -375,16 +504,22 @@ def admin():
     
     # Get upcoming paid holidays (next 30 days)
     from datetime import datetime, timedelta
+    
     today = datetime.now().date()
     next_month = today + timedelta(days=30)
+    
+    # Cast date columns for PostgreSQL compatibility if column is TEXT
+    start_date_col = cast_date_column(PaidHoliday.start_date)
+    
     upcoming_holidays = PaidHoliday.query.filter(
-        PaidHoliday.start_date >= today,
-        PaidHoliday.start_date <= next_month
+        start_date_col >= today,
+        start_date_col <= next_month
     ).order_by(PaidHoliday.start_date).limit(5).all()
     
     # Get leave type statistics
     leave_type_stats = []
-    leave_types = LeaveType.query.filter_by(is_active=True).all()
+    # Query active leave types (PostgreSQL boolean comparison)
+    leave_types = LeaveType.query.filter(LeaveType.is_active == True).all()
     for lt in leave_types:
         total_balances = LeaveBalance.query.filter_by(leave_type_id=lt.id).count()
         total_used = db.session.query(db.func.sum(LeaveBalance.used_days)).filter_by(leave_type_id=lt.id).scalar() or 0
@@ -899,8 +1034,11 @@ def director():
     
     # Get upcoming paid holidays
     from datetime import datetime
+    # Cast date columns for PostgreSQL compatibility if column is TEXT
+    paid_holiday_start_date_col = cast_date_column(PaidHoliday.start_date)
+    
     upcoming_paid_holidays = PaidHoliday.query.filter(
-        PaidHoliday.start_date >= datetime.now().date()
+        paid_holiday_start_date_col >= datetime.now().date()
     ).order_by(PaidHoliday.start_date.asc()).limit(5).all()
     
     # Get leave type statistics with dynamic data
@@ -1578,7 +1716,8 @@ def leave_balances():
     form = LeaveBalanceForm()
     
     # Set form choices
-    leave_types = LeaveType.query.filter_by(is_active=True).all()
+    # Query active leave types (PostgreSQL boolean comparison)
+    leave_types = LeaveType.query.filter(LeaveType.is_active == True).all()
     form.user_id.choices = [(u.id, f"{u.first_name} {u.last_name}") for u in users]
     form.leave_type_id.choices = [(lt.id, lt.name) for lt in leave_types]
     
@@ -1804,7 +1943,8 @@ def api_stats():
 @role_required(['admin', 'product_owner'])
 def smtp_configuration():
     """SMTP Configuration management for admin only"""
-    config = SMTPConfiguration.query.filter_by(is_active=True).first()
+    # Query active SMTP configuration (PostgreSQL boolean comparison)
+    config = SMTPConfiguration.query.filter(SMTPConfiguration.is_active == True).first()
     form = SMTPConfigurationForm()
     
     if config:

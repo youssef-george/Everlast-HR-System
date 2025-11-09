@@ -14,7 +14,6 @@ from extensions import db, scheduler
 from routes.attendance import sync_attendance_task
 from flask_apscheduler import APScheduler
 from datetime import datetime
-from working_sync_service import working_sync_service
 
 # Load environment variables
 load_dotenv()
@@ -22,30 +21,12 @@ load_dotenv()
 # Initialize scheduler
 scheduler = APScheduler()
 
-def create_app(config_name=None):
+
+def create_app(config_name='default'):
     app = Flask(__name__)
-    
-    # Auto-detect config based on environment if not specified
-    if config_name is None:
-        flask_env = os.environ.get('FLASK_ENV', 'development').lower()
-        if flask_env == 'production':
-            config_name = 'production'
-        else:
-            config_name = 'default'
     
     # Load config
     app.config.from_object(config[config_name])
-    
-    # Apply ProxyFix middleware for deployment behind reverse proxy
-    # This is important for correct request handling (scheme, host, etc.)
-    if config_name == 'production' or os.environ.get('PROXY_FIX_ENABLED', 'false').lower() == 'true':
-        app.wsgi_app = ProxyFix(
-            app.wsgi_app,
-            x_for=1,  # Trust 1 X-Forwarded-For header
-            x_proto=1,  # Trust 1 X-Forwarded-Proto header
-            x_host=1,  # Trust 1 X-Forwarded-Host header
-            x_port=1   # Trust 1 X-Forwarded-Port header
-        )
     
     # Initialize extensions
     db.init_app(app)
@@ -54,27 +35,13 @@ def create_app(config_name=None):
     csrf = CSRFProtect(app)
     scheduler.init_app(app)
     
-    # Initialize sync service
-    working_sync_service.init_app(app)
-    
     # Log database connection info
     with app.app_context():
-        logging.info(f"=== DATABASE CONNECTIONS ===")
-        logging.info(f"Primary DB URL: {db.engine.url}")
-        logging.info(f"Primary DB Driver: {db.engine.url.drivername}")
-        logging.info(f"Primary DB Host: {db.engine.url.host}")
-        logging.info(f"Primary DB Name: {db.engine.url.database}")
-        
-        # Log PostgreSQL connection info
-        if working_sync_service.postgres_engine:
-            logging.info(f"PostgreSQL URL: {working_sync_service.postgres_engine.url}")
-            logging.info(f"PostgreSQL Driver: {working_sync_service.postgres_engine.url.drivername}")
-            logging.info(f"PostgreSQL Host: {working_sync_service.postgres_engine.url.host}")
-            logging.info(f"PostgreSQL DB: {working_sync_service.postgres_engine.url.database}")
-            logging.info(f"Sync Enabled: {working_sync_service.sync_enabled}")
-        else:
-            logging.warning("PostgreSQL connection not available")
-        
+        logging.info(f"=== DATABASE CONNECTION ===")
+        logging.info(f"Database URL: {db.engine.url}")
+        logging.info(f"Database Driver: {db.engine.url.drivername}")
+        logging.info(f"Database Host: {db.engine.url.host}")
+        logging.info(f"Database Name: {db.engine.url.database}")
         logging.info(f"=============================")
     
     # Configure logging
@@ -90,14 +57,6 @@ def create_app(config_name=None):
     login_manager.login_message = 'Please log in to access this page.'
     login_manager.login_message_category = 'info'
     
-    # Configure Flask-Login cookie settings for production
-    if config_name == 'production':
-        login_manager.session_protection = 'strong'
-        # Configure remember cookie security (Flask-Login reads from app config)
-        app.config.setdefault('REMEMBER_COOKIE_SECURE', True)
-        app.config.setdefault('REMEMBER_COOKIE_HTTPONLY', True)
-        app.config.setdefault('REMEMBER_COOKIE_SAMESITE', 'Lax')
-    
     @login_manager.user_loader
     def load_user(user_id):
         from models import User
@@ -110,10 +69,69 @@ def create_app(config_name=None):
             return ''
         if isinstance(value, str):
             try:
-                value = datetime.fromisoformat(value.replace('Z', '+00:00'))
-            except ValueError:
+                # Try parsing various datetime string formats
+                for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S%z']:
+                    try:
+                        value = datetime.strptime(value, fmt)
+                        break
+                    except ValueError:
+                        continue
+                else:
+                    # Try ISO format
+                    value = datetime.fromisoformat(value.replace('Z', '+00:00'))
+            except (ValueError, AttributeError):
                 return value
-        return value.strftime(format)
+        if hasattr(value, 'strftime'):
+            return value.strftime(format)
+        return str(value)
+    
+    @app.template_filter('safe_datetime')
+    def safe_datetime(value, format='%Y-%m-%d %H:%M:%S'):
+        """Safely format datetime, handling both string and datetime objects"""
+        if value is None:
+            return ''
+        # If it's already a datetime object, format it
+        if hasattr(value, 'strftime'):
+            return value.strftime(format)
+        # If it's a string, try to parse and format it
+        if isinstance(value, str):
+            try:
+                # Try parsing various datetime string formats
+                for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S%z', '%Y-%m-%d %H:%M:%S.%f']:
+                    try:
+                        dt = datetime.strptime(value, fmt)
+                        return dt.strftime(format)
+                    except ValueError:
+                        continue
+                # Try ISO format
+                dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+                return dt.strftime(format)
+            except (ValueError, AttributeError):
+                return value
+        return str(value)
+    
+    @app.template_filter('to_datetime')
+    def to_datetime(value):
+        """Convert string to datetime object for template arithmetic"""
+        if value is None:
+            return None
+        # If it's already a datetime object, return it
+        if isinstance(value, datetime):
+            return value
+        # If it's a string, try to parse it
+        if isinstance(value, str):
+            try:
+                # Try parsing various datetime string formats
+                for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S%z', '%Y-%m-%d %H:%M:%S.%f']:
+                    try:
+                        return datetime.strptime(value, fmt)
+                    except ValueError:
+                        continue
+                # Try ISO format
+                return datetime.fromisoformat(value.replace('Z', '+00:00'))
+            except (ValueError, AttributeError):
+                return None
+        return None
     
     @app.template_filter('hours_minutes')
     def format_hours_minutes_filter(hours):
@@ -125,6 +143,77 @@ def create_app(config_name=None):
     @app.context_processor
     def utility_processor():
         return {'now': datetime.now()}
+    
+    # Quick fix for missing table and sequence - run once at startup
+    _tables_initialized = False
+    
+    def ensure_tables_exist():
+        """Ensure critical tables exist and sequences are fixed - runs once"""
+        nonlocal _tables_initialized
+        if _tables_initialized:
+            return
+        _tables_initialized = True
+        try:
+            from sqlalchemy import text
+            
+            # Create employee_attachments table if missing
+            try:
+                db.session.execute(text("""
+                    CREATE TABLE IF NOT EXISTS employee_attachments (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER NOT NULL,
+                        file_name VARCHAR(255) NOT NULL,
+                        display_name VARCHAR(255) NOT NULL,
+                        file_path VARCHAR(500) NOT NULL,
+                        file_size INTEGER,
+                        file_type VARCHAR(100),
+                        description TEXT,
+                        uploaded_by INTEGER,
+                        created_at TIMESTAMP,
+                        updated_at TIMESTAMP,
+                        CONSTRAINT fk_employee_attachments_user 
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                        CONSTRAINT fk_employee_attachments_uploader 
+                            FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
+                    )
+                """))
+                db.session.commit()
+                logging.info("✅ employee_attachments table checked/created")
+            except Exception as e:
+                logging.warning(f"employee_attachments table check: {e}")
+                db.session.rollback()
+            
+            # Fix Department sequence
+            try:
+                result = db.session.execute(text("SELECT COALESCE(MAX(id), 0) FROM departments"))
+                max_id = result.scalar() or 0
+                
+                # Ensure sequence exists and is linked
+                db.session.execute(text("""
+                    DO $$ 
+                    BEGIN
+                        IF NOT EXISTS (SELECT 1 FROM pg_sequences WHERE sequencename = 'departments_id_seq') THEN
+                            CREATE SEQUENCE departments_id_seq;
+                        END IF;
+                    END $$;
+                """))
+                db.session.execute(text("ALTER TABLE departments ALTER COLUMN id SET DEFAULT nextval('departments_id_seq')"))
+                db.session.execute(text("ALTER SEQUENCE departments_id_seq OWNED BY departments.id"))
+                db.session.execute(text(f"SELECT setval('departments_id_seq', GREATEST({max_id}, 1), false)"))
+                db.session.commit()
+                logging.info(f"✅ Department sequence fixed")
+            except Exception as e:
+                logging.warning(f"Department sequence fix: {e}")
+                db.session.rollback()
+                
+        except Exception as e:
+            logging.warning(f"Table/sequence check: {e}")
+            db.session.rollback()
+    
+    # Run on first request
+    @app.before_request
+    def before_request_ensure_tables():
+        ensure_tables_exist()
     
     def admin_instance_required(f):
         @wraps(f)
@@ -232,19 +321,9 @@ def create_app(config_name=None):
                 'overflow': getattr(pool, 'overflow', lambda: 'N/A')()
             }
             
-            # Test PostgreSQL connection
-            postgres_status = 'disconnected'
-            if working_sync_service.postgres_engine:
-                try:
-                    postgres_status = 'connected' if working_sync_service.test_postgres_connection() else 'failed'
-                except:
-                    postgres_status = 'error'
-            
             return jsonify({
                 'status': 'healthy',
-                'primary_database': 'connected',
-                'postgres_database': postgres_status,
-                'sync_enabled': working_sync_service.sync_enabled,
+                'database': 'connected',
                 'pool_status': pool_status
             }), 200
             
@@ -261,9 +340,54 @@ def create_app(config_name=None):
     def close_db(error):
         """Ensure database connections are properly closed"""
         try:
+            if error:
+                db.session.rollback()
             db.session.close()
         except Exception as e:
             logging.warning(f"Error closing database session: {str(e)}")
+    
+    @app.errorhandler(500)
+    def handle_internal_error(e):
+        """Handle internal errors and rollback transactions"""
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        
+        # Log the full error with traceback
+        import traceback
+        error_details = traceback.format_exc()
+        logging.error(f"Internal error: {str(e)}", exc_info=True)
+        logging.error(f"Full traceback:\n{error_details}")
+        
+        # Get original exception if available
+        original_error = str(e)
+        if hasattr(e, 'original_exception') and e.original_exception:
+            original_error = str(e.original_exception)
+        
+        # Return JSON for API requests (POST requests, JSON accept header, or API routes)
+        is_api_request = (
+            request.method == 'POST' or 
+            request.accept_mimetypes.accept_json or
+            request.path.startswith('/attendance/') or
+            request.path.startswith('/api/')
+        )
+        
+        if is_api_request:
+            error_message = original_error
+            # In development, include more details
+            if app.config.get('DEBUG', False):
+                error_message = f"{original_error}\n\nTraceback:\n{error_details}"
+            return jsonify({
+                'status': 'error',
+                'message': f'Internal server error: {original_error}',
+                'details': error_details if app.config.get('DEBUG', False) else None
+            }), 500
+        
+        # Return HTML for regular page requests
+        if app.config.get('DEBUG', False):
+            return f"<h1>Internal Server Error</h1><pre>{error_details}</pre>", 500
+        return "Internal Server Error", 500
     
     return app
 

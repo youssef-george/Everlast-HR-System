@@ -141,13 +141,14 @@ def create():
     """Create a new leave request"""
     form = LeaveRequestForm()
     
-    # Set leave type choices
-    leave_types = LeaveType.query.filter_by(is_active=True).all()
-    form.leave_type_id.choices = [(lt.id, lt.name) for lt in leave_types]
+    # Set leave type choices (PostgreSQL boolean comparison)
+    leave_types = LeaveType.query.filter(LeaveType.is_active == True).all()
+    form.leave_type_id.choices = [(lt.id, lt.name) for lt in leave_types] if leave_types else []
 
     # Set delegate employee choices
     employees = User.query.filter_by(status='active').order_by(User.first_name).all()
-    form.delegate_employee_id.choices = [(0, 'Select Delegate Employee')] + [(e.id, e.get_full_name()) for e in employees]
+    delegate_choices = [(0, 'Select Delegate Employee')] + [(e.id, e.get_full_name()) for e in employees] if employees else [(0, 'Select Delegate Employee')]
+    form.delegate_employee_id.choices = delegate_choices
     
     if form.validate_on_submit():
         # Check for paid holidays overlapping with the requested dates
@@ -338,13 +339,14 @@ def edit(id):
     
     form = LeaveRequestForm(obj=leave_request)
 
-    # Set leave type choices
-    leave_types = LeaveType.query.filter_by(is_active=True).all()
-    form.leave_type_id.choices = [(lt.id, lt.name) for lt in leave_types]
+    # Set leave type choices (PostgreSQL boolean comparison)
+    leave_types = LeaveType.query.filter(LeaveType.is_active == True).all()
+    form.leave_type_id.choices = [(lt.id, lt.name) for lt in leave_types] if leave_types else []
 
     # Set delegate employee choices
     employees = User.query.filter_by(status='active').order_by(User.first_name).all()
-    form.delegate_employee_id.choices = [(0, 'Select Delegate Employee')] + [(e.id, e.get_full_name()) for e in employees]
+    delegate_choices = [(0, 'Select Delegate Employee')] + [(e.id, e.get_full_name()) for e in employees] if employees else [(0, 'Select Delegate Employee')]
+    form.delegate_employee_id.choices = delegate_choices
 
     if form.validate_on_submit():
         leave_request.start_date = form.start_date.data
@@ -434,6 +436,11 @@ def admin_create():
     """Allow admin to create leave requests on behalf of employees"""
     form = AdminLeaveRequestForm()
     
+    # Initialize choices to empty lists immediately to prevent None errors
+    form.employee_id.choices = []
+    form.leave_type_id.choices = []
+    form.delegate_employee_id.choices = []
+    
     # Populate employee dropdown with active employees (excluding test users)
     current_app.logger.debug(f"Current user role: {current_user.role}")
     current_app.logger.debug(f"Form data received: {form.data}")
@@ -493,18 +500,45 @@ def admin_create():
 
     # Create choices list for the dropdown: [(id, "First Last (Department)")]
     employee_choices = []
-    for employee in employees:
-        dept_name = employee.department.department_name if employee.department else "No Department"
-        display_text = f"{employee.get_full_name()} ({dept_name})"
-        employee_choices.append((employee.id, display_text))
+    if employees:
+        for employee in employees:
+            try:
+                # Safely get department name - handle both department_name and name attributes
+                if employee.department:
+                    dept_name = getattr(employee.department, 'department_name', None) or getattr(employee.department, 'name', 'No Department')
+                else:
+                    dept_name = "No Department"
+                display_text = f"{employee.get_full_name()} ({dept_name})"
+                employee_choices.append((employee.id, display_text))
+            except Exception as e:
+                # Skip employees with invalid department relationships
+                current_app.logger.warning(f"Error processing employee {employee.id} for choices: {e}")
+                # Add employee without department name if possible
+                try:
+                    display_text = f"{employee.get_full_name()} (No Department)"
+                    employee_choices.append((employee.id, display_text))
+                except:
+                    continue
     
     # Populate leave type dropdown with all active leave types for admin/manager
-    leave_types = LeaveType.query.filter_by(is_active=True).all()
-    leave_type_choices = [(lt.id, lt.name) for lt in leave_types]
+    # Use filter with boolean comparison for PostgreSQL compatibility
+    leave_types = LeaveType.query.filter(LeaveType.is_active == True).all()
+    leave_type_choices = [(lt.id, lt.name) for lt in leave_types] if leave_types else []
     
-    # Set choices for both fields
-    form.employee_id.choices = employee_choices
-    form.leave_type_id.choices = leave_type_choices
+    # Ensure choices are never None - set to empty list if needed
+    if not employee_choices:
+        employee_choices = []
+    if not leave_type_choices:
+        leave_type_choices = []
+    
+    # Set choices for all fields - always set even if empty
+    form.employee_id.choices = employee_choices if employee_choices else []
+    form.leave_type_id.choices = leave_type_choices if leave_type_choices else []
+    
+    # Also set delegate employee choices
+    delegate_employees = User.query.filter_by(status='active').order_by(User.first_name).all()
+    delegate_choices = [(0, 'Select Delegate Employee')] + [(e.id, e.get_full_name()) for e in delegate_employees] if delegate_employees else [(0, 'Select Delegate Employee')]
+    form.delegate_employee_id.choices = delegate_choices
     
     if form.validate_on_submit():
         # Get the selected employee
@@ -574,18 +608,44 @@ def edit_leave(leave_id):
     # Populate employee choices
     employees = User.query.filter_by(status='active').all()
     employee_choices = []
-    for employee in employees:
-        dept_name = employee.department.department_name if employee.department else "No Department"
-        display_text = f"{employee.get_full_name()} ({dept_name})"
-        employee_choices.append((employee.id, display_text))
+    if employees:
+        for employee in employees:
+            try:
+                # Safely get department name - handle both department_name and name attributes
+                if employee.department:
+                    dept_name = getattr(employee.department, 'department_name', None) or getattr(employee.department, 'name', 'No Department')
+                else:
+                    dept_name = "No Department"
+                display_text = f"{employee.get_full_name()} ({dept_name})"
+                employee_choices.append((employee.id, display_text))
+            except Exception as e:
+                # Skip employees with invalid department relationships
+                current_app.logger.warning(f"Error processing employee {employee.id} for choices: {e}")
+                # Add employee without department name if possible
+                try:
+                    display_text = f"{employee.get_full_name()} (No Department)"
+                    employee_choices.append((employee.id, display_text))
+                except:
+                    continue
     
-    # Populate leave type choices
-    leave_types = LeaveType.query.filter_by(is_active=True).all()
-    leave_type_choices = [(lt.id, lt.name) for lt in leave_types]
+    # Populate leave type choices (PostgreSQL boolean comparison)
+    leave_types = LeaveType.query.filter(LeaveType.is_active == True).all()
+    leave_type_choices = [(lt.id, lt.name) for lt in leave_types] if leave_types else []
     
-    # Set choices for both fields
+    # Ensure choices are never None
+    if not employee_choices:
+        employee_choices = []
+    if not leave_type_choices:
+        leave_type_choices = []
+    
+    # Set choices for all fields - always set even if empty
     form.employee_id.choices = employee_choices
     form.leave_type_id.choices = leave_type_choices
+    
+    # Also set delegate employee choices
+    delegate_employees = User.query.filter_by(status='active').order_by(User.first_name).all()
+    delegate_choices = [(0, 'Select Delegate Employee')] + [(e.id, e.get_full_name()) for e in delegate_employees] if delegate_employees else [(0, 'Select Delegate Employee')]
+    form.delegate_employee_id.choices = delegate_choices
     
     if form.validate_on_submit():
         try:

@@ -263,7 +263,7 @@
                 
                 <div class="row">
                     <label class="col-sm-3 fw-bold">Account Created:</label>
-                    <div class="col-sm-9">{{ current_user.created_at.strftime('%d/%m/%Y') }}</div>
+                    <div class="col-sm-9">{{ current_user.created_at|safe_datetime('%d/%m/%Y') }}</div>
                 </div>
             </div>
         </div>

@@ -1128,7 +1128,7 @@ async function triggerSync(retryCount = 0) {
             const timeoutId = setTimeout(() => {
                 console.log('Sync timeout reached, aborting request...');
                 controller.abort();
-            }, 300000); // 5 minute timeout for sync operations
+            }, 900000); // 15 minute timeout for sync operations (increased for large datasets)
             
             response = await fetch('/attendance/manual-sync', {
                 method: 'POST',
@@ -1147,8 +1147,8 @@ async function triggerSync(retryCount = 0) {
             console.error('Network error during manual sync:', networkError);
             
             if (networkError.name === 'AbortError') {
-                // Sync operation timed out after 5 minutes
-                showSyncAlert('Sync operation timed out after 5 minutes. This indicates the sync is processing a large amount of data. The sync may still be running in the background. Please wait a few minutes before trying again.', 'warning');
+                // Sync operation timed out after 15 minutes
+                showSyncAlert('Sync operation timed out after 15 minutes. This indicates the sync is processing a very large amount of data. The sync may still be running in the background. Please wait a few minutes and check the attendance logs to see if new records were added.', 'warning');
                 
                 // Don't retry automatically for timeouts - let user decide
                 console.log('Sync aborted due to timeout - no automatic retry');
@@ -1379,8 +1379,9 @@ document.addEventListener('DOMContentLoaded', function() {
 // Make auto-fetch status visible to all users on attendance page
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🔄 Attendance page loaded - Auto-fetch system should be active');
-    console.log('📊 Auto-fetch will check for new data every 30 seconds');
+    console.log('📊 Auto-fetch will check for new data every 5 minutes (300 seconds)');
     console.log('🔄 Page will reload automatically when new attendance data is detected');
+    console.log('🔄 Manual sync button is still available for immediate sync');
 });
 </script>
 {% endblock %}

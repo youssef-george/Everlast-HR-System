@@ -170,7 +170,7 @@ class User(UserMixin, db.Model):
 class Department(db.Model):
     __tablename__ = 'departments'
     
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     department_name = db.Column(db.String(100), nullable=False)
     manager_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -473,7 +473,7 @@ class DeviceSettings(db.Model):
     __tablename__ = 'device_settings'
 
     id = db.Column(db.Integer, primary_key=True)
-    device_ip = db.Column(db.String(15), nullable=False)  # No default - must be set explicitly
+    device_ip = db.Column(db.String(15), nullable=False, default='192.168.11.2')
     device_port = db.Column(db.Integer, nullable=False, default=4370)
     device_name = db.Column(db.String(100), nullable=True)
     is_active = db.Column(db.Boolean, default=True)
@@ -530,7 +530,7 @@ class DeviceUser(db.Model):
 class EmployeeAttachment(db.Model):
     __tablename__ = 'employee_attachments'
     
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     file_name = db.Column(db.String(255), nullable=False)  # Original filename
     display_name = db.Column(db.String(255), nullable=False)  # User-defined name for the attachment

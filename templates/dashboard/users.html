@@ -151,9 +151,9 @@ table thead th * {
                                                                 <i class="fas fa-user-slash me-1"></i>Deactivate
                                                             </button>
                                                         </form>
-                                                        <form method="POST" action="{{ url_for('dashboard.delete_member', user_id=user.id) }}" class="d-inline">
+                                                        <form method="POST" action="{{ url_for('dashboard.delete_member', user_id=user.id) }}" class="d-inline delete-user-form">
                                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                            <button type="submit" onclick="return confirmDeleteUser('{{ user.first_name }}', '{{ user.last_name }}', {{ user.id }});" class="btn btn-sm btn-danger">
+                                                            <button type="submit" class="btn btn-sm btn-danger" data-user-id="{{ user.id }}" data-first-name="{{ user.first_name }}" data-last-name="{{ user.last_name }}">
                                                                 <i class="fas fa-trash me-1"></i>Delete
                                                             </button>
                                                         </form>
@@ -257,9 +257,9 @@ table thead th * {
                                                                 <i class="fas fa-user-check me-1"></i>Activate
                                                             </button>
                                                         </form>
-                                                        <form method="POST" action="{{ url_for('dashboard.delete_member', user_id=user.id) }}" class="d-inline">
+                                                        <form method="POST" action="{{ url_for('dashboard.delete_member', user_id=user.id) }}" class="d-inline delete-user-form">
                                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                            <button type="submit" onclick="return confirmDeleteUser('{{ user.first_name }}', '{{ user.last_name }}', {{ user.id }});" class="btn btn-sm btn-danger">
+                                                            <button type="submit" class="btn btn-sm btn-danger" data-user-id="{{ user.id }}" data-first-name="{{ user.first_name }}" data-last-name="{{ user.last_name }}">
                                                                 <i class="fas fa-trash me-1"></i>Delete
                                                             </button>
                                                         </form>
@@ -504,8 +504,22 @@ table thead th * {
         });
     }
 
+    // Handle delete user form submissions
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.delete-user-form').forEach(function(form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const button = form.querySelector('button[type="submit"]');
+                const userId = button.getAttribute('data-user-id');
+                const firstName = button.getAttribute('data-first-name');
+                const lastName = button.getAttribute('data-last-name');
+                confirmDeleteUser(firstName, lastName, userId, form);
+            });
+        });
+    });
+    
     // User deletion confirmation function
-    function confirmDeleteUser(firstName, lastName, userId) {
+    function confirmDeleteUser(firstName, lastName, userId, formElement) {
         // Create a custom confirmation modal
         const modalHtml = `
             <div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
@@ -550,7 +564,7 @@ table thead th * {
                             <button type="button" class="btn btn-secondary btn-lg px-4" data-bs-dismiss="modal">
                                 <i class="fas fa-times me-2"></i>Cancel
                             </button>
-                            <button type="button" class="btn btn-danger btn-lg px-4" onclick="proceedWithDeletion(${userId})">
+                            <button type="button" class="btn btn-danger btn-lg px-4" onclick="proceedWithDeletion(${userId}, formElement)">
                                 <i class="fas fa-trash me-2"></i>Yes, Delete User
                             </button>
                         </div>
@@ -577,16 +591,22 @@ table thead th * {
     }
     
     // Function to proceed with deletion after confirmation
-    function proceedWithDeletion(userId) {
-        // Find the form for this user and submit it
-        const form = document.querySelector(`form[action*="/users/delete/${userId}"]`);
-        if (form) {
-            // Hide the modal first
-            const modal = bootstrap.Modal.getInstance(document.getElementById('deleteUserModal'));
+    function proceedWithDeletion(userId, formElement) {
+        // Hide the modal first
+        const modal = bootstrap.Modal.getInstance(document.getElementById('deleteUserModal'));
+        if (modal) {
             modal.hide();
-            
-            // Submit the form
-            form.submit();
+        }
+        
+        // Submit the form
+        if (formElement) {
+            formElement.submit();
+        } else {
+            // Fallback: find the form
+            const form = document.querySelector(`form[action*="/users/delete/${userId}"]`);
+            if (form) {
+                form.submit();
+            }
         }
     }
 
@@ -689,15 +709,15 @@ table thead th * {
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold">Joining Date:</label>
-                            <p class="mb-0">{{ user.joining_date.strftime('%Y-%m-%d') if user.joining_date else '-' }}</p>
+                            <p class="mb-0">{{ user.joining_date|safe_datetime('%Y-%m-%d') if user.joining_date else '-' }}</p>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold">Created:</label>
-                            <p class="mb-0">{{ user.created_at.strftime('%Y-%m-%d %H:%M') if user.created_at else '-' }}</p>
+                            <p class="mb-0">{{ user.created_at|safe_datetime('%Y-%m-%d %H:%M') if user.created_at else '-' }}</p>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold">Last Updated:</label>
-                            <p class="mb-0">{{ user.updated_at.strftime('%Y-%m-%d %H:%M') if user.updated_at else '-' }}</p>
+                            <p class="mb-0">{{ user.updated_at|safe_datetime('%Y-%m-%d %H:%M') if user.updated_at else '-' }}</p>
                         </div>
                     </div>
                 </div>
@@ -734,7 +754,7 @@ table thead th * {
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label fw-bold">Date of Birth:</label>
-                                    <p class="mb-0">{{ user.date_of_birth.strftime('%Y-%m-%d') if user.date_of_birth else '-' }}</p>
+                                    <p class="mb-0">{{ user.date_of_birth|safe_datetime('%Y-%m-%d') if user.date_of_birth else '-' }}</p>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label fw-bold">Age:</label>
@@ -810,7 +830,7 @@ table thead th * {
                                             {% endif %}
                                         </td>
                                         <td>
-                                            <small class="text-muted">{{ attachment.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                            <small class="text-muted">{{ attachment.created_at|safe_datetime('%Y-%m-%d %H:%M') }}</small>
                                         </td>
                                         <td>
                                             <div class="d-flex gap-1">

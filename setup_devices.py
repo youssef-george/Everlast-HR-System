@@ -42,28 +42,21 @@ def setup_devices():
             devices_updated = 0
             
             for device_config in devices_config:
-                # Check if device already exists by NAME (not IP) to preserve existing IPs
+                # Check if device already exists
                 existing_device = DeviceSettings.query.filter_by(
-                    device_name=device_config['device_name']
+                    device_ip=device_config['device_ip']
                 ).first()
                 
                 if existing_device:
-                    # Only update port and status if changed, NEVER update IP address
-                    updated = False
-                    if existing_device.device_port != device_config['device_port']:
-                        existing_device.device_port = device_config['device_port']
-                        updated = True
-                    if existing_device.is_active != device_config['is_active']:
-                        existing_device.is_active = device_config['is_active']
-                        updated = True
-                    if updated:
-                        existing_device.updated_at = datetime.utcnow()
-                        devices_updated += 1
-                        print(f"[OK] Updated device: {device_config['device_name']} (IP preserved: {existing_device.device_ip}:{existing_device.device_port})")
-                    else:
-                        print(f"[SKIP] Device already exists: {device_config['device_name']} ({existing_device.device_ip}:{existing_device.device_port})")
+                    # Update existing device
+                    existing_device.device_port = device_config['device_port']
+                    existing_device.device_name = device_config['device_name']
+                    existing_device.is_active = device_config['is_active']
+                    existing_device.updated_at = datetime.utcnow()
+                    devices_updated += 1
+                    print(f"✅ Updated device: {device_config['device_name']} ({device_config['device_ip']})")
                 else:
-                    # Create new device only if it doesn't exist
+                    # Create new device
                     new_device = DeviceSettings(
                         device_ip=device_config['device_ip'],
                         device_port=device_config['device_port'],
@@ -72,7 +65,7 @@ def setup_devices():
                     )
                     db.session.add(new_device)
                     devices_added += 1
-                    print(f"[OK] Added device: {device_config['device_name']} ({device_config['device_ip']})")
+                    print(f"✅ Added device: {device_config['device_name']} ({device_config['device_ip']})")
             
             # Commit all changes
             db.session.commit()

@@ -385,7 +385,7 @@
                                     {% if permission_requests %}
                                         {% for permission in permission_requests[:5] %}
                                         <tr>
-                                            <td>{{ permission.start_time.strftime('%d/%m/%Y %I:%M %p') }} - {{ permission.end_time.strftime('%I:%M %p') }}</td>
+                                            <td>{{ permission.start_time|safe_datetime('%d/%m/%Y %I:%M %p') }} - {{ permission.end_time|safe_datetime('%I:%M %p') }}</td>
                                             <td>{{ permission.reason|truncate(30) }}</td>
                                             <td>
                                                 {% if permission.status == 'pending' %}
@@ -396,7 +396,7 @@
                                                     <span class="badge badge-light-danger">Rejected</span>
                                                 {% endif %}
                                             </td>
-                                            <td>{{ permission.created_at.strftime('%d/%m/%Y') }}</td>
+                                            <td>{{ permission.created_at|safe_datetime('%d/%m/%Y') }}</td>
                                             <td>
                                                 <a href="{{ url_for('permission.view', id=permission.id) }}" class="btn btn-sm btn-icon btn-light" data-bs-toggle="tooltip" title="View Details">
                                                     <i class="fas fa-eye"></i>

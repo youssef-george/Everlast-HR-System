@@ -232,7 +232,7 @@
                                                         <i class="fas fa-clock me-1"></i>
                                                         <strong>Permission:</strong> {{ permission.reason }}
                                                         <br><small class="text-muted">
-                                                            {{ permission.start_time.strftime('%I:%M %p') }} to {{ permission.end_time.strftime('%I:%M %p') }}
+                                                            {{ permission.start_time|safe_datetime('%I:%M %p') }} to {{ permission.end_time|safe_datetime('%I:%M %p') }}
                                                         </small>
                                                     </div>
                                                 {% endfor %}

@@ -326,12 +326,18 @@ class AutoFetchSystem {
     }
     
     getFinalReportFetchPromises() {
-        return [
+        const promises = [
             this.fetchAttendanceData(),
             this.fetchAttendanceStats(),
-            this.fetchFinalReportData(),
-            this.performDeviceSync()
+            this.fetchFinalReportData()
         ];
+        
+        // Don't include device sync on final-report page - it's not needed there
+        // Device sync should only run on attendance page where it's more relevant
+        // This also prevents timeout errors on final-report page
+        // If needed, device sync can be triggered manually from attendance page
+        
+        return promises;
     }
     
     getCalendarFetchPromises() {
@@ -1425,7 +1431,17 @@ class AutoFetchSystem {
     
     // Device Sync Methods
     async performDeviceSync() {
-        if (!this.deviceSyncEnabled || this.deviceSyncInProgress) {
+        // Don't sync if manual sync is in progress or if auto-fetch sync is already running
+        if (!this.deviceSyncEnabled || this.deviceSyncInProgress || window.syncInProgress) {
+            if (window.syncInProgress) {
+                console.log('⏸️ Skipping auto device sync - manual sync in progress');
+            }
+            return;
+        }
+        
+        // Double-check role - don't attempt sync for employees
+        if (this.userRole === 'employee') {
+            console.log('ℹ️ Device sync skipped - employee role (admin-only feature)');
             return;
         }
         
@@ -1470,12 +1486,36 @@ class AutoFetchSystem {
             }
             
         } catch (error) {
-            console.error('❌ Device sync failed:', error);
-            this.connectionFailures++;
+            // Extract error message properly
+            let errorMessage = 'Unknown error';
+            if (error instanceof Error) {
+                errorMessage = error.message || error.toString();
+            } else if (typeof error === 'string') {
+                errorMessage = error;
+            } else if (error && error.message) {
+                errorMessage = error.message;
+            }
             
-            if (this.connectionFailures >= this.maxFailures) {
-                console.error('Max device sync failures reached. Disabling device sync...');
+            // Handle specific error types
+            if (error.name === 'AbortError' || error.name === 'TimeoutError' || 
+                errorMessage.includes('aborted') || errorMessage.includes('timeout') ||
+                errorMessage.includes('signal timed out')) {
+                console.warn('⏸️ Device sync timed out (this is normal for long-running syncs)');
+                // Don't count timeout as a failure - it's expected for long syncs
+                return;
+            } else if (errorMessage.includes('403') || errorMessage.includes('Forbidden')) {
+                console.warn('⚠️ Device sync access denied. This feature is admin-only.');
                 this.deviceSyncEnabled = false;
+                return;
+            } else {
+                console.error('❌ Device sync failed:', errorMessage);
+                console.error('Error details:', error);
+                this.connectionFailures++;
+                
+                if (this.connectionFailures >= this.maxFailures) {
+                    console.error('Max device sync failures reached. Disabling device sync...');
+                    this.deviceSyncEnabled = false;
+                }
             }
         } finally {
             this.deviceSyncInProgress = false;
@@ -1588,18 +1628,27 @@ document.addEventListener('DOMContentLoaded', function() {
     if (shouldEnableAutoFetch) {
         console.log(`🚀 Initializing auto-fetch system for ${userRole} role...`);
         
+        // Use 5-minute interval for attendance page, 30 seconds for other pages
+        const isAttendancePage = currentPath.includes('/attendance/');
+        const fetchInterval = isAttendancePage ? 300000 : 30000; // 5 minutes for attendance, 30s for others
+        
         // Initialize auto-fetch system with device sync
         window.autoFetch = new AutoFetchSystem({
-            fetchInterval: 30000, // 30 seconds for faster updates
+            fetchInterval: fetchInterval, // 5 minutes for attendance, 30 seconds for other pages
             refreshInterval: 300000, // 5 minutes for full refresh (disabled in code)
             enabled: true,
             userRole: userRole,
             debug: true, // Enable debug mode
-            deviceSyncEnabled: true // Enable device sync
+            // Only enable device sync for admin/product_owner roles
+            deviceSyncEnabled: (userRole === 'admin' || userRole === 'product_owner')
         });
         
         console.log(`✅ Auto-fetch system enabled for ${userRole} role on ${currentPath}`);
-        console.log(`📊 Fetch interval: 30s, Auto-reload disabled`);
+        if (isAttendancePage) {
+            console.log(`📊 Attendance page: Fetch interval: 5 minutes (300s), Manual sync still available`);
+        } else {
+            console.log(`📊 Fetch interval: 30s, Auto-reload disabled`);
+        }
     } else {
         console.log(`❌ Auto-fetch not enabled for path: ${currentPath}`);
         console.log(`   - Supported paths: ${fetchPages.join(', ')}`);
