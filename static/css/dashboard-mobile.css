@@ -1,0 +1,665 @@
+/* EverLast ERP - Comprehensive Mobile Dashboard UI/UX Fixes */
+/* This file provides centered, mobile-optimized styling for all dashboards */
+
+/* ===== BASE MOBILE STYLES (All Dashboards) ===== */
+@media (max-width: 991.98px) {
+    /* ===== Container & Layout Centering ===== */
+    .container-fluid,
+    .container {
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+    
+    .content-wrapper {
+        padding: 0.75rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    /* ===== Dashboard Header - Centered & Mobile Optimized ===== */
+    .dashboard-header {
+        padding: 1.5rem 1rem !important;
+        border-radius: 16px !important;
+        margin-bottom: 1.5rem !important;
+        text-align: center !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    .dashboard-header .d-flex {
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+        width: 100% !important;
+    }
+    
+    .dashboard-title {
+        font-size: 1.75rem !important;
+        margin-bottom: 0.75rem !important;
+        text-align: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+    }
+    
+    .dashboard-title i {
+        margin-right: 0.5rem !important;
+    }
+    
+    .welcome-text {
+        font-size: 0.95rem !important;
+        margin-bottom: 1rem !important;
+        text-align: center !important;
+        width: 100% !important;
+    }
+    
+    .action-buttons {
+        flex-direction: column !important;
+        width: 100% !important;
+        gap: 0.75rem !important;
+        align-items: stretch !important;
+        margin-top: 1rem !important;
+    }
+    
+    .action-btn {
+        width: 100% !important;
+        justify-content: center !important;
+        padding: 0.875rem 1.25rem !important;
+        min-height: 44px !important;
+        font-size: 0.9rem !important;
+        text-align: center !important;
+    }
+    
+    /* ===== Stat Cards - Centered & Mobile Optimized ===== */
+    .stat-card {
+        padding: 1.25rem 1rem !important;
+        min-height: 110px !important;
+        margin-bottom: 1rem !important;
+        text-align: center !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 12px !important;
+    }
+    
+    .stat-icon {
+        width: 45px !important;
+        height: 45px !important;
+        font-size: 1.1rem !important;
+        margin-bottom: 0.75rem !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    .stat-content {
+        width: 100% !important;
+        text-align: center !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    .stat-value {
+        font-size: 1.75rem !important;
+        margin-bottom: 0.5rem !important;
+        text-align: center !important;
+        width: 100% !important;
+    }
+    
+    .stat-label {
+        font-size: 0.8rem !important;
+        line-height: 1.3 !important;
+        text-align: center !important;
+        width: 100% !important;
+    }
+    
+    /* ===== Quick Action Cards - Centered & Mobile Optimized ===== */
+    .quick-action-card {
+        padding: 1.25rem 1rem !important;
+        margin-bottom: 1.5rem !important;
+        text-align: center !important;
+    }
+    
+    .quick-action-card-header {
+        margin-bottom: 1rem !important;
+        padding-bottom: 0.75rem !important;
+        text-align: center !important;
+    }
+    
+    .quick-action-card-header h3 {
+        font-size: 1.25rem !important;
+        text-align: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+    }
+    
+    .quick-action-card-header p {
+        font-size: 0.85rem !important;
+        margin-top: 0.5rem !important;
+        text-align: center !important;
+    }
+    
+    .quick-action-card-body .row {
+        margin: 0 !important;
+        justify-content: center !important;
+    }
+    
+    .quick-action-card-body .col-lg-3,
+    .quick-action-card-body .col-md-6,
+    .quick-action-card-body .col-sm-6 {
+        padding: 0.5rem !important;
+        margin-bottom: 0.75rem !important;
+        display: flex !important;
+        justify-content: center !important;
+    }
+    
+    .quick-action-item {
+        height: auto !important;
+        min-height: 100px !important;
+        padding: 1.25rem 0.75rem !important;
+        border-radius: 12px !important;
+        text-align: center !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+    }
+    
+    .quick-action-item i {
+        font-size: 1.75rem !important;
+        margin-bottom: 0.75rem !important;
+        text-align: center !important;
+    }
+    
+    .quick-action-item span {
+        font-size: 0.95rem !important;
+        font-weight: 600 !important;
+        margin-bottom: 0.5rem !important;
+        line-height: 1.3 !important;
+        text-align: center !important;
+        width: 100% !important;
+    }
+    
+    .quick-action-item small {
+        font-size: 0.8rem !important;
+        line-height: 1.4 !important;
+        opacity: 0.85 !important;
+        text-align: center !important;
+        width: 100% !important;
+    }
+    
+    /* ===== Employee Cards - Centered & Mobile Optimized ===== */
+    .employee-card {
+        padding: 1.25rem 1rem !important;
+        margin-bottom: 1.5rem !important;
+        border-radius: 12px !important;
+        text-align: center !important;
+    }
+    
+    .employee-card-header {
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+        padding-bottom: 1rem !important;
+        margin-bottom: 1rem !important;
+    }
+    
+    .employee-card-header .card-title {
+        font-size: 1.1rem !important;
+        margin-bottom: 0.75rem !important;
+        width: 100% !important;
+        text-align: center !important;
+        justify-content: center !important;
+    }
+    
+    .card-toolbar {
+        width: 100% !important;
+        justify-content: center !important;
+        margin-top: 0.5rem !important;
+        display: flex !important;
+    }
+    
+    .card-toolbar .btn-group {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+    
+    /* ===== Charts - Mobile Optimized ===== */
+    .chart-container-enhanced {
+        padding: 0 !important;
+        text-align: center !important;
+    }
+    
+    .chart-wrapper {
+        height: 250px !important;
+        margin: 0 auto !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+    }
+    
+    .chart-wrapper canvas {
+        max-height: 250px !important;
+        margin: 0 auto !important;
+    }
+    
+    /* ===== Request Status Card - Centered ===== */
+    .request-status-card {
+        margin-bottom: 1.5rem !important;
+    }
+    
+    .request-summary-stats {
+        padding: 1rem 0.75rem !important;
+        margin: 0 -1rem 1rem -1rem !important;
+    }
+    
+    .request-summary-stats .row {
+        justify-content: center !important;
+    }
+    
+    .summary-stat-item {
+        padding: 0.75rem 0.5rem !important;
+        border-radius: 8px !important;
+        text-align: center !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    .stat-icon-small {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 0.85rem !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    .stat-value-small {
+        font-size: 1.1rem !important;
+        font-weight: 700 !important;
+        text-align: center !important;
+    }
+    
+    .stat-label-small {
+        font-size: 0.75rem !important;
+        text-align: center !important;
+    }
+    
+    /* ===== Tables - Mobile Optimized ===== */
+    .table-responsive {
+        border-radius: 8px !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        margin: 0 auto !important;
+    }
+    
+    .table {
+        font-size: 0.85rem !important;
+        min-width: 600px !important;
+        margin: 0 auto !important;
+    }
+    
+    .table thead th {
+        padding: 0.75rem 0.5rem !important;
+        font-size: 0.75rem !important;
+        white-space: nowrap !important;
+        text-align: center !important;
+    }
+    
+    .table tbody td {
+        padding: 0.75rem 0.5rem !important;
+        font-size: 0.8rem !important;
+        vertical-align: middle !important;
+        text-align: center !important;
+    }
+    
+    .table .btn-sm {
+        padding: 0.375rem 0.75rem !important;
+        font-size: 0.8rem !important;
+        min-height: 32px !important;
+        margin: 0 auto !important;
+    }
+    
+    /* ===== Buttons - Centered & Touch-Friendly ===== */
+    .view-all-btn {
+        width: 100% !important;
+        justify-content: center !important;
+        padding: 0.625rem 1rem !important;
+        font-size: 0.85rem !important;
+        min-height: 40px !important;
+        margin: 0 auto !important;
+    }
+    
+    .btn {
+        min-height: 44px !important;
+        padding: 0.875rem 1.25rem !important;
+        font-size: 0.9rem !important;
+    }
+    
+    .btn-group {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+    
+    .btn-group .btn {
+        flex: 1 !important;
+    }
+    
+    /* ===== Recent Activity Tabs - Centered ===== */
+    .recent-activity-tabs {
+        width: 100% !important;
+        display: flex !important;
+        justify-content: center !important;
+    }
+    
+    .recent-activity-tabs .action-btn {
+        flex: 1 !important;
+        padding: 0.625rem 0.75rem !important;
+        font-size: 0.85rem !important;
+        min-height: 40px !important;
+        text-align: center !important;
+    }
+    
+    /* ===== Chart Toggle Buttons - Centered ===== */
+    .chart-toggle-btn {
+        flex: 1 1 auto !important;
+        min-width: calc(33.333% - 4px) !important;
+        margin: 2px !important;
+        font-size: 0.8rem !important;
+        padding: 0.5rem 0.5rem !important;
+        text-align: center !important;
+    }
+    
+    /* ===== Empty States - Centered ===== */
+    .empty-state {
+        padding: 2rem 1rem !important;
+        text-align: center !important;
+    }
+    
+    .empty-state i {
+        font-size: 2.5rem !important;
+        margin-bottom: 1rem !important;
+        display: block !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+    
+    .empty-state h5 {
+        font-size: 1rem !important;
+        margin-bottom: 0.5rem !important;
+        text-align: center !important;
+    }
+    
+    .empty-state p {
+        font-size: 0.85rem !important;
+        text-align: center !important;
+    }
+    
+    /* ===== Content Header - Centered ===== */
+    .content-header {
+        text-align: center !important;
+        margin-bottom: 1.5rem !important;
+        padding: 1rem 0 !important;
+    }
+    
+    .content-header .page-title {
+        font-size: 1.5rem !important;
+        text-align: center !important;
+        margin-bottom: 1rem !important;
+        width: 100% !important;
+    }
+    
+    .content-header-actions {
+        display: flex !important;
+        justify-content: center !important;
+        width: 100% !important;
+    }
+    
+    .content-header-actions .btn {
+        width: 100% !important;
+        max-width: 300px !important;
+    }
+    
+    /* ===== Row & Column Centering ===== */
+    .row {
+        margin-left: -0.75rem !important;
+        margin-right: -0.75rem !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+    }
+    
+    .row > * {
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+    }
+    
+    /* ===== Dropdowns - Centered ===== */
+    .dropdown-toggle {
+        min-height: 40px !important;
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.85rem !important;
+        width: 100% !important;
+        text-align: center !important;
+    }
+    
+    .dropdown-menu {
+        width: 100% !important;
+        max-width: 100% !important;
+        font-size: 0.85rem !important;
+        text-align: center !important;
+    }
+    
+    .dropdown-item {
+        text-align: center !important;
+        padding: 0.75rem 1rem !important;
+    }
+    
+    /* ===== Real-time Indicators - Centered ===== */
+    .realtime-indicator {
+        font-size: 0.75rem !important;
+        padding: 0.375rem 0.75rem !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin: 0 auto !important;
+    }
+    
+    /* ===== Symbol/Avatar - Centered ===== */
+    .symbol {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 0.75rem !important;
+        margin: 0 auto !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    /* ===== Badges - Centered ===== */
+    .badge {
+        display: inline-block !important;
+        text-align: center !important;
+        margin: 0 auto !important;
+    }
+    
+    /* ===== Forms - Centered ===== */
+    .form-group {
+        text-align: center !important;
+        margin-bottom: 1rem !important;
+    }
+    
+    .form-label {
+        text-align: center !important;
+        display: block !important;
+        width: 100% !important;
+    }
+    
+    .form-control,
+    .form-select {
+        text-align: center !important;
+        width: 100% !important;
+    }
+    
+    /* ===== Pagination - Centered ===== */
+    .pagination {
+        justify-content: center !important;
+        flex-wrap: wrap !important;
+    }
+    
+    .page-link {
+        min-width: 44px !important;
+        min-height: 44px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+}
+
+/* ===== EXTRA SMALL DEVICES (phones) ===== */
+@media (max-width: 576px) {
+    .dashboard-header {
+        padding: 1.25rem 0.75rem !important;
+    }
+    
+    .dashboard-title {
+        font-size: 1.5rem !important;
+    }
+    
+    .quick-action-card {
+        padding: 1rem 0.75rem !important;
+    }
+    
+    .quick-action-item {
+        min-height: 90px !important;
+        padding: 1rem 0.5rem !important;
+    }
+    
+    .quick-action-item i {
+        font-size: 1.5rem !important;
+    }
+    
+    .quick-action-item span {
+        font-size: 0.85rem !important;
+    }
+    
+    .quick-action-item small {
+        font-size: 0.75rem !important;
+    }
+    
+    .stat-card {
+        padding: 1rem 0.75rem !important;
+        min-height: 100px !important;
+    }
+    
+    .stat-icon {
+        width: 40px !important;
+        height: 40px !important;
+        font-size: 1rem !important;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem !important;
+    }
+    
+    .stat-label {
+        font-size: 0.75rem !important;
+    }
+    
+    .employee-card {
+        padding: 1rem 0.75rem !important;
+    }
+    
+    .chart-wrapper {
+        height: 220px !important;
+    }
+    
+    .table {
+        font-size: 0.8rem !important;
+        min-width: 500px !important;
+    }
+    
+    .table thead th {
+        padding: 0.625rem 0.375rem !important;
+        font-size: 0.7rem !important;
+    }
+    
+    .table tbody td {
+        padding: 0.625rem 0.375rem !important;
+        font-size: 0.75rem !important;
+    }
+    
+    .request-summary-stats {
+        padding: 0.75rem 0.5rem !important;
+    }
+    
+    .summary-stat-item {
+        padding: 0.625rem 0.375rem !important;
+    }
+    
+    .stat-icon-small {
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    .stat-value-small {
+        font-size: 1rem !important;
+    }
+    
+    .stat-label-small {
+        font-size: 0.7rem !important;
+    }
+    
+    .content-header .page-title {
+        font-size: 1.25rem !important;
+    }
+}
+
+/* ===== LANDSCAPE MOBILE ===== */
+@media (max-width: 991.98px) and (orientation: landscape) {
+    .chart-wrapper {
+        height: 200px !important;
+    }
+    
+    .quick-action-item {
+        min-height: 80px !important;
+    }
+    
+    .dashboard-header {
+        padding: 1rem 0.75rem !important;
+    }
+}
+
+/* ===== TOUCH DEVICE OPTIMIZATIONS ===== */
+@media (hover: none) and (pointer: coarse) {
+    .btn:hover,
+    .action-btn:hover,
+    .quick-action-item:hover {
+        transform: none !important;
+    }
+    
+    .btn:active,
+    .action-btn:active,
+    .quick-action-item:active {
+        transform: scale(0.98) !important;
+        opacity: 0.9 !important;
+    }
+    
+    .stat-card:hover {
+        transform: none !important;
+    }
+    
+    .stat-card:active {
+        transform: scale(0.98) !important;
+    }
+}
+

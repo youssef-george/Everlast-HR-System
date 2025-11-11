@@ -46,26 +46,13 @@ def edit():
     form = ProfileEditForm(obj=current_user)
     
     if form.validate_on_submit():
-        # Only admins can edit personal information
+        # Only admins and product owners can edit profiles and change passwords
         if current_user.role not in ['admin', 'product_owner']:
-            # Only update password if provided
-            if form.new_password.data:
-                if not form.current_password.data:
-                    flash('Current password is required to set a new password.', 'danger')
-                    return render_template('profile/edit.html', title='Edit Profile', form=form)
-                
-                if not check_password_hash(current_user.password_hash, form.current_password.data):
-                    flash('Current password is incorrect.', 'danger')
-                    return render_template('profile/edit.html', title='Edit Profile', form=form)
-                
-                current_user.password_hash = generate_password_hash(form.new_password.data)
-                db.session.commit()
-                flash('Your password has been updated successfully!', 'success')
-            else:
-                flash('No changes were made.', 'info')
+            # Employees cannot change their password or profile information
+            flash('You do not have permission to update your profile. Please contact an administrator.', 'warning')
             return redirect(url_for('profile.index'))
         
-        # For admins, allow full profile updates
+        # For admins and product owners, allow full profile updates
         else:
             # Check if email is being changed and if it's already taken
             if form.email.data != current_user.email:

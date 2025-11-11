@@ -1057,9 +1057,10 @@ class AutoFetchSystem {
                 const lastReload = localStorage.getItem('lastAttendanceReload');
                 const now = Date.now();
                 
-                // Only reload if it's been more than 30 seconds since last reload
-                if (!lastReload || (now - parseInt(lastReload)) > 30000) {
+                // Only reload if it's been more than 20 seconds since last reload (reduced from 30s)
+                if (!lastReload || (now - parseInt(lastReload)) > 20000) {
                     localStorage.setItem('lastAttendanceReload', now.toString());
+                    console.log('🔄 Reloading attendance page to show updated data...');
                     setTimeout(() => window.location.reload(), 1000);
                 } else {
                     console.log('⏸️ Skipping reload - too soon since last reload');
@@ -1628,13 +1629,13 @@ document.addEventListener('DOMContentLoaded', function() {
     if (shouldEnableAutoFetch) {
         console.log(`🚀 Initializing auto-fetch system for ${userRole} role...`);
         
-        // Use 5-minute interval for attendance page, 30 seconds for other pages
+        // Use 30-second interval for attendance page to keep data fresh, 30 seconds for other pages
         const isAttendancePage = currentPath.includes('/attendance/');
-        const fetchInterval = isAttendancePage ? 300000 : 30000; // 5 minutes for attendance, 30s for others
+        const fetchInterval = 30000; // 30 seconds for all pages (including attendance)
         
         // Initialize auto-fetch system with device sync
         window.autoFetch = new AutoFetchSystem({
-            fetchInterval: fetchInterval, // 5 minutes for attendance, 30 seconds for other pages
+            fetchInterval: fetchInterval, // 30 seconds for all pages
             refreshInterval: 300000, // 5 minutes for full refresh (disabled in code)
             enabled: true,
             userRole: userRole,
@@ -1645,7 +1646,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log(`✅ Auto-fetch system enabled for ${userRole} role on ${currentPath}`);
         if (isAttendancePage) {
-            console.log(`📊 Attendance page: Fetch interval: 5 minutes (300s), Manual sync still available`);
+            console.log(`📊 Attendance page: Auto-fetching data every 30 seconds while app is running`);
         } else {
             console.log(`📊 Fetch interval: 30s, Auto-reload disabled`);
         }

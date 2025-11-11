@@ -58,6 +58,7 @@ def before_request():
         'attendance.my_attendance_sync_status',
         'attendance.index',
         'attendance.device_settings',  # Has its own role-based access control
+        'attendance.breaks',  # Breaks page has its own access control
     ]
     if request.endpoint in excluded_routes:
         return None
@@ -901,7 +902,7 @@ def sync_attendance_from_device(device):
                         logging.warning(f'No user found for fingerprint number {record.user_id} on device {device.get_display_name()}')
                     continue
             
-            # Collect records for batch processing
+            # Normal attendance log
             new_records.append({
                 'user_id': user.id,
                 'timestamp': record.timestamp,
@@ -1624,40 +1625,52 @@ def index():
     
     try:
         # Get today's attendance logs
+        today_logs_query = AttendanceLog.query\
+            .filter(AttendanceLog.timestamp.between(start_datetime, end_datetime))
+        
+        # Apply employee filter if specified
+        if employee_id:
+            today_logs_query = today_logs_query.filter(AttendanceLog.user_id == employee_id)
+        
         today_logs = safe_db_query(
-            lambda: AttendanceLog.query\
-            .filter(AttendanceLog.timestamp.between(start_datetime, end_datetime))\
-            .order_by(AttendanceLog.timestamp.desc())\
-                .all(),
+            lambda: today_logs_query.order_by(AttendanceLog.timestamp.desc()).all(),
             default=[]
         )
         
         # Get users based on role
         if current_user.role in ['admin', 'product_owner', 'director']:
             # Admins, Product Owners, and directors can see all users
-            all_active_users = safe_db_query(
-                lambda: User.query.filter_by(status='active').filter(
+            user_query = User.query.filter_by(status='active').filter(
                 User.fingerprint_number != None,
                 User.fingerprint_number != '',
                 User.first_name != None,
                 User.first_name != '',
                 User.last_name != None,
                 User.last_name != ''
-                ).order_by(User.first_name.desc(), User.last_name.desc()).all(),
+            )
+            # Apply employee filter if specified
+            if employee_id:
+                user_query = user_query.filter(User.id == employee_id)
+            all_active_users = safe_db_query(
+                lambda: user_query.order_by(User.first_name.desc(), User.last_name.desc()).all(),
                 default=[]
             )
         elif current_user.role == 'manager':
             # Managers can see all employees in their department
             if current_user.department_id:
-                all_active_users = safe_db_query(
-                    lambda: User.query.filter_by(status='active', department_id=current_user.department_id).filter(
+                user_query = User.query.filter_by(status='active', department_id=current_user.department_id).filter(
                     User.fingerprint_number != None,
                     User.fingerprint_number != '',
                     User.first_name != None,
                     User.first_name != '',
                     User.last_name != None,
                     User.last_name != ''
-                    ).order_by(User.first_name.desc(), User.last_name.desc()).all(),
+                )
+                # Apply employee filter if specified
+                if employee_id:
+                    user_query = user_query.filter(User.id == employee_id)
+                all_active_users = safe_db_query(
+                    lambda: user_query.order_by(User.first_name.desc(), User.last_name.desc()).all(),
                     default=[]
                 )
             else:
@@ -1710,6 +1723,9 @@ def index():
     absent_users = {}
 
     for user in all_active_users:
+        # If employee filter is applied, only process that employee's records
+        if employee_id and user.id != employee_id:
+            continue
         # If employee is viewing their own data, only process their records
         if is_employee_viewing_own_data and user.id != current_user.id:
             continue
@@ -2210,9 +2226,9 @@ def index():
                     user_absent_days[user_id] = {'user': User.query.get(user_id), 'absent_dates': []}
                 user_absent_days[user_id]['absent_dates'].append(date_key)
 
-    # Get all employees for the admin filter dropdown
+    # Get all employees for the filter dropdown
     employees = None
-    if is_admin or current_user.role in ['manager', 'director']:
+    if is_admin or current_user.role in ['manager', 'director', 'product_owner']:
         if current_user.role == 'manager' and current_user.department_id:
             # Managers can see employees in their department
             employees = User.query.filter(
@@ -2517,6 +2533,10 @@ def employee_attendance(user_id):
             'late_days': late_days
         }
         
+        # Fetch break sessions for the date range
+        # Break sessions removed
+        break_sessions_by_date = {}
+        
         return render_template('attendance/employee.html',
                              user=user,
                              attendance_records=attendance_records,
@@ -2529,11 +2549,14 @@ def employee_attendance(user_id):
                              total_hours=round(total_hours, 2),
                              monthly_stats=monthly_stats,
                              leave_by_date=leave_by_date,
-                             permission_by_date=permission_by_date)
+                             permission_by_date=permission_by_date,
+                             break_sessions_by_date=break_sessions_by_date)
         
     except ValueError as e:
         flash('Invalid date format. Please use YYYY-MM-DD format.', 'error')
         return redirect(url_for('attendance.employee_attendance', user_id=user_id))
+
+# Break routes removed - all break functionality has been removed
 
 @attendance_bp.route('/raw-logs')
 @login_required
@@ -2563,6 +2586,22 @@ def raw_logs():
             query = query.filter(AttendanceLog.timestamp <= end_datetime)
     except ValueError:
         flash('Invalid date format. Please use YYYY-MM-DD format.', 'error')
+    
+    # Get all users for the filter dropdown
+    users = User.query.order_by(User.first_name).all()
+    
+    # Paginate results
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+    logs = query.paginate(page=page, per_page=per_page)
+    
+    return render_template('attendance/raw_logs.html',
+                          title='Raw Attendance Logs',
+                          logs=logs,
+                          users=users,
+                          selected_user_id=user_id,
+                          start_date=start_date.strftime('%Y-%m-%d') if start_date else '',
+                          end_date=end_date.strftime('%Y-%m-%d') if end_date else '')
     
     # Get all users for the filter dropdown
     users = User.query.order_by(User.first_name).all()
@@ -3828,8 +3867,34 @@ def get_device_status(device_ip, device_port):
             logging.info(f'Device {device_ip}:{device_port} is on private network and not reachable from cloud')
             return device_status
     
+    # First, test if we can reach the device with a socket connection
+    # This helps determine if it's a network issue or ZK protocol issue
+    socket_reachable = False
     try:
-        zk = ZK(device_ip, port=device_port, timeout=5)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(10)  # Increased timeout for slower networks
+        result = sock.connect_ex((device_ip, device_port))
+        sock.close()
+        if result == 0:
+            socket_reachable = True
+            logging.info(f'Socket connection to {device_ip}:{device_port} successful')
+        else:
+            logging.warning(f'Socket connection to {device_ip}:{device_port} failed with code: {result}')
+    except Exception as sock_error:
+        logging.warning(f'Socket test error for {device_ip}:{device_port}: {str(sock_error)}')
+    
+    # If socket is not reachable, device is likely offline or firewall is blocking
+    if not socket_reachable:
+        if is_private_ip(device_ip):
+            device_status['error'] = 'Device on private network - port not reachable (check firewall/VPN/port forwarding)'
+            device_status['network_unreachable'] = True
+        else:
+            device_status['error'] = f'Cannot reach device on port {device_port} - check firewall or device is offline'
+        return device_status
+    
+    # Socket is reachable, now try ZK protocol connection
+    try:
+        zk = ZK(device_ip, port=device_port, timeout=15)  # Increased timeout for ZK connection
         conn = zk.connect()
         if conn:
             device_status['connected'] = True
@@ -3865,18 +3930,17 @@ def get_device_status(device_ip, device_port):
             finally:
                 conn.disconnect()
         else:
-            device_status['error'] = 'Could not connect to device'
+            # Socket is reachable but ZK connection failed - device might be wrong type or protocol issue
+            device_status['error'] = 'Port is reachable but ZK protocol connection failed - device may not be a ZKTeco device or wrong port'
     except Exception as e:
         error_msg = str(e)
-        # Check for common network errors
-        if 'timeout' in error_msg.lower() or 'connection' in error_msg.lower():
-            if is_private_ip(device_ip):
-                device_status['error'] = 'Device on private network - connection timeout (may not be reachable from this network)'
-                device_status['network_unreachable'] = True
-            else:
-                device_status['error'] = error_msg
+        # Socket is reachable but ZK connection failed
+        if 'timeout' in error_msg.lower():
+            device_status['error'] = f'ZK connection timeout - device port is reachable but not responding to ZK protocol (timeout after 15s)'
+        elif 'connection' in error_msg.lower():
+            device_status['error'] = f'ZK connection refused - device port is reachable but rejected ZK protocol connection'
         else:
-            device_status['error'] = error_msg
+            device_status['error'] = f'ZK protocol error: {error_msg}'
         logging.error(f'Error connecting to device {device_ip}:{device_port}: {error_msg}')
     
     return device_status

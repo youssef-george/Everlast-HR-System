@@ -1,247 +1,240 @@
-# EverLast ERP - Deployment Guide for Biometric Device Sync
+# EverLast ERP - Local Network Deployment Guide
 
-## Problem Overview
+This guide will help you deploy the EverLast ERP application on your local network so it can be accessed from all devices on the same network.
 
-After deploying your Flask HR attendance app to Coolify (or any cloud platform), biometric devices (ZKTeco) can no longer connect because:
+## Quick Start
 
-- **Cloud servers are outside your internal LAN network**
-- **Private IP ranges (192.168.x.x, 10.x.x.x, 172.x.x.x) are not accessible over the internet**
-- **The Flask app in Coolify cannot directly reach local device IPs**
+### Option 1: Using the Deployment Script (Recommended)
 
-## Solution Architecture
+1. **Run the deployment script:**
+   ```bash
+   python deploy_local_network.py
+   ```
 
+2. The script will:
+   - Show your local IP address(es)
+   - Display network access URLs
+   - Optionally configure Windows Firewall
+   - Start the server
+
+### Option 2: Manual Deployment
+
+1. **Start the application:**
+   ```bash
+   python app.py
+   ```
+   or
+   ```bash
+   python run.py
+   ```
+
+2. **Find your local IP address:**
+   - Windows: Open Command Prompt and run `ipconfig`
+   - Look for "IPv4 Address" under your active network adapter
+   - Usually something like `192.168.x.x` or `10.x.x.x`
+
+3. **Access from other devices:**
+   - On the same network, open a browser and go to:
+     ```
+     http://YOUR_IP_ADDRESS:5000
+     ```
+   - Replace `YOUR_IP_ADDRESS` with the IP address you found
+
+## Configuration
+
+### Port Configuration
+
+The default port is **5000**. You can change it by:
+
+1. **Using environment variable:**
+   ```bash
+   set PORT=8080
+   python app.py
+   ```
+
+2. **Or modify `config.py`:**
+   ```python
+   PORT = 8080  # Change to your desired port
+   ```
+
+### Host Configuration
+
+The app is already configured to listen on `0.0.0.0`, which means it accepts connections from all network interfaces. This is set in:
+- `app.py` line 499: `app.run(debug=True, host='0.0.0.0', port=port)`
+- `run.py` line 22: `host='0.0.0.0'`
+
+## Firewall Configuration
+
+### Windows Firewall
+
+#### Automatic Configuration (Requires Admin)
+Run the deployment script as Administrator:
+```bash
+# Right-click Command Prompt/PowerShell and select "Run as Administrator"
+python deploy_local_network.py
 ```
-Local Network (192.168.11.x)          Cloud (Coolify)
-┌─────────────────────────┐           ┌──────────────────┐
-│  ZKTeco Device          │           │                  │
-│  192.168.11.253:4370    │           │  Flask App       │
-│                         │           │  (PostgreSQL)    │
-│  ZKTeco Device          │    HTTPS  │                  │
-│  192.168.11.254:4370    │◄─────────►│  /api/sync_logs  │
-│                         │           │                  │
-│  Sync Agent (Python)    │           │                  │
-│  - Connects to devices  │           │                  │
-│  - Fetches logs         │           │                  │
-│  - Uploads via API      │           │                  │
-└─────────────────────────┘           └──────────────────┘
-```
 
-## Deployment Steps
+#### Manual Configuration
 
-### Step 1: Deploy Flask App to Coolify
+1. **Open Windows Firewall:**
+   - Press `Win + R`
+   - Type `wf.msc` and press Enter
 
-1. **Push your code** to GitHub (already done)
-2. **Deploy to Coolify** with these environment variables:
+2. **Add Inbound Rule:**
+   - Click "Inbound Rules" → "New Rule"
+   - Select "Port" → Next
+   - Select "TCP" and enter port `5000` (or your custom port)
+   - Select "Allow the connection" → Next
+   - Check all profiles (Domain, Private, Public) → Next
+   - Name it "EverLast ERP" → Finish
 
-```env
-# Database
-DATABASE_URL=postgresql://postgres:your-password@host:port/database
+3. **Or use Command Prompt (as Administrator):**
+   ```cmd
+   netsh advfirewall firewall add rule name="EverLast ERP" dir=in action=allow protocol=TCP localport=5000
+   ```
 
-# Flask
-SECRET_KEY=your-production-secret-key
-CSRF_SECRET=your-production-csrf-secret
-FLASK_ENV=production
-
-# Sync Agent Authentication
-SYNC_SECRET=everlast-sync-secret-key-2024-change-in-production
-
-# Disable direct device connections in production
-ENABLE_DIRECT_DEVICE_SYNC=false
-```
-
-3. **Verify deployment** - your app should be accessible at your Coolify domain
-
-### Step 2: Set Up Local Sync Agent
-
-1. **On a computer in your office network** (same LAN as biometric devices):
+### Linux Firewall (iptables)
 
 ```bash
-# Clone the repository
-git clone https://github.com/youssef-george/Everlast-HR-System.git
-cd Everlast-HR-System/sync_agent
-
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Copy and configure
-cp config.example.ini config.ini
+sudo iptables -A INPUT -p tcp --dport 5000 -j ACCEPT
+sudo iptables-save
 ```
 
-2. **Edit `config.ini`** with your settings:
+### macOS Firewall
 
-```ini
-[server]
-url = https://your-everlast-app.coolify.domain
-sync_secret = everlast-sync-secret-key-2024-change-in-production
+1. System Preferences → Security & Privacy → Firewall
+2. Click "Firewall Options"
+3. Click "+" and add Python or Terminal
+4. Allow incoming connections
 
-[sync]
-interval_minutes = 5
-batch_size = 100
-max_retries = 3
+## Network Requirements
 
-[device_ground_floor]
-name = Ground Floor Device
-ip = 192.168.11.253
-port = 4370
-enabled = true
+1. **Same Network:**
+   - All devices must be on the same local network (same router/switch)
+   - Devices can be connected via WiFi or Ethernet
 
-[device_upper_floor]
-name = Upper Floor Device
-ip = 192.168.11.254
-port = 4370
-enabled = true
-```
+2. **No VPN:**
+   - Disable VPN on the server machine if it's interfering
 
-3. **Test the setup**:
-
-```bash
-# Test server connection
-python attendance_sync_agent.py --test
-
-# Run sync once
-python attendance_sync_agent.py --once
-```
-
-4. **Run continuously**:
-
-```bash
-# Run with scheduler
-python attendance_sync_agent.py
-
-# Or run in background
-nohup python attendance_sync_agent.py > sync_agent.log 2>&1 &
-```
-
-### Step 3: Verify Everything Works
-
-1. **Check sync agent logs**:
-```bash
-tail -f sync_agent.log
-```
-
-2. **Check Flask app logs** in Coolify dashboard
-
-3. **Test attendance** - have someone use the biometric device and verify it appears in your web dashboard within 5 minutes
-
-## Security Considerations
-
-### HMAC Authentication
-- All API requests are signed with HMAC-SHA256
-- Sync secret must match between agent and server
-- Invalid signatures are rejected and logged
-
-### Network Security
-- Agent only makes outbound HTTPS connections
-- No inbound ports need to be opened
-- Biometric devices remain on local network only
-
-### Data Protection
-- Attendance logs are encrypted in transit (HTTPS)
-- PostgreSQL database is password protected
-- Sensitive configuration in environment variables
-
-## Monitoring & Maintenance
-
-### Log Monitoring
-- **Sync Agent**: `sync_agent.log` on local computer
-- **Flask App**: Coolify dashboard logs
-- **Database**: PostgreSQL logs (if needed)
-
-### Health Checks
-- Agent tests server connection on startup
-- Failed syncs are retried automatically
-- Errors are logged with details
-
-### Regular Maintenance
-- Monitor disk space for log files
-- Update sync agent if needed
-- Backup PostgreSQL database regularly
+3. **Router Configuration:**
+   - Usually no configuration needed
+   - Some routers may block local network traffic (rare)
 
 ## Troubleshooting
 
-### Common Issues
+### Cannot Access from Other Devices
 
-**1. "Connection failed" to devices**
-```bash
-# Test device connectivity
-ping 192.168.11.253
-telnet 192.168.11.253 4370
+1. **Check Firewall:**
+   - Ensure Windows Firewall allows port 5000
+   - Try temporarily disabling firewall to test
+
+2. **Verify IP Address:**
+   - Make sure you're using the correct local IP
+   - Run `ipconfig` (Windows) or `ifconfig` (Linux/Mac) to verify
+
+3. **Check Network:**
+   - Ensure all devices are on the same network
+   - Try pinging the server IP from another device:
+     ```bash
+     ping YOUR_SERVER_IP
+     ```
+
+4. **Verify Server is Running:**
+   - Check that the server is actually running
+   - Look for "Running on http://0.0.0.0:5000" in the console
+
+5. **Check Port:**
+   - Verify the port is not blocked by another application
+   - Try changing to a different port (e.g., 8080)
+
+### Connection Timeout
+
+- Check if antivirus is blocking the connection
+- Verify the server machine's network adapter is active
+- Try accessing from the server machine itself first: `http://localhost:5000`
+
+### "Connection Refused" Error
+
+- Server might not be running
+- Wrong IP address
+- Port is blocked by firewall
+- Server is only listening on localhost (should be 0.0.0.0)
+
+## Security Considerations
+
+⚠️ **Important:** When deploying on a local network:
+
+1. **Development Mode:**
+   - The app runs in debug mode (`debug=True`)
+   - This is fine for local network testing
+   - **Do NOT expose to the internet** without proper security
+
+2. **Production Deployment:**
+   - For production, use a proper WSGI server (Gunicorn, uWSGI)
+   - Set `debug=False`
+   - Use HTTPS with SSL certificates
+   - Implement proper authentication and authorization
+
+3. **Network Security:**
+   - Ensure your local network is secure
+   - Use strong passwords for user accounts
+   - Consider VPN for remote access instead of exposing to internet
+
+## Testing Network Access
+
+1. **From Server Machine:**
+   ```
+   http://localhost:5000
+   http://127.0.0.1:5000
+   ```
+
+2. **From Other Devices:**
+   ```
+   http://SERVER_IP_ADDRESS:5000
+   ```
+
+3. **Find Server IP:**
+   - Windows: `ipconfig` → Look for IPv4 Address
+   - Linux/Mac: `ifconfig` or `ip addr`
+
+## Example Network Setup
+
+```
+Router (192.168.1.1)
+  ├── Server PC (192.168.1.100) ← Running EverLast ERP
+  ├── Laptop (192.168.1.101) ← Can access http://192.168.1.100:5000
+  ├── Phone (192.168.1.102) ← Can access http://192.168.1.100:5000
+  └── Tablet (192.168.1.103) ← Can access http://192.168.1.100:5000
 ```
 
-**2. "Invalid signature" errors**
-- Verify SYNC_SECRET matches in both agent config and Flask app environment
-- Check for extra spaces or characters in the secret
+## Production Deployment
 
-**3. "User not found" errors**
-- Ensure user IDs from devices match user IDs in your database
-- Check device user enrollment
+For production use, consider:
 
-**4. Sync agent stops running**
-- Check `sync_agent.log` for error messages
-- Restart the agent: `python attendance_sync_agent.py`
-- Consider running as a system service
+1. **Use a Production WSGI Server:**
+   ```bash
+   pip install gunicorn
+   gunicorn -w 4 -b 0.0.0.0:5000 app:app
+   ```
 
-### Testing Individual Components
+2. **Use a Reverse Proxy (Nginx):**
+   - Better performance and security
+   - SSL/TLS termination
+   - Load balancing
 
-**Test device connection:**
-```python
-from zk import ZK
-zk = ZK('192.168.11.253', port=4370, timeout=30)
-conn = zk.connect()
-print("Connected successfully!")
-conn.disconnect()
-```
-
-**Test server API:**
-```bash
-curl -X POST https://your-app.coolify.domain/api/sync_logs \
-  -H "Content-Type: application/json" \
-  -H "X-Sync-Signature: test" \
-  -d '{"test": true}'
-```
-
-## Alternative Solutions
-
-### Option 1: VPN Tunnel
-Set up WireGuard VPN between Coolify server and your office:
-- More complex setup
-- Requires VPN configuration on both ends
-- Direct device access from cloud
-
-### Option 2: Reverse Proxy
-Use ngrok or Cloudflare Tunnel:
-- Exposes local devices to internet
-- Security concerns
-- Additional service dependency
-
-### Option 3: Hybrid Approach
-Keep some processing local, sync summaries only:
-- Process attendance locally
-- Send daily summaries to cloud
-- Reduced real-time visibility
-
-## Recommended: Sync Agent Approach
-
-The sync agent approach is recommended because:
-- ✅ Simple setup and maintenance
-- ✅ Secure (no inbound connections)
-- ✅ Reliable (handles network issues)
-- ✅ Scalable (easy to add more devices)
-- ✅ No complex networking required
+3. **Environment Variables:**
+   - Set `FLASK_ENV=production`
+   - Use proper secret keys
+   - Configure database properly
 
 ## Support
 
-For deployment assistance:
-1. Check logs first (both agent and Flask app)
-2. Verify network connectivity to devices
-3. Test API authentication
-4. Contact system administrator if needed
+If you encounter issues:
+1. Check the server console for error messages
+2. Verify firewall settings
+3. Test network connectivity with `ping`
+4. Check that the port is not in use by another application
 
 ---
 
-**Next Steps:**
-1. Deploy Flask app to Coolify with proper environment variables
-2. Set up sync agent on local network computer
-3. Test end-to-end functionality
-4. Set up monitoring and alerts
-5. Document any customizations for your environment
+**Note:** This deployment is for local network access only. For internet access, you need proper security measures, domain name, and SSL certificates.

@@ -36,15 +36,16 @@ class Config:
         "pool_pre_ping": True,  # Verify connections before using
         "pool_size": 5,  # Reduced pool size for better connection management
         "max_overflow": 10,
-        "pool_timeout": 60,  # Increased timeout for pool connections
+        "pool_timeout": 30,  # Timeout for getting connection from pool
         "pool_reset_on_return": "rollback",
         "echo": False,
         "connect_args": {
-            "connect_timeout": 30,  # Increased connection timeout to 30 seconds
+            "connect_timeout": 10,  # Connection timeout in seconds (reduced for faster failure detection)
             "keepalives": 1,
             "keepalives_idle": 30,
             "keepalives_interval": 10,
             "keepalives_count": 5,
+            "sslmode": "prefer",  # Allow SSL if available
         }
     }
 

@@ -953,7 +953,11 @@
         });
         
         // Show loading state
-        const button = event.target.closest('button');
+        const button = event && event.target ? event.target.closest('button') : null;
+        if (!button) {
+            console.warn('Could not find button element');
+            return;
+        }
         const originalHtml = button.innerHTML;
         button.disabled = true;
         button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Exporting...';

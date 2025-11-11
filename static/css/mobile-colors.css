@@ -1,0 +1,461 @@
+/* EverLast ERP - Mobile Color Fixes */
+/* Ensures all colors have proper contrast and visibility on mobile devices */
+
+/* ===== MOBILE COLOR FIXES - Enhanced Contrast & Visibility ===== */
+@media (max-width: 991.98px) {
+    /* ===== Purple Gradient Headers - Enhanced for Mobile ===== */
+    .dashboard-header,
+    .employee-page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: #ffffff !important;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+    }
+    
+    .dashboard-header *,
+    .employee-page-header * {
+        color: #ffffff !important;
+    }
+    
+    .dashboard-title,
+    .employee-page-title {
+        color: #ffffff !important;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    .welcome-text,
+    .employee-page-subtitle {
+        color: rgba(255, 255, 255, 0.95) !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+    }
+    
+    /* ===== Action Buttons on Colored Backgrounds ===== */
+    .action-btn-primary,
+    .employee-btn-primary {
+        background: rgba(255, 255, 255, 0.25) !important;
+        color: #ffffff !important;
+        border: 2px solid rgba(255, 255, 255, 0.4) !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+        font-weight: 600 !important;
+    }
+    
+    .action-btn-primary:hover,
+    .employee-btn-primary:hover {
+        background: rgba(255, 255, 255, 0.35) !important;
+        color: #ffffff !important;
+        border-color: rgba(255, 255, 255, 0.5) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    .action-btn-secondary,
+    .employee-btn-secondary {
+        background: rgba(255, 255, 255, 0.15) !important;
+        color: #ffffff !important;
+        border: 2px solid rgba(255, 255, 255, 0.3) !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+        font-weight: 600 !important;
+    }
+    
+    .action-btn-secondary:hover,
+    .employee-btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.25) !important;
+        color: #ffffff !important;
+        border-color: rgba(255, 255, 255, 0.4) !important;
+    }
+    
+    /* ===== Buttons - Enhanced Colors for Mobile ===== */
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #5a67d8 100%) !important;
+        color: #ffffff !important;
+        border: none !important;
+        font-weight: 600 !important;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #5a67d8 0%, #4c51bf 100%) !important;
+        color: #ffffff !important;
+        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5) !important;
+    }
+    
+    .btn-success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+        color: #ffffff !important;
+        border: none !important;
+        font-weight: 600 !important;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4) !important;
+    }
+    
+    .btn-success:hover {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+        color: #ffffff !important;
+        box-shadow: 0 6px 16px rgba(16, 185, 129, 0.5) !important;
+    }
+    
+    .btn-warning {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+        color: #ffffff !important;
+        border: none !important;
+        font-weight: 600 !important;
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4) !important;
+    }
+    
+    .btn-warning:hover {
+        background: linear-gradient(135deg, #d97706 0%, #b45309 100%) !important;
+        color: #ffffff !important;
+        box-shadow: 0 6px 16px rgba(245, 158, 11, 0.5) !important;
+    }
+    
+    .btn-danger {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+        color: #ffffff !important;
+        border: none !important;
+        font-weight: 600 !important;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4) !important;
+    }
+    
+    .btn-danger:hover {
+        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
+        color: #ffffff !important;
+        box-shadow: 0 6px 16px rgba(239, 68, 68, 0.5) !important;
+    }
+    
+    .btn-info {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+        color: #ffffff !important;
+        border: none !important;
+        font-weight: 600 !important;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4) !important;
+    }
+    
+    .btn-info:hover {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+        color: #ffffff !important;
+        box-shadow: 0 6px 16px rgba(59, 130, 246, 0.5) !important;
+    }
+    
+    .btn-secondary {
+        background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%) !important;
+        color: #ffffff !important;
+        border: none !important;
+        font-weight: 600 !important;
+        box-shadow: 0 4px 12px rgba(107, 114, 128, 0.4) !important;
+    }
+    
+    .btn-secondary:hover {
+        background: linear-gradient(135deg, #4b5563 0%, #374151 100%) !important;
+        color: #ffffff !important;
+        box-shadow: 0 6px 16px rgba(107, 114, 128, 0.5) !important;
+    }
+    
+    /* ===== Badges - Enhanced Colors for Mobile ===== */
+    .badge {
+        font-weight: 600 !important;
+        padding: 0.375rem 0.75rem !important;
+        font-size: 0.75rem !important;
+        border-radius: 6px !important;
+    }
+    
+    .badge-light-success,
+    .badge.bg-success {
+        background-color: #10b981 !important;
+        color: #ffffff !important;
+        box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3) !important;
+    }
+    
+    .badge-light-warning,
+    .badge.bg-warning {
+        background-color: #f59e0b !important;
+        color: #ffffff !important;
+        box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3) !important;
+    }
+    
+    .badge-light-danger,
+    .badge.bg-danger {
+        background-color: #ef4444 !important;
+        color: #ffffff !important;
+        box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3) !important;
+    }
+    
+    .badge-light-info,
+    .badge.bg-info,
+    .badge.bg-info-light {
+        background-color: #3b82f6 !important;
+        color: #ffffff !important;
+        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3) !important;
+    }
+    
+    .badge-light-primary,
+    .badge.bg-primary {
+        background-color: #667eea !important;
+        color: #ffffff !important;
+        box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3) !important;
+    }
+    
+    .badge.bg-secondary {
+        background-color: #6b7280 !important;
+        color: #ffffff !important;
+        box-shadow: 0 2px 4px rgba(107, 114, 128, 0.3) !important;
+    }
+    
+    /* ===== Stat Cards - Enhanced Colors ===== */
+    .stat-card {
+        background: #ffffff !important;
+        border: 1px solid #e5e7eb !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    }
+    
+    .stat-value {
+        color: #1e293b !important;
+        font-weight: 700 !important;
+    }
+    
+    .stat-label {
+        color: #64748b !important;
+        font-weight: 500 !important;
+    }
+    
+    /* ===== Text Colors - Enhanced Contrast ===== */
+    .text-muted {
+        color: #64748b !important;
+    }
+    
+    .text-dark {
+        color: #1e293b !important;
+    }
+    
+    .text-primary {
+        color: #667eea !important;
+    }
+    
+    .text-success {
+        color: #10b981 !important;
+    }
+    
+    .text-warning {
+        color: #f59e0b !important;
+    }
+    
+    .text-danger {
+        color: #ef4444 !important;
+    }
+    
+    .text-info {
+        color: #3b82f6 !important;
+    }
+    
+    /* ===== Cards - Enhanced Backgrounds ===== */
+    .card,
+    .employee-card {
+        background: #ffffff !important;
+        border: 1px solid #e5e7eb !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    }
+    
+    .card-header {
+        background: #f8fafc !important;
+        border-bottom: 1px solid #e5e7eb !important;
+    }
+    
+    .card-title {
+        color: #1e293b !important;
+        font-weight: 600 !important;
+    }
+    
+    /* ===== Tables - Enhanced Colors ===== */
+    .table thead th {
+        background: #f8fafc !important;
+        color: #1e293b !important;
+        font-weight: 600 !important;
+        border-bottom: 2px solid #e5e7eb !important;
+    }
+    
+    .table tbody td {
+        color: #374151 !important;
+        border-bottom: 1px solid #f3f4f6 !important;
+    }
+    
+    .table tbody tr:hover {
+        background: #f8fafc !important;
+    }
+    
+    /* ===== Quick Action Items - Enhanced Colors ===== */
+    .employee-quick-action-item {
+        background: #f8fafc !important;
+        border: 1px solid #e5e7eb !important;
+        color: #1e293b !important;
+    }
+    
+    .employee-quick-action-item:hover {
+        background: #ffffff !important;
+        border-color: #667eea !important;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15) !important;
+    }
+    
+    .employee-quick-action-item .fw-bold {
+        color: #1e293b !important;
+    }
+    
+    .employee-quick-action-item:hover .fw-bold {
+        color: #667eea !important;
+    }
+    
+    /* ===== Status Indicators - Enhanced Colors ===== */
+    .status-active,
+    .auto-update-active {
+        color: #10b981 !important;
+        font-weight: 600 !important;
+    }
+    
+    .status-inactive {
+        color: #6b7280 !important;
+    }
+    
+    /* ===== Small Boxes (Summary Cards) - Enhanced Colors ===== */
+    .small-box {
+        border-radius: 12px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    .small-box.bg-info {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+        color: #ffffff !important;
+    }
+    
+    .small-box.bg-success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+        color: #ffffff !important;
+    }
+    
+    .small-box.bg-warning {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+        color: #ffffff !important;
+    }
+    
+    .small-box.bg-danger {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+        color: #ffffff !important;
+    }
+    
+    .small-box .inner {
+        color: #ffffff !important;
+    }
+    
+    .small-box .inner h3 {
+        color: #ffffff !important;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+    }
+    
+    .small-box .inner p {
+        color: rgba(255, 255, 255, 0.9) !important;
+    }
+    
+    .small-box .icon {
+        color: rgba(255, 255, 255, 0.3) !important;
+    }
+    
+    /* ===== Alerts - Enhanced Colors ===== */
+    .alert-success {
+        background-color: #d1fae5 !important;
+        border-color: #10b981 !important;
+        color: #065f46 !important;
+    }
+    
+    .alert-warning {
+        background-color: #fef3c7 !important;
+        border-color: #f59e0b !important;
+        color: #92400e !important;
+    }
+    
+    .alert-danger {
+        background-color: #fee2e2 !important;
+        border-color: #ef4444 !important;
+        color: #991b1b !important;
+    }
+    
+    .alert-info {
+        background-color: #dbeafe !important;
+        border-color: #3b82f6 !important;
+        color: #1e40af !important;
+    }
+    
+    /* ===== Progress Bars - Enhanced Colors ===== */
+    .progress-bar {
+        font-weight: 600 !important;
+    }
+    
+    .progress-bar.bg-success {
+        background-color: #10b981 !important;
+    }
+    
+    .progress-bar.bg-warning {
+        background-color: #f59e0b !important;
+    }
+    
+    .progress-bar.bg-danger {
+        background-color: #ef4444 !important;
+    }
+    
+    .progress-bar.bg-info {
+        background-color: #3b82f6 !important;
+    }
+    
+    .progress-bar.bg-primary {
+        background-color: #667eea !important;
+    }
+    
+    /* ===== Modals - Enhanced Colors ===== */
+    .modal-header {
+        background: #f8fafc !important;
+        border-bottom: 1px solid #e5e7eb !important;
+    }
+    
+    .modal-title {
+        color: #1e293b !important;
+        font-weight: 600 !important;
+    }
+    
+    .modal-body {
+        background: #ffffff !important;
+        color: #374151 !important;
+    }
+    
+    /* ===== Links - Enhanced Colors ===== */
+    a {
+        color: #667eea !important;
+    }
+    
+    a:hover {
+        color: #5a67d8 !important;
+    }
+    
+    /* ===== Form Controls - Enhanced Colors ===== */
+    .form-control:focus {
+        border-color: #667eea !important;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25) !important;
+    }
+    
+    .form-select:focus {
+        border-color: #667eea !important;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25) !important;
+    }
+}
+
+/* Extra Small Devices - Additional Color Enhancements */
+@media (max-width: 575.98px) {
+    /* Even stronger contrast for very small screens */
+    .dashboard-title,
+    .employee-page-title {
+        text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
+    }
+    
+    .btn {
+        font-weight: 700 !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+    }
+    
+    .badge {
+        font-weight: 700 !important;
+        padding: 0.5rem 0.875rem !important;
+    }
+}
+

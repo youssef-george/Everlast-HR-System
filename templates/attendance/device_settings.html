@@ -756,12 +756,24 @@ code {
 
 {% block scripts %}
 <script>
+// Browser extension errors are already suppressed in layout.html
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
-    });
+    // Initialize tooltips with null checks
+    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList
+            .filter(function (el) { return el !== null && el.parentNode !== null; }) // Filter out null or detached elements
+            .map(function (tooltipTriggerEl) {
+                try {
+                    return new bootstrap.Tooltip(tooltipTriggerEl);
+                } catch (e) {
+                    console.warn('Failed to initialize tooltip on element:', tooltipTriggerEl, e);
+                    return null;
+                }
+            })
+            .filter(function (tooltip) { return tooltip !== null; }); // Remove failed initializations
+    }
 
     // Enhanced toggle switch functionality for Add Device form
     const statusToggle = document.getElementById('is_active');
@@ -847,7 +859,11 @@ function testDeviceConnection(deviceId, deviceIp, devicePort) {
         toastr.warning('Only Product Owner can test device connections');
         return;
     }
-    const button = event.target.closest('button');
+    const button = event && event.target ? event.target.closest('button') : null;
+    if (!button) {
+        console.warn('Could not find button element for testDeviceConnection');
+        return;
+    }
     const originalText = button.innerHTML;
     button.disabled = true;
     button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Testing...';

@@ -366,11 +366,19 @@ table thead th * {
                     }
                 }
                 
-                // Initialize tooltips for this modal
-                const tooltipTriggerList = this.querySelectorAll('[data-bs-toggle="tooltip"]');
-                tooltipTriggerList.forEach(function (tooltipTriggerEl) {
-                    new bootstrap.Tooltip(tooltipTriggerEl);
-                });
+                // Initialize tooltips for this modal with null checks
+                if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                    const tooltipTriggerList = this.querySelectorAll('[data-bs-toggle="tooltip"]');
+                    tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+                        if (tooltipTriggerEl && tooltipTriggerEl.parentNode) {
+                            try {
+                                new bootstrap.Tooltip(tooltipTriggerEl);
+                            } catch (e) {
+                                console.warn('Failed to initialize tooltip on element:', tooltipTriggerEl, e);
+                            }
+                        }
+                    });
+                }
             });
         });
 

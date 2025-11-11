@@ -237,6 +237,8 @@ def create_app(config_name='default'):
                 logging.warning(f"employee_attachments table check: {e}")
                 db.session.rollback()
             
+            # Break tables removed
+            
             # Fix Department sequence
             try:
                 result = db.session.execute(text("SELECT COALESCE(MAX(id), 0) FROM departments"))
@@ -341,20 +343,20 @@ def create_app(config_name='default'):
     app.config['SCHEDULER_API_ENABLED'] = True
     app.config['SCHEDULER_TIMEZONE'] = 'UTC'
     
-    # Auto-sync disabled - manual sync only
-    # @scheduler.task('interval', id='sync_attendance', minutes=1, misfire_grace_time=300, coalesce=True, max_instances=1)
-    # def scheduled_sync():
-    #     with app.app_context():
-    #         try:
-    #             from routes.attendance import sync_attendance_task
-    #             logging.info('Starting scheduled attendance sync...')
-    #             sync_stats = sync_attendance_task(full_sync=True)
-    #             if sync_stats:
-    #                 logging.info(f"Scheduled sync completed. Added {sync_stats['records_added']} records and updated {sync_stats.get('records_updated', 0)} records.")
-    #         except Exception as e:
-    #             logging.error(f'Scheduled sync failed: {str(e)}')
+    # Auto-sync enabled - sync every 45 seconds
+    @scheduler.task('interval', id='sync_attendance', seconds=45, misfire_grace_time=300, coalesce=True, max_instances=1)
+    def scheduled_sync():
+        with app.app_context():
+            try:
+                from routes.attendance import sync_attendance_task
+                logging.info('Starting scheduled attendance sync...')
+                sync_stats = sync_attendance_task(full_sync=True)
+                if sync_stats:
+                    logging.info(f"Scheduled sync completed. Added {sync_stats.get('records_added', 0)} records and updated {sync_stats.get('records_updated', 0)} records.")
+            except Exception as e:
+                logging.error(f'Scheduled sync failed: {str(e)}')
 
-    # scheduler.start()  # Disabled auto-sync
+    scheduler.start()  # Enable auto-sync
     
     @app.route('/')
     def root():
@@ -380,7 +382,8 @@ def create_app(config_name='default'):
         is_db_error = (
             isinstance(e, (OperationalError, SQLAlchemyOperationalError)) or 
             ('connection' in error_str.lower() and 'timeout' in error_str.lower()) or
-            ('psycopg2.OperationalError' in error_str)
+            ('psycopg2.OperationalError' in error_str) or
+            ('connection to server' in error_str.lower())
         )
         
         if is_db_error:
@@ -393,6 +396,14 @@ def create_app(config_name='default'):
                     db_url = parts[0].split('//')[0] + '//***@' + parts[1]
             logging.error(f"Database URL being used: {db_url[:100]}...")
             
+            # Extract host and port from error if available
+            import re
+            host_match = re.search(r'at "([^"]+)"', error_str)
+            port_match = re.search(r'port (\d+)', error_str)
+            host_info = ""
+            if host_match and port_match:
+                host_info = f" (Host: {host_match.group(1)}, Port: {port_match.group(1)})"
+            
             # Try to rollback any pending transaction
             try:
                 db.session.rollback()
@@ -401,10 +412,19 @@ def create_app(config_name='default'):
             
             # If user is authenticated, show error message
             if current_user.is_authenticated:
-                flash('Database connection failed. Please contact the administrator or try again later.', 'danger')
+                error_message = "Database connection failed"
+                error_details = f"Unable to connect to the database server.{host_info}\n\n"
+                error_details += "Possible causes:\n"
+                error_details += "• Database server is down or unreachable\n"
+                error_details += "• Network/firewall is blocking the connection\n"
+                error_details += "• VPN not connected (if required)\n"
+                error_details += "• Incorrect database host/port in configuration\n\n"
+                error_details += "Please contact your system administrator."
+                
+                flash('Database connection failed. Please contact the administrator.', 'danger')
                 return render_template('error.html', 
-                    error_message="Database connection failed",
-                    error_details=str(e) if app.config.get('DEBUG') else "Unable to connect to database. Please try again later."
+                    error_message=error_message,
+                    error_details=error_details if app.config.get('DEBUG') else "Unable to connect to database. Please try again later."
                 ), 503
             
             # If not authenticated, redirect to login with error
@@ -474,6 +494,48 @@ def create_app(config_name='default'):
     return app
 
 if __name__ == '__main__':
+    import socket
+    
     port = int(os.environ.get("PORT", 5000))  # Use PORT env variable if exists
     app = create_app()
+    
+    # Get local IP addresses for network access
+    def get_local_ip():
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            try:
+                s.connect(('8.8.8.8', 80))
+                ip = s.getsockname()[0]
+            except Exception:
+                ip = '127.0.0.1'
+            finally:
+                s.close()
+            return ip
+        except Exception:
+            return '127.0.0.1'
+    
+    local_ip = get_local_ip()
+    
+    # Print network access information
+    print("\n" + "=" * 70)
+    print("🚀 EverLast ERP Server Starting")
+    print("=" * 70)
+    print(f"\n📍 Server Configuration:")
+    print(f"   • Host: 0.0.0.0 (Listening on all network interfaces)")
+    print(f"   • Port: {port}")
+    print(f"\n🌐 Network Access URLs:")
+    print(f"   • Local:     http://localhost:{port}")
+    print(f"   • Local:     http://127.0.0.1:{port}")
+    if local_ip != '127.0.0.1':
+        print(f"   • Network:   http://{local_ip}:{port}")
+    print(f"\n🔐 Login URL:")
+    if local_ip != '127.0.0.1':
+        print(f"   • http://{local_ip}:{port}/auth/login")
+    print(f"   • http://localhost:{port}/auth/login")
+    print(f"\n💡 To access from other devices on your network:")
+    print(f"   1. Make sure Windows Firewall allows port {port}")
+    print(f"   2. Use the Network URL above from any device on the same network")
+    print(f"   3. All devices must be on the same local network (same router)")
+    print("\n" + "=" * 70 + "\n")
+    
     app.run(debug=True, host='0.0.0.0', port=port)
