@@ -25,13 +25,135 @@
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/metronic.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/mobile.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/dashboard-mobile.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/mobile-colors.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/mobile-tables.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/mobile-sidebar.css') }}" rel="stylesheet">
     
     {% block extra_css %}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     {% endblock %}
     
-    <!-- Early DOM Safety Script -->
+    <!-- Early DOM Safety Script - MUST RUN FIRST -->
     <script>
+    // ULTRA-EARLY Error Suppression - Runs before ANY other scripts
+    (function() {
+        'use strict';
+        
+        // Suppress ALL errors from index.ts files and Chrome extensions immediately
+        const originalError = window.onerror;
+        window.onerror = function(msg, source, lineno, colno, error) {
+            const fullInfo = (msg + ' ' + (source || '') + ' ' + (error && error.stack ? error.stack : '')).toLowerCase();
+            if (fullInfo.includes('mutationobserver') || 
+                fullInfo.includes('parameter 1 is not of type') ||
+                fullInfo.includes('index.ts-89f8331b.js') ||
+                fullInfo.includes('index.ts-loader3.js') ||
+                fullInfo.includes('index.ts-loader') ||
+                fullInfo.includes('index.js-loader') ||
+                fullInfo.includes('index.tsx-loader') ||
+                fullInfo.includes('chrome-extension://') ||
+                fullInfo.includes('failed to fetch dynamically imported module') ||
+                (fullInfo.includes('observe') && fullInfo.includes('not of type'))) {
+                return true; // Suppress error
+            }
+            if (originalError) {
+                return originalError.apply(this, arguments);
+            }
+            return false;
+        };
+    })();
+    
+    // Suppress MutationObserver errors from external scripts (must run first)
+    (function() {
+        'use strict';
+        
+        // Override console.error to suppress MutationObserver errors and browser extension errors
+        const originalConsoleError = console.error;
+        console.error = function(...args) {
+            const message = args.join(' ');
+            const stack = (args[0] && args[0].stack) ? args[0].stack : '';
+            const fullMessage = (message + ' ' + stack).toLowerCase();
+            
+            // Suppress MutationObserver errors (including from external scripts)
+            if (message.includes('MutationObserver') || 
+                message.includes('parameter 1 is not of type') || 
+                message.includes('Failed to execute \'observe\'') ||
+                message.includes('index.ts') ||
+                message.includes('index.ts-') ||
+                message.includes('index.ts-loader') ||
+                message.includes('index.js-loader') ||
+                message.includes('index.tsx-loader') ||
+                (message.includes('observe') && message.includes('not of type')) ||
+                fullMessage.includes('index.ts-89f8331b.js') ||
+                fullMessage.includes('index.ts-loader3.js') ||
+                fullMessage.includes('index.ts-loader') ||
+                fullMessage.includes('index.js-loader') ||
+                fullMessage.includes('index.tsx-loader')) {
+                // Completely suppress this error - don't log anything
+                return;
+            }
+            // Suppress Chrome extension runtime errors and dynamic import errors
+            if (message.includes('runtime.lastError') || 
+                message.includes('message channel closed') ||
+                message.includes('Extension context invalidated') ||
+                message.includes('A listener indicated an asynchronous response') ||
+                message.includes('Failed to fetch dynamically imported module') ||
+                message.includes('chrome-extension://') ||
+                fullMessage.includes('chrome-extension://') ||
+                fullMessage.includes('failed to fetch dynamically imported module') ||
+                fullMessage.includes('index.tsx-') ||
+                fullMessage.includes('index.js-') ||
+                fullMessage.includes('index.ts-')) {
+                return; // Suppress browser extension errors
+            }
+            originalConsoleError.apply(console, args);
+        };
+        
+        // Suppress uncaught errors related to MutationObserver (including external scripts)
+        window.addEventListener('error', function(event) {
+            const message = event.message || '';
+            const source = event.filename || '';
+            const stack = (event.error && event.error.stack) ? event.error.stack : '';
+            const fullInfo = message + ' ' + source + ' ' + stack;
+            
+            // Catch MutationObserver errors from any source
+            if ((message.includes('MutationObserver') || 
+                 message.includes('parameter 1 is not of type') || 
+                 message.includes('Failed to execute \'observe\'') ||
+                 (message.includes('observe') && message.includes('not of type'))) ||
+                // Also catch errors from external scripts (index.ts files)
+                (source.includes('index.ts') && (message.includes('observe') || message.includes('MutationObserver'))) ||
+                (source.includes('index.ts-89f8331b.js') || source.includes('index.ts-loader3.js')) ||
+                fullInfo.includes('index.ts-89f8331b.js') || fullInfo.includes('index.ts-loader3.js') ||
+                // Catch errors from any .js file with observe errors
+                (source.includes('.js') && message.includes('observe') && message.includes('not of type'))) {
+                // Silently suppress - don't even warn to avoid console noise
+                event.preventDefault();
+                event.stopPropagation();
+                return false;
+            }
+        }, true);
+        
+        // Suppress unhandled promise rejections related to MutationObserver
+        window.addEventListener('unhandledrejection', function(event) {
+            const reason = event.reason;
+            const message = (reason && reason.message) ? reason.message : String(reason || '');
+            const stack = (reason && reason.stack) ? reason.stack : '';
+            
+            // Catch all MutationObserver errors
+            if (message.includes('MutationObserver') || 
+                message.includes('parameter 1 is not of type') || 
+                message.includes('Failed to execute \'observe\'') ||
+                message.includes('observe') && message.includes('not of type') ||
+                stack.includes('index.ts') && (message.includes('observe') || message.includes('MutationObserver'))) {
+                // Silently suppress
+                event.preventDefault();
+                event.stopPropagation();
+                return false;
+            }
+        }, true);
+    })();
+    
     // Hide page loader immediately if possible
     (function() {
         'use strict';
@@ -79,37 +201,21 @@
                             }
                         });
                         
-                        // Override observe method with enhanced error handling
+                        // Override observe method with enhanced error handling - COMPLETELY SILENT
                         const originalObserve = observer.observe;
                         observer.observe = function(target, options) {
                             try {
-                                // Enhanced validation for target
-                                if (!target) {
-                                    console.warn('MutationObserver.observe called with null/undefined target, skipping');
-                                    return;
-                                }
-                                
-                                if (!(target instanceof Node)) {
-                                    console.warn('MutationObserver.observe called with invalid target type:', typeof target, 'using document.body');
-                                    if (document.body) {
-                                        return originalObserve.call(this, document.body, options);
-                                    }
-                                    return;
-                                }
-                                
-                                // Additional check for disconnected nodes
-                                if (!document.contains(target)) {
-                                    console.warn('MutationObserver.observe called with disconnected node, using document.body');
-                                    if (document.body) {
-                                        return originalObserve.call(this, document.body, options);
-                                    }
+                                // Enhanced validation for target - fail silently
+                                if (!target || !(target instanceof Node) || !document.contains(target)) {
+                                    // Silently skip - don't log anything to avoid console noise
                                     return;
                                 }
                                 
                                 return originalObserve.call(this, target, options);
                             } catch (error) {
-                                console.warn('MutationObserver.observe error handled:', error.message);
-                                return;
+                                // Silently handle ALL errors from external scripts (browser extensions, etc.)
+                                // This completely suppresses the error without any console output
+                                return; // Suppress all errors silently
                             }
                         };
                         
@@ -130,13 +236,20 @@
                 }
             }
             
-            // Additional protection: Override console.error to catch MutationObserver errors
+            // Additional protection: Override console.error to catch MutationObserver errors and extension errors
             const originalConsoleError = console.error;
             console.error = function(...args) {
                 const message = args.join(' ');
                 if (message.includes('MutationObserver') || message.includes('parameter 1 is not of type')) {
                     console.warn('MutationObserver error suppressed in console:', message);
                     return;
+                }
+                // Suppress Chrome extension runtime errors
+                if (message.includes('runtime.lastError') || 
+                    message.includes('message channel closed') ||
+                    message.includes('Extension context invalidated') ||
+                    message.includes('A listener indicated an asynchronous response')) {
+                    return; // Suppress browser extension errors
                 }
                 originalConsoleError.apply(console, args);
             };
@@ -265,7 +378,7 @@
                     </div>
                 </li>
         <li class="nav-item">
-            <a href="{{ url_for('attendance.index') }}" class="nav-link {{ 'active' if request.path.startswith('/attendance') }}">
+            <a href="{{ url_for('attendance.index') }}" class="nav-link {{ 'active' if request.path.startswith('/attendance') and not request.path.startswith('/attendance/breaks') }}">
                 <i class="fas fa-clipboard-list nav-icon"></i>
                 <span class="nav-text">Daily Attendance</span>
                 <span id="sync-status" class="badge bg-primary ms-2" style="display: none;">Syncing...</span>
@@ -463,6 +576,44 @@
     </script>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Tooltip Safety Wrapper -->
+    <script>
+    // Prevent tooltip errors from breaking the page
+    (function() {
+        'use strict';
+        // Wait for Bootstrap to load
+        if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+            const OriginalTooltip = bootstrap.Tooltip;
+            
+            // Use a Proxy to intercept constructor calls while preserving all static properties
+            bootstrap.Tooltip = new Proxy(OriginalTooltip, {
+                construct: function(target, args) {
+                    const element = args[0];
+                    const config = args[1];
+                    
+                    // Check if element exists and is in the DOM
+                    if (!element || !element.parentNode) {
+                        console.warn('Tooltip: Element is null or not in DOM', element);
+                        return null;
+                    }
+                    
+                    try {
+                        // Call original constructor
+                        return new target(element, config);
+                    } catch (e) {
+                        console.warn('Tooltip initialization failed:', e, element);
+                        return null;
+                    }
+                },
+                get: function(target, prop) {
+                    // Forward all property access to the original Tooltip
+                    return target[prop];
+                }
+            });
+        }
+    })();
+    </script>
     
     <!-- FullCalendar JS -->
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
@@ -932,49 +1083,100 @@
     });
     
     document.addEventListener('DOMContentLoaded', function() {
-        // Global error handler for external script MutationObserver errors
+        // Global error handler for external script MutationObserver errors - ENHANCED
         window.addEventListener('error', function(event) {
-            if (event.message && event.message.includes('MutationObserver') && event.message.includes('parameter 1 is not of type')) {
-                console.warn('External script MutationObserver error caught and suppressed:', event.message);
+            const message = event.message || '';
+            const source = event.filename || '';
+            const stack = (event.error && event.error.stack) ? event.error.stack : '';
+            const fullInfo = (message + ' ' + source + ' ' + stack).toLowerCase();
+            
+            // Catch all MutationObserver parameter type errors (most common pattern)
+            if (message.includes('parameter 1 is not of type') && 
+                (message.includes('MutationObserver') || message.includes('observe'))) {
+                // Silently suppress
                 event.preventDefault();
-                return true;
+                event.stopPropagation();
+                return false;
             }
-            // Handle other common external script errors
-            if (event.message && (event.message.includes('index.ts-') || event.message.includes('.js:1:'))) {
-                console.warn('External script error caught and suppressed:', event.message);
-                event.preventDefault();
-                return true;
-            }
+            
             // Handle MutationObserver errors more broadly
-            if (event.message && event.message.includes('Failed to execute \'observe\' on \'MutationObserver\'')) {
-                console.warn('MutationObserver error caught and suppressed:', event.message);
+            if (message.includes('Failed to execute \'observe\' on \'MutationObserver\'')) {
+                // Silently suppress
                 event.preventDefault();
-                return true;
+                event.stopPropagation();
+                return false;
             }
             
-            // Handle specific parameter type error
-            if (event.message && event.message.includes('parameter 1 is not of type \'Node\'')) {
-                console.warn('MutationObserver parameter type error caught and suppressed:', event.message);
+            // Handle errors from index.ts files and Chrome extensions (external scripts) - ENHANCED
+            if ((source.includes('index.ts') || source.includes('index.ts-') || 
+                 source.includes('index.ts-loader') || source.includes('index.ts-89f8331b') ||
+                 source.includes('index.ts-loader3') || source.includes('index.js-loader') ||
+                 source.includes('index.tsx-loader') || source.includes('chrome-extension://')) && 
+                (message.includes('observe') || message.includes('MutationObserver') || 
+                 message.includes('parameter 1 is not of type') ||
+                 message.includes('Failed to fetch dynamically imported module'))) {
+                // Silently suppress
                 event.preventDefault();
-                return true;
+                event.stopPropagation();
+                return false;
             }
             
-            // Handle external script MutationObserver errors
-            if (event.message && event.message.includes('index.ts') && event.message.includes('MutationObserver')) {
-                console.warn('External script MutationObserver error caught and suppressed:', event.message);
+            // Catch specific file patterns and Chrome extension errors
+            if (fullInfo.includes('index.ts-89f8331b.js') || 
+                fullInfo.includes('index.ts-loader3.js') ||
+                fullInfo.includes('index.ts-loader') ||
+                fullInfo.includes('index.js-loader') ||
+                fullInfo.includes('index.tsx-loader') ||
+                fullInfo.includes('chrome-extension://') ||
+                fullInfo.includes('failed to fetch dynamically imported module')) {
+                // Silently suppress
                 event.preventDefault();
-                return true;
+                event.stopPropagation();
+                return false;
             }
-        });
+            
+            // Handle other common external script errors and Chrome extension errors
+            if ((message.includes('index.ts-') || message.includes('index.js-') ||
+                 message.includes('index.tsx-') || message.includes('.js:1:') || 
+                 message.includes('.js:3292') || message.includes('chrome-extension://') ||
+                 message.includes('Failed to fetch dynamically imported module')) && 
+                (message.includes('observe') || message.includes('MutationObserver') ||
+                 message.includes('dynamically imported module'))) {
+                // Silently suppress
+                event.preventDefault();
+                event.stopPropagation();
+                return false;
+            }
+        }, true);
         
-        // Also handle unhandled promise rejections
+        // Also handle unhandled promise rejections - Enhanced
         window.addEventListener('unhandledrejection', function(event) {
-            if (event.reason && event.reason.message && event.reason.message.includes('MutationObserver')) {
-                console.warn('MutationObserver promise rejection caught and suppressed:', event.reason.message);
+            const reason = event.reason;
+            const message = (reason && reason.message) ? reason.message : String(reason || '');
+            const stack = (reason && reason.stack) ? reason.stack : '';
+            const fullInfo = (message + ' ' + stack).toLowerCase();
+            
+            // Catch all MutationObserver promise rejections and Chrome extension errors
+            if (message.includes('MutationObserver') || 
+                message.includes('parameter 1 is not of type') || 
+                message.includes('Failed to execute \'observe\'') ||
+                message.includes('Failed to fetch dynamically imported module') ||
+                message.includes('chrome-extension://') ||
+                (message.includes('observe') && message.includes('not of type')) ||
+                (stack.includes('index.ts') && (message.includes('observe') || message.includes('MutationObserver'))) ||
+                (stack.includes('chrome-extension://')) ||
+                fullInfo.includes('index.ts-89f8331b.js') ||
+                fullInfo.includes('index.ts-loader3.js') ||
+                fullInfo.includes('index.ts-loader') ||
+                fullInfo.includes('index.js-loader') ||
+                fullInfo.includes('index.tsx-loader') ||
+                fullInfo.includes('chrome-extension://')) {
+                // Silently suppress
                 event.preventDefault();
-                return true;
+                event.stopPropagation();
+                return false;
             }
-        });
+        }, true);
         
         // Debug: Log when DOM is ready
         console.log('DOM Content Loaded - Page should be visible now');
@@ -996,6 +1198,66 @@
             console.log('Dropdown styling matches sidebar nav-links');
         }, 1500);
     });
+    </script>
+    
+    <!-- Hide scroll indicator when scrolling on mobile -->
+    <script>
+    (function() {
+        'use strict';
+        
+        // Only run on mobile devices
+        if (window.innerWidth > 991.98) {
+            return;
+        }
+        
+        // Function to handle scroll events on table containers
+        function setupScrollIndicatorHiding() {
+            const tableResponsiveElements = document.querySelectorAll('.table-responsive');
+            
+            tableResponsiveElements.forEach(function(tableContainer) {
+                let scrollTimeout;
+                let isScrolling = false;
+                
+                // Add 'scrolling' class when user starts scrolling
+                tableContainer.addEventListener('scroll', function() {
+                    if (!isScrolling) {
+                        isScrolling = true;
+                        tableContainer.classList.add('scrolling');
+                    }
+                    
+                    // Clear existing timeout
+                    clearTimeout(scrollTimeout);
+                    
+                    // Remove 'scrolling' class after scrolling stops (300ms delay)
+                    scrollTimeout = setTimeout(function() {
+                        isScrolling = false;
+                        tableContainer.classList.remove('scrolling');
+                    }, 300);
+                }, { passive: true });
+            });
+        }
+        
+        // Initialize on DOM ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupScrollIndicatorHiding);
+        } else {
+            setupScrollIndicatorHiding();
+        }
+        
+        // Re-initialize when new content is loaded (for dynamic tables)
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.addedNodes.length > 0) {
+                    setupScrollIndicatorHiding();
+                }
+            });
+        });
+        
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    })();
     </script>
     {% endblock %}
 </body>

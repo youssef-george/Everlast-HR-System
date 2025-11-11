@@ -1,0 +1,357 @@
+/* EverLast ERP - Global Mobile Table UI/UX Fixes */
+/* This file provides comprehensive mobile table styling for ALL tables across the application */
+
+/* ===== GLOBAL MOBILE TABLE FIXES ===== */
+@media (max-width: 991.98px) {
+    /* ===== Table Container - Enhanced Mobile Responsiveness ===== */
+    .table-responsive,
+    .table-wrapper,
+    div[class*="table"] {
+        border-radius: 12px !important;
+        overflow-x: auto !important;
+        overflow-y: visible !important;
+        -webkit-overflow-scrolling: touch !important;
+        margin: 0 -0.75rem 1.5rem -0.75rem !important;
+        padding: 0 0.75rem !important;
+        border: 1px solid #e5e7eb !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+        position: relative !important;
+    }
+    
+    /* Scroll indicator for tables */
+    .table-responsive::after {
+        content: '← Scroll →' !important;
+        position: absolute !important;
+        bottom: 0.5rem !important;
+        right: 0.5rem !important;
+        background: rgba(102, 126, 234, 0.9) !important;
+        color: #ffffff !important;
+        padding: 0.25rem 0.75rem !important;
+        border-radius: 12px !important;
+        font-size: 0.7rem !important;
+        font-weight: 600 !important;
+        pointer-events: none !important;
+        z-index: 10 !important;
+        opacity: 1 !important;
+        transition: opacity 0.3s ease !important;
+    }
+    
+    /* Hide scroll indicator when scrolling */
+    .table-responsive.scrolling::after {
+        opacity: 0 !important;
+        visibility: hidden !important;
+    }
+    
+    /* ===== All Tables - Base Styling ===== */
+    .table,
+    table,
+    .employee-table,
+    .enhanced-table,
+    .data-table,
+    table[class*="table"] {
+        font-size: 0.8rem !important;
+        min-width: 800px !important;
+        width: 100% !important;
+        background: #ffffff !important;
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+        margin: 0 !important;
+    }
+    
+    /* ===== Table Headers - Enhanced Visibility ===== */
+    .table thead,
+    table thead,
+    .table thead th,
+    table thead th,
+    .employee-table thead th,
+    .enhanced-table thead th {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        background-color: #667eea !important;
+        background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        font-size: 0.75rem !important;
+        padding: 1rem 0.75rem !important;
+        white-space: nowrap !important;
+        text-align: center !important;
+        vertical-align: middle !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+        border: none !important;
+        border-bottom: 2px solid #5a67d8 !important;
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 5 !important;
+    }
+    
+    /* Force all header child elements to be white */
+    .table thead th *,
+    table thead th *,
+    .table thead th i,
+    table thead th i,
+    .table thead th span,
+    table thead th span {
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+        -webkit-text-fill-color: #ffffff !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+    
+    /* ===== Table Body - Enhanced Readability ===== */
+    .table tbody,
+    table tbody {
+        background: #ffffff !important;
+    }
+    
+    .table tbody td,
+    table tbody td,
+    .table tbody th,
+    table tbody th {
+        padding: 0.875rem 0.75rem !important;
+        font-size: 0.8rem !important;
+        vertical-align: middle !important;
+        text-align: center !important;
+        color: #374151 !important;
+        font-weight: 500 !important;
+        border-bottom: 1px solid #f3f4f6 !important;
+        background: #ffffff !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+    }
+    
+    /* ===== Table Rows - Enhanced Interaction ===== */
+    .table tbody tr,
+    table tbody tr {
+        transition: all 0.2s ease !important;
+        border-bottom: 1px solid #f3f4f6 !important;
+    }
+    
+    .table tbody tr:hover,
+    table tbody tr:hover {
+        background: #f8fafc !important;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+    }
+    
+    .table tbody tr:last-child td,
+    table tbody tr:last-child td {
+        border-bottom: none !important;
+    }
+    
+    /* ===== Table Buttons - Touch Friendly ===== */
+    .table .btn,
+    table .btn,
+    .table .btn-sm,
+    table .btn-sm,
+    .table button,
+    table button {
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.8rem !important;
+        min-height: 36px !important;
+        min-width: 36px !important;
+        font-weight: 600 !important;
+        border-radius: 6px !important;
+        white-space: nowrap !important;
+    }
+    
+    .table .btn i,
+    table .btn i {
+        font-size: 0.85rem !important;
+    }
+    
+    /* ===== Table Badges - Enhanced Visibility ===== */
+    .table .badge,
+    table .badge,
+    .table span[class*="badge"],
+    table span[class*="badge"] {
+        font-size: 0.7rem !important;
+        padding: 0.375rem 0.75rem !important;
+        font-weight: 600 !important;
+        border-radius: 6px !important;
+        display: inline-block !important;
+        white-space: nowrap !important;
+        text-align: center !important;
+    }
+    
+    /* ===== Fingerprint ID Display ===== */
+    .fingerprint-id-display,
+    .table .fingerprint-id-display,
+    table .fingerprint-id-display {
+        display: inline-block !important;
+        background: #f0f4ff !important;
+        color: #1e40af !important;
+        font-weight: 700 !important;
+        font-size: 0.85rem !important;
+        padding: 0.5rem 1rem !important;
+        border-radius: 8px !important;
+        border: 2px solid #3b82f6 !important;
+        text-align: center !important;
+        min-width: 50px !important;
+    }
+    
+    /* ===== Table Icons ===== */
+    .table i,
+    table i,
+    .table .fas,
+    table .fas,
+    .table .far,
+    table .far {
+        font-size: 0.85rem !important;
+        margin: 0 0.25rem !important;
+    }
+    
+    /* ===== Table Links ===== */
+    .table a,
+    table a {
+        color: #667eea !important;
+        font-weight: 600 !important;
+        text-decoration: none !important;
+        word-wrap: break-word !important;
+    }
+    
+    .table a:hover,
+    table a:hover {
+        color: #5a67d8 !important;
+        text-decoration: underline !important;
+    }
+    
+    /* ===== Empty State ===== */
+    .table tbody tr td[colspan],
+    table tbody tr td[colspan] {
+        text-align: center !important;
+        padding: 2rem 1rem !important;
+        color: #6b7280 !important;
+        font-size: 0.9rem !important;
+    }
+    
+    /* ===== Table Actions Column ===== */
+    .table .actions,
+    table .actions,
+    .table td:last-child,
+    table td:last-child {
+        white-space: nowrap !important;
+    }
+    
+    .table .d-flex.gap-1,
+    table .d-flex.gap-1,
+    .table .d-flex.gap-2,
+    table .d-flex.gap-2 {
+        justify-content: center !important;
+        flex-wrap: wrap !important;
+        gap: 0.5rem !important;
+    }
+    
+    /* ===== Special Table Types ===== */
+    .table-hover tbody tr:hover {
+        background: #f8fafc !important;
+    }
+    
+    .table-striped tbody tr:nth-of-type(odd) {
+        background: #f9fafb !important;
+    }
+    
+    .table-striped tbody tr:nth-of-type(even) {
+        background: #ffffff !important;
+    }
+    
+    /* ===== Table Symbols/Avatars ===== */
+    .table .symbol,
+    table .symbol,
+    .table .avatar,
+    table .avatar {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 0.75rem !important;
+        min-width: 36px !important;
+        min-height: 36px !important;
+    }
+    
+    /* ===== Table Text Alignment ===== */
+    .table .text-start,
+    table .text-start {
+        text-align: left !important;
+    }
+    
+    .table .text-center,
+    table .text-center {
+        text-align: center !important;
+    }
+    
+    .table .text-end,
+    table .text-end {
+        text-align: right !important;
+    }
+    
+    /* ===== Table Status Colors ===== */
+    .table .text-success,
+    table .text-success {
+        color: #10b981 !important;
+        font-weight: 600 !important;
+    }
+    
+    .table .text-danger,
+    table .text-danger {
+        color: #ef4444 !important;
+        font-weight: 600 !important;
+    }
+    
+    .table .text-warning,
+    table .text-warning {
+        color: #f59e0b !important;
+        font-weight: 600 !important;
+    }
+    
+    .table .text-info,
+    table .text-info {
+        color: #3b82f6 !important;
+        font-weight: 600 !important;
+    }
+    
+    .table .text-muted,
+    table .text-muted {
+        color: #6b7280 !important;
+    }
+}
+
+/* Extra Small Devices - Additional Optimizations */
+@media (max-width: 575.98px) {
+    .table,
+    table {
+        font-size: 0.75rem !important;
+        min-width: 700px !important;
+    }
+    
+    .table thead th,
+    table thead th {
+        font-size: 0.7rem !important;
+        padding: 0.75rem 0.5rem !important;
+    }
+    
+    .table tbody td,
+    table tbody td {
+        font-size: 0.75rem !important;
+        padding: 0.75rem 0.5rem !important;
+    }
+    
+    .table .btn-sm,
+    table .btn-sm {
+        padding: 0.375rem 0.5rem !important;
+        font-size: 0.75rem !important;
+        min-height: 32px !important;
+        min-width: 32px !important;
+    }
+    
+    .table .badge,
+    table .badge {
+        font-size: 0.65rem !important;
+        padding: 0.25rem 0.5rem !important;
+    }
+    
+    .table-responsive::after {
+        font-size: 0.65rem !important;
+        padding: 0.2rem 0.5rem !important;
+    }
+}
+

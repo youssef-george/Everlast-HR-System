@@ -328,6 +328,470 @@ table thead th * {
             margin-bottom: 0.5rem;
         }
     }
+    
+    /* ===== DESKTOP DATE RANGE & TABLE FIXES ===== */
+    @media (min-width: 992px) {
+        /* Date Range Form - Desktop Optimized */
+        .date-range-form {
+            background: #ffffff !important;
+            padding: 1.5rem !important;
+            border-radius: 12px !important;
+            border: 2px solid #e5e7eb !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+            margin-bottom: 2rem !important;
+        }
+        
+        .date-range-form .row {
+            align-items: flex-end !important;
+        }
+        
+        .date-range-form .col-auto {
+            padding: 0.5rem !important;
+        }
+        
+        .date-range-form .form-label {
+            color: #1e293b !important;
+            font-weight: 600 !important;
+            font-size: 0.9rem !important;
+            margin-bottom: 0.5rem !important;
+            display: block !important;
+        }
+        
+        .date-range-form .form-label i {
+            color: #667eea !important;
+            font-size: 1rem !important;
+            margin-right: 0.5rem !important;
+        }
+        
+        .date-range-form .form-control,
+        .date-range-form .form-select {
+            background: #ffffff !important;
+            border: 2px solid #667eea !important;
+            color: #1e293b !important;
+            font-size: 0.95rem !important;
+            font-weight: 500 !important;
+            padding: 0.625rem 1rem !important;
+            min-height: 42px !important;
+            border-radius: 8px !important;
+            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.15) !important;
+            transition: all 0.2s ease !important;
+        }
+        
+        .date-range-form .form-control:focus,
+        .date-range-form .form-select:focus {
+            border-color: #5a67d8 !important;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25) !important;
+            outline: none !important;
+        }
+        
+        .date-range-form input[type="date"] {
+            color: #1e293b !important;
+            font-weight: 500 !important;
+        }
+        
+        .date-range-form input[type="date"]::-webkit-calendar-picker-indicator {
+            background-color: #667eea !important;
+            border-radius: 4px !important;
+            padding: 0.25rem !important;
+            cursor: pointer !important;
+            opacity: 1 !important;
+        }
+        
+        .date-range-form .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #5a67d8 100%) !important;
+            color: #ffffff !important;
+            border: none !important;
+            font-weight: 600 !important;
+            padding: 0.625rem 1.5rem !important;
+            min-height: 42px !important;
+            font-size: 0.95rem !important;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+            transition: all 0.2s ease !important;
+        }
+        
+        .date-range-form .btn-primary:hover {
+            background: linear-gradient(135deg, #5a67d8 0%, #4c51bf 100%) !important;
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4) !important;
+            transform: translateY(-1px) !important;
+        }
+        
+        /* Desktop Table Styling */
+        .table-responsive {
+            border-radius: 12px !important;
+            overflow-x: auto !important;
+            border: 1px solid #e5e7eb !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+        }
+        
+        .table {
+            font-size: 0.9rem !important;
+            width: 100% !important;
+            background: #ffffff !important;
+        }
+        
+        .table thead th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            color: #ffffff !important;
+            font-weight: 600 !important;
+            font-size: 0.85rem !important;
+            padding: 1rem 0.75rem !important;
+            white-space: nowrap !important;
+            text-align: center !important;
+            vertical-align: middle !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+            border: none !important;
+        }
+        
+        .table tbody td {
+            padding: 0.875rem 0.75rem !important;
+            font-size: 0.9rem !important;
+            vertical-align: middle !important;
+            text-align: center !important;
+            color: #374151 !important;
+            font-weight: 500 !important;
+            border-bottom: 1px solid #f3f4f6 !important;
+            background: #ffffff !important;
+        }
+        
+        .table tbody tr:hover {
+            background: #f8fafc !important;
+        }
+        
+        /* Fingerprint ID Display - Desktop */
+        .fingerprint-id-display {
+            display: inline-block !important;
+            background: #f0f4ff !important;
+            color: #1e40af !important;
+            font-weight: 600 !important;
+            font-size: 0.9rem !important;
+            padding: 0.375rem 0.875rem !important;
+            border-radius: 6px !important;
+            border: 1px solid #3b82f6 !important;
+            text-align: center !important;
+        }
+    }
+    
+    /* ===== MOBILE DATE RANGE & TABLE FIXES ===== */
+    @media (max-width: 991.98px) {
+        /* Date Range Form - Enhanced Visibility */
+        .date-range-form {
+            background: #ffffff !important;
+            padding: 1rem !important;
+            border-radius: 12px !important;
+            border: 2px solid #e5e7eb !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+            margin-bottom: 1.5rem !important;
+        }
+        
+        .date-range-form .row {
+            margin: 0 !important;
+        }
+        
+        .date-range-form .col-auto,
+        .date-range-form .col-12,
+        .date-range-form [class*="col-"] {
+            padding: 0.5rem !important;
+            margin-bottom: 0.75rem !important;
+        }
+        
+        .date-range-form .col-12 {
+            width: 100% !important;
+        }
+        
+        .date-range-form .form-label {
+            color: #1e293b !important;
+            font-weight: 700 !important;
+            font-size: 1rem !important;
+            margin-bottom: 0.75rem !important;
+            display: block !important;
+            width: 100% !important;
+            text-align: left !important;
+            padding-left: 0.25rem !important;
+        }
+        
+        .date-range-form .form-label[style*="visibility: hidden"] {
+            margin-bottom: 0 !important;
+            padding: 0 !important;
+            height: 0 !important;
+            min-height: 0 !important;
+        }
+        
+        .date-range-form .form-label i {
+            color: #667eea !important;
+            font-size: 1.1rem !important;
+            margin-right: 0.5rem !important;
+        }
+        
+        .date-range-form .form-control,
+        .date-range-form .form-select {
+            width: 100% !important;
+            background: #ffffff !important;
+            border: 3px solid #667eea !important;
+            color: #1e293b !important;
+            font-size: 1.1rem !important;
+            font-weight: 700 !important;
+            padding: 1rem 1.25rem !important;
+            min-height: 56px !important;
+            border-radius: 10px !important;
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3) !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: textfield !important;
+        }
+        
+        /* Date input specific styling for better visibility */
+        .date-range-form input[type="date"] {
+            color: #1e293b !important;
+            font-weight: 700 !important;
+            font-size: 1.1rem !important;
+            background-color: #f8fafc !important;
+        }
+        
+        .date-range-form input[type="date"]::-webkit-calendar-picker-indicator {
+            background-color: #667eea !important;
+            border-radius: 6px !important;
+            padding: 0.5rem !important;
+            cursor: pointer !important;
+            opacity: 1 !important;
+            width: 24px !important;
+            height: 24px !important;
+        }
+        
+        .date-range-form input[type="date"]::-webkit-datetime-edit-text {
+            color: #1e293b !important;
+            font-weight: 700 !important;
+            font-size: 1.1rem !important;
+        }
+        
+        .date-range-form input[type="date"]::-webkit-datetime-edit-month-field,
+        .date-range-form input[type="date"]::-webkit-datetime-edit-day-field,
+        .date-range-form input[type="date"]::-webkit-datetime-edit-year-field {
+            color: #1e293b !important;
+            font-weight: 700 !important;
+            font-size: 1.1rem !important;
+            padding: 0.25rem !important;
+        }
+        
+        .date-range-form .form-control:focus,
+        .date-range-form .form-select:focus {
+            border-color: #5a67d8 !important;
+            box-shadow: 0 0 0 0.3rem rgba(102, 126, 234, 0.3) !important;
+            outline: none !important;
+            background: #ffffff !important;
+            color: #1e293b !important;
+        }
+        
+        .date-range-form .form-control::placeholder {
+            color: #64748b !important;
+            font-weight: 500 !important;
+        }
+        
+        .date-range-form .btn-primary {
+            width: 100% !important;
+            background: linear-gradient(135deg, #667eea 0%, #5a67d8 100%) !important;
+            color: #ffffff !important;
+            border: none !important;
+            font-weight: 700 !important;
+            padding: 0.875rem 1.5rem !important;
+            min-height: 56px !important;
+            font-size: 1.1rem !important;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;
+            border-radius: 10px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0.5rem !important;
+            transition: all 0.2s ease !important;
+        }
+        
+        .date-range-form .btn-primary:hover,
+        .date-range-form .btn-primary:active {
+            background: linear-gradient(135deg, #5a67d8 0%, #4c51bf 100%) !important;
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5) !important;
+            transform: translateY(-1px) !important;
+        }
+        
+        .date-range-form .btn-primary i {
+            font-size: 1.1rem !important;
+        }
+        
+        .date-range-form .alert {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+            border: 2px solid #3b82f6 !important;
+            color: #1e40af !important;
+            font-weight: 700 !important;
+            font-size: 1rem !important;
+            padding: 0.875rem 1rem !important;
+            border-radius: 10px !important;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2) !important;
+            margin: 0 !important;
+            text-align: center !important;
+        }
+        
+        .date-range-form .alert i {
+            font-size: 1.1rem !important;
+            margin-right: 0.5rem !important;
+        }
+        
+        /* Input Group Text (for "to" separator) */
+        .input-group-text {
+            background: #f8fafc !important;
+            border: 2px solid #e5e7eb !important;
+            color: #1e293b !important;
+            font-weight: 600 !important;
+            padding: 0.875rem 1rem !important;
+            min-height: 48px !important;
+        }
+        
+        /* Fingerprint ID Display - Not a button */
+        .fingerprint-id-display {
+            display: inline-block !important;
+            background: #f0f4ff !important;
+            color: #1e40af !important;
+            font-weight: 700 !important;
+            font-size: 0.95rem !important;
+            padding: 0.5rem 1rem !important;
+            border-radius: 8px !important;
+            border: 2px solid #3b82f6 !important;
+            text-align: center !important;
+            min-width: 60px !important;
+        }
+        
+        /* Tables - Enhanced Mobile Responsiveness */
+        .table-responsive {
+            border-radius: 12px !important;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            margin: 0 -1rem !important;
+            padding: 0 1rem !important;
+            border: 1px solid #e5e7eb !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+        }
+        
+        .table {
+            font-size: 0.85rem !important;
+            min-width: 1000px !important;
+            width: 100% !important;
+            background: #ffffff !important;
+        }
+        
+        .table thead th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            font-size: 0.8rem !important;
+            padding: 1rem 0.75rem !important;
+            white-space: nowrap !important;
+            text-align: center !important;
+            vertical-align: middle !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+            border: none !important;
+        }
+        
+        .table tbody td {
+            padding: 1rem 0.75rem !important;
+            font-size: 0.85rem !important;
+            vertical-align: middle !important;
+            text-align: center !important;
+            color: #374151 !important;
+            font-weight: 500 !important;
+            border-bottom: 1px solid #f3f4f6 !important;
+            background: #ffffff !important;
+        }
+        
+        .table tbody tr {
+            transition: all 0.2s ease !important;
+        }
+        
+        .table tbody tr:hover {
+            background: #f8fafc !important;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+        }
+        
+        .table .btn-sm {
+            padding: 0.5rem 0.75rem !important;
+            font-size: 0.8rem !important;
+            min-height: 36px !important;
+            min-width: 36px !important;
+            font-weight: 600 !important;
+        }
+        
+        .table .badge {
+            font-size: 0.75rem !important;
+            padding: 0.375rem 0.75rem !important;
+            font-weight: 600 !important;
+            border-radius: 6px !important;
+        }
+        
+        /* Historical Attendance Date Headers */
+        .card-subtitle {
+            font-size: 1.25rem !important;
+            font-weight: 700 !important;
+            color: #1e293b !important;
+            margin-bottom: 1rem !important;
+            text-align: center !important;
+        }
+        
+        .table-responsive h6 {
+            font-size: 1.1rem !important;
+            font-weight: 700 !important;
+            color: #1e293b !important;
+            margin-top: 1.5rem !important;
+            margin-bottom: 0.75rem !important;
+            padding: 0.75rem 1rem !important;
+            background: #f8fafc !important;
+            border-radius: 8px !important;
+            border-left: 4px solid #667eea !important;
+        }
+        
+        /* Employee Card Mobile Fixes */
+        .employee-card {
+            border-radius: 12px !important;
+            overflow: hidden !important;
+        }
+        
+        .employee-card-header {
+            padding: 1rem 0.75rem !important;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+        }
+        
+        .employee-card-header .card-title {
+            font-size: 1.1rem !important;
+            color: #1e293b !important;
+            font-weight: 700 !important;
+            text-align: center !important;
+        }
+        
+        .employee-card-body {
+            padding: 1rem 0.75rem !important;
+        }
+    }
+    
+    /* Extra Small Devices */
+    @media (max-width: 575.98px) {
+        .date-range-form .form-control,
+        .date-range-form .form-select {
+            font-size: 0.95rem !important;
+        }
+        
+        .table {
+            font-size: 0.75rem !important;
+            min-width: 900px !important;
+        }
+        
+        .table thead th {
+            font-size: 0.7rem !important;
+            padding: 0.75rem 0.5rem !important;
+        }
+        
+        .table tbody td {
+            font-size: 0.75rem !important;
+            padding: 0.75rem 0.5rem !important;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -389,29 +853,43 @@ table thead th * {
 
                     
                     <div class="row mb-4">
-                        <div class="col-md-8">
+                        <div class="col-12">
                             <form class="date-range-form" method="get">
-                                <div class="row g-2">
-                                    <div class="col-auto">
-                                        <input type="date" class="form-control" name="start_date" value="{{ request.args.get('start_date', '') }}">
+                                <div class="row g-3">
+                                    <div class="col-12 col-md-6 col-lg-3">
+                                        <label for="start_date" class="form-label fw-bold">
+                                            <i class="fas fa-calendar-alt me-2"></i>Start Date
+                                        </label>
+                                        <input type="date" class="form-control" id="start_date" name="start_date" value="{{ request.args.get('start_date', '') }}" required>
                                     </div>
-                                    <div class="col-auto">
-                                        <input type="date" class="form-control" name="end_date" value="{{ request.args.get('end_date', '') }}">
+                                    <div class="col-12 col-md-6 col-lg-3">
+                                        <label for="end_date" class="form-label fw-bold">
+                                            <i class="fas fa-calendar-check me-2"></i>End Date
+                                        </label>
+                                        <input type="date" class="form-control" id="end_date" name="end_date" value="{{ request.args.get('end_date', '') }}" required>
                                     </div>
                                     
-                                    {% if is_admin %}
-                                    <div class="col-auto">
-                                        <select class="form-select" name="employee_id">
+                                    {% if is_admin or current_user.role in ['manager', 'director', 'product_owner'] %}
+                                    <div class="col-12 col-md-6 col-lg-3">
+                                        <label for="employee_id" class="form-label fw-bold">
+                                            <i class="fas fa-users me-2"></i>Employee
+                                        </label>
+                                        <select class="form-select" id="employee_id" name="employee_id">
                                             <option value="">All Employees</option>
+                                            {% if employees %}
                                             {% for employee in employees %}
                                             <option value="{{ employee.id }}" {% if request.args.get('employee_id')|int == employee.id %}selected{% endif %}>
                                                 {{ employee.get_full_name() }}
                                             </option>
                                             {% endfor %}
+                                            {% endif %}
                                         </select>
                                     </div>
                                     {% elif current_user.role == 'employee' %}
-                                    <div class="col-auto">
+                                    <div class="col-12 col-md-6 col-lg-3">
+                                        <label class="form-label fw-bold d-block mb-2">
+                                            <i class="fas fa-user me-2"></i>Status
+                                        </label>
                                         <div class="alert alert-info mb-0 py-2">
                                             <i class="fas fa-user me-2"></i>
                                             Viewing your attendance logs
@@ -419,8 +897,11 @@ table thead th * {
                                     </div>
                                     {% endif %}
                                     
-                                    <div class="col-auto">
-                                        <button type="submit" class="btn btn-primary">View Records</button>
+                                    <div class="col-12 col-md-6 col-lg-3">
+                                        <label class="form-label fw-bold d-block mb-2" style="visibility: hidden;">Action</label>
+                                        <button type="submit" class="btn btn-primary w-100">
+                                            <i class="fas fa-search me-2"></i>View Records
+                                        </button>
                                     </div>
                                 </div>
                             </form>
@@ -687,7 +1168,7 @@ table thead th * {
                                         <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#logs-{{ user_id }}" aria-expanded="false">
                                             View All ({{ data['all_logs']|length }})
                                         </button>
-                                        <div class="collapse mt-2" id="logs-{{ user_id }}">
+                                            <div class="collapse mt-2" id="logs-{{ user_id }}">
                                             <div class="card card-body p-2">
                                                 {% for log in data['all_logs'] %}
                                                 <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
@@ -698,6 +1179,10 @@ table thead th * {
                                                         {% if log.device %}
                                                             <small class="text-muted">
                                                                 <i class="fas fa-fingerprint me-1"></i>{{ log.device.get_display_name() }}
+                                                            </small>
+                                                        {% elif log.device_ip %}
+                                                            <small class="text-muted">
+                                                                <i class="fas fa-fingerprint me-1"></i>{{ log.device_ip }}
                                                             </small>
                                                         {% else %}
                                                             <small class="text-muted">Unknown Device</small>
@@ -833,7 +1318,7 @@ table thead th * {
                                 <tr>
                                     <td>
                                         {% if data['user'].fingerprint_number %}
-                                            <span class="badge bg-info">{{ data['user'].fingerprint_number }}</span>
+                                            <span class="fingerprint-id-display">{{ data['user'].fingerprint_number }}</span>
                                         {% else %}
                                             <span class="badge bg-warning">Not Assigned</span>
                                         {% endif %}
@@ -862,10 +1347,23 @@ table thead th * {
                                             <div class="collapse mt-2" id="logs-{{ date }}-{{ user_id }}">
                                                 <div class="card card-body p-2">
                                                     {% for log in data['all_logs'] %}
-                                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                                        <span class="{% if log == data['check_in'] %}text-success fw-bold{% elif log == data['check_out'] %}text-danger fw-bold{% else %}text-muted{% endif %}">
-                                                            {{ log.timestamp.strftime('%I:%M %p') }}
-                                                        </span>
+                                                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+                                                        <div class="d-flex flex-column">
+                                                            <span class="{% if log == data['check_in'] %}text-success fw-bold{% elif log == data['check_out'] %}text-danger fw-bold{% else %}text-muted{% endif %}">
+                                                                {{ log.timestamp.strftime('%I:%M %p') }}
+                                                            </span>
+                                                            {% if log.device %}
+                                                                <small class="text-muted">
+                                                                    <i class="fas fa-fingerprint me-1"></i>{{ log.device.get_display_name() }}
+                                                                </small>
+                                                            {% elif log.device_ip %}
+                                                                <small class="text-muted">
+                                                                    <i class="fas fa-fingerprint me-1"></i>{{ log.device_ip }}
+                                                                </small>
+                                                            {% else %}
+                                                                <small class="text-muted">Unknown Device</small>
+                                                            {% endif %}
+                                                        </div>
                                                         <span class="badge {% if log == data['check_in'] %}bg-success{% elif log == data['check_out'] %}bg-danger{% else %}bg-secondary{% endif %}">
                                                             {% if log == data['check_in'] %}Check-In{% elif log == data['check_out'] %}Check-Out{% else %}Additional{% endif %}
                                                         </span>
@@ -1378,10 +1876,21 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 // Make auto-fetch status visible to all users on attendance page
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🔄 Attendance page loaded - Auto-fetch system should be active');
-    console.log('📊 Auto-fetch will check for new data every 5 minutes (300 seconds)');
+    console.log('🔄 Attendance Management page loaded - Auto-fetch system is active');
+    console.log('📊 Auto-fetch will check for new data every 30 seconds while app is running');
     console.log('🔄 Page will reload automatically when new attendance data is detected');
     console.log('🔄 Manual sync button is still available for immediate sync');
+    
+    // Verify auto-fetch is initialized
+    setTimeout(() => {
+        if (window.autoFetch) {
+            console.log('✅ Auto-fetch system confirmed active');
+            console.log(`   - Fetch interval: ${window.autoFetch.fetchInterval / 1000} seconds`);
+            console.log(`   - System enabled: ${window.autoFetch.enabled}`);
+        } else {
+            console.warn('⚠️ Auto-fetch system not detected - data may not auto-update');
+        }
+    }, 2000);
 });
 </script>
 {% endblock %}
