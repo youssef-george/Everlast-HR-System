@@ -103,6 +103,40 @@ class Config:
     # Set to True to enable admin features (device settings, etc.)
     # Can be overridden via environment variable
     IS_ADMIN_INSTANCE = os.environ.get('IS_ADMIN_INSTANCE', 'true').lower() == 'true'
+    
+    # ------------------------
+    # Cloudflare Turnstile Configuration
+    # ------------------------
+    # Smart detection: Only enable Turnstile in production (not localhost)
+    @staticmethod
+    def is_production_environment():
+        """Detect if running in production based on hostname/domain"""
+        # Check environment variable first (explicit override)
+        env_override = os.environ.get('TURNSTILE_ENABLED', '').lower()
+        if env_override == 'true':
+            return True
+        if env_override == 'false':
+            return False
+        
+        # Check if DEBUG is disabled (production mode)
+        debug_mode = os.environ.get('FLASK_DEBUG', '').lower()
+        if debug_mode == 'false' or debug_mode == '0':
+            return True
+        
+        # Check FLASK_ENV
+        flask_env = os.environ.get('FLASK_ENV', '').lower()
+        if flask_env == 'production':
+            return True
+        if flask_env == 'development':
+            return False
+        
+        # Default: assume local if no explicit production indicators
+        return False
+    
+    TURNSTILE_SITE_KEY = os.environ.get('TURNSTILE_SITE_KEY', '0x4AAAAAACAhO6remiAiUqI9')
+    TURNSTILE_SECRET_KEY = os.environ.get('TURNSTILE_SECRET_KEY', '0x4AAAAAACAhO-yJ436h7Ou_ZoSHLylw3zw')
+    # Smart detection: Only enable in production (will be overridden in app.py based on request)
+    TURNSTILE_ENABLED = False  # Default to False, will be set dynamically in app.py
 
     @staticmethod
     def init_app(app):
@@ -117,6 +151,24 @@ class ProductionConfig(Config):
     DEBUG = False
     WTF_CSRF_ENABLED = True
     PREFERRED_URL_SCHEME = 'https'
+    
+    # Production security settings
+    SESSION_COOKIE_SECURE = True  # Only send cookies over HTTPS
+    SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access to cookies
+    SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
+    
+    # Additional security
+    PERMANENT_SESSION_LIFETIME = 1800  # 30 minutes
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
+    
+    # Ensure secret keys are set
+    @staticmethod
+    def init_app(app):
+        import os
+        if not os.environ.get('SECRET_KEY') or os.environ.get('SECRET_KEY') == 'your-secret-key-here':
+            raise ValueError("SECRET_KEY must be set in production environment!")
+        if not os.environ.get('CSRF_SECRET') or os.environ.get('CSRF_SECRET') == 'your-csrf-secret-here':
+            raise ValueError("CSRF_SECRET must be set in production environment!")
 
 
 config = {

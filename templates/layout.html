@@ -81,6 +81,29 @@
     (function() {
         'use strict';
         
+        // Override MutationObserver.observe to prevent errors from external scripts
+        if (window.MutationObserver) {
+            const OriginalMutationObserver = window.MutationObserver;
+            const originalObserve = OriginalMutationObserver.prototype.observe;
+            
+            OriginalMutationObserver.prototype.observe = function(target, options) {
+                try {
+                    // Validate target before observing
+                    if (!target || !(target instanceof Node)) {
+                        console.warn('MutationObserver.observe: Invalid target, skipping');
+                        return;
+                    }
+                    return originalObserve.call(this, target, options);
+                } catch (error) {
+                    // Suppress errors from external scripts
+                    if (error.message && error.message.includes('not of type')) {
+                        return; // Silently ignore
+                    }
+                    throw error;
+                }
+            };
+        }
+        
         // Override console.error to suppress MutationObserver errors and browser extension errors
         const originalConsoleError = console.error;
         console.error = function(...args) {
@@ -428,7 +451,7 @@
             </a>
         </li>
         {% endif %}
-        {% if current_user.role in ['admin', 'director', 'support'] %}
+        {% if current_user.role in ['admin', 'director', 'support', 'product_owner'] %}
         <li class="nav-item">
             <a href="{{ url_for('final_report.detailed_attendance_report') }}" class="nav-link {{ 'active' if request.path.startswith('/detailed-attendance-report') }}">
                 <i class="fas fa-list-alt nav-icon"></i>
@@ -444,14 +467,11 @@
                     </a>
                 </li>
                 {% endif %}
-                {% if current_user.role in ['admin', 'product_owner', 'director'] %}
+                {% if current_user.role == 'product_owner' %}
                 <li class="nav-item">
                     <a href="{{ url_for('dashboard.smtp_configuration') }}" class="nav-link {{ 'active' if request.path.startswith('/dashboard/smtp-configuration') }}">
                         <i class="fas fa-envelope-open-text nav-icon"></i>
-                        <span class="nav-text">Email Settings</span>
-                        {% if current_user.role != 'product_owner' %}
-                        <span class="badge bg-secondary ms-2" style="font-size: 0.6rem;">View Only</span>
-                        {% endif %}
+                        <span class="nav-text">SMTP Configuration</span>
                     </a>
                 </li>
                 {% endif %}
@@ -1312,5 +1332,10 @@
     })();
     </script>
     {% endblock %}
+    
+    <!-- Cloudflare Turnstile Script -->
+    {% if config.TURNSTILE_ENABLED and config.TURNSTILE_SITE_KEY %}
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    {% endif %}
 </body>
 </html>

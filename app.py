@@ -35,6 +35,10 @@ def create_app(config_name='default'):
     csrf = CSRFProtect(app)
     scheduler.init_app(app)
     
+    # Initialize security middleware
+    from security import setup_security_middleware
+    setup_security_middleware(app)
+    
     # Log database connection info and validate connection
     with app.app_context():
         db_url = app.config.get('SQLALCHEMY_DATABASE_URI', 'Not set')
@@ -108,6 +112,56 @@ def create_app(config_name='default'):
     def load_user(user_id):
         from models import User
         return User.query.get(int(user_id))
+    
+    # Make config available to templates
+    @app.context_processor
+    def inject_config():
+        # Smart detection: Check if we're in production based on request hostname
+        def is_production():
+            """Detect production environment based on request hostname"""
+            # Check explicit environment variable first
+            env_override = os.environ.get('TURNSTILE_ENABLED', '').lower()
+            if env_override in ['true', 'false']:
+                return env_override == 'true'
+            
+            # Check if DEBUG is disabled
+            if not app.config.get('DEBUG', True):
+                return True
+            
+            # Check FLASK_ENV
+            flask_env = os.environ.get('FLASK_ENV', '').lower()
+            if flask_env == 'production':
+                return True
+            if flask_env == 'development':
+                return False
+            
+            # Check request hostname (if available)
+            try:
+                from flask import request
+                if request and hasattr(request, 'host'):
+                    hostname = request.host.lower()
+                    # Local development indicators
+                    local_indicators = ['localhost', '127.0.0.1', '0.0.0.0', '::1']
+                    if any(indicator in hostname for indicator in local_indicators):
+                        return False
+                    # Production domain indicators
+                    production_domains = ['everlastdashboard.com', 'hr.everlastdashboard.com']
+                    if any(domain in hostname for domain in production_domains):
+                        return True
+            except:
+                pass
+            
+            # Default: assume local/development
+            return False
+        
+        # Update Turnstile enabled status based on smart detection
+        turnstile_enabled = is_production()
+        app.config['TURNSTILE_ENABLED'] = turnstile_enabled
+        
+        return dict(
+            config=app.config,
+            is_production=is_production
+        )
     
     # Add template filters
     @app.template_filter('datetime')
@@ -363,6 +417,12 @@ def create_app(config_name='default'):
         if current_user.is_authenticated:
             return redirect(url_for('dashboard.index'))
         return redirect(url_for('auth.login'))
+    
+    @app.route('/robots.txt')
+    def robots_txt():
+        """Serve robots.txt to prevent scraping"""
+        from flask import send_from_directory
+        return send_from_directory(app.static_folder, 'robots.txt')
     
     @app.errorhandler(CSRFError)
     def handle_csrf_error(e):

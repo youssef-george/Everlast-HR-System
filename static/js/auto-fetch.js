@@ -374,19 +374,30 @@ class AutoFetchSystem {
         return allowedPaths.some(path => currentPath.startsWith(path));
     }
     
+    // Helper function to create timeout signal (more compatible than AbortSignal.timeout)
+    _createTimeoutSignal(timeoutMs) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        return { controller, timeoutId };
+    }
+    
     // Fetch methods
     async fetchDashboardStats() {
         try {
+            const { controller, timeoutId } = this._createTimeoutSignal(10000);
+            
             const response = await fetch('/dashboard/api/stats', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken()
                 },
-                signal: AbortSignal.timeout ? AbortSignal.timeout(10000) : null
+                signal: controller.signal
             });
             
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             
             const result = await response.json();
             console.log('📊 Dashboard stats response:', result);
@@ -397,23 +408,30 @@ class AutoFetchSystem {
                 throw new Error(result.message || 'Failed to fetch dashboard stats');
             }
         } catch (error) {
-            console.warn('Failed to fetch dashboard stats:', error);
+            // Only log if it's not an abort (timeout) or if it's a real error
+            if (error.name !== 'AbortError' && error.name !== 'TimeoutError') {
+                console.warn('Failed to fetch dashboard stats:', error.message || error);
+            }
             return null;
         }
     }
     
     async fetchLeaveBalance() {
         try {
+            const { controller, timeoutId } = this._createTimeoutSignal(5000);
+            
             const response = await fetch('/api/leave/balances', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken()
                 },
-                signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : null
+                signal: controller.signal
             });
             
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             
             const result = await response.json();
             console.log('📊 Leave balance response:', result);
@@ -422,7 +440,10 @@ class AutoFetchSystem {
             const data = result.data || result;
             return { type: 'leave_balance', data };
         } catch (error) {
-            console.warn('Failed to fetch leave balance:', error);
+            // Only log if it's not an abort (timeout) or if it's a real error
+            if (error.name !== 'AbortError' && error.name !== 'TimeoutError') {
+                console.warn('Failed to fetch leave balance:', error.message || error);
+            }
             return null;
         }
     }
@@ -664,42 +685,56 @@ class AutoFetchSystem {
     
     async fetchAttendanceData() {
         try {
+            const { controller, timeoutId } = this._createTimeoutSignal(5000);
+            
             const response = await fetch('/api/attendance/data', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken()
                 },
-                signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : null
+                signal: controller.signal
             });
             
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             
             const data = await response.json();
             return { type: 'attendance_data', data };
         } catch (error) {
-            console.warn('Failed to fetch attendance data:', error);
+            // Only log if it's not an abort (timeout) or if it's a real error
+            if (error.name !== 'AbortError' && error.name !== 'TimeoutError') {
+                console.warn('Failed to fetch attendance data:', error.message || error);
+            }
             return null;
         }
     }
     
     async fetchAttendanceStats() {
         try {
+            const { controller, timeoutId } = this._createTimeoutSignal(5000);
+            
             const response = await fetch('/api/attendance/stats', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken()
                 },
-                signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : null
+                signal: controller.signal
             });
             
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             
             const data = await response.json();
             return { type: 'attendance_stats', data };
         } catch (error) {
-            console.warn('Failed to fetch attendance stats:', error);
+            // Only log if it's not an abort (timeout) or if it's a real error
+            if (error.name !== 'AbortError' && error.name !== 'TimeoutError') {
+                console.warn('Failed to fetch attendance stats:', error.message || error);
+            }
             return null;
         }
     }

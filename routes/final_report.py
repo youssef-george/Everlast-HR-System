@@ -825,9 +825,9 @@ def role_required(roles):
 
 @final_report_bp.route('/detailed-attendance-report')
 @login_required
-@role_required(['admin', 'director', 'support'])
+@role_required(['admin', 'director', 'support', 'product_owner'])
 def detailed_attendance_report():
-    """Detailed Attendance Report - Admin, Director, and Support only attendance report with expandable employee logs"""
+    """Detailed Attendance Report - Admin, Director, Support, and Product Owner attendance report with expandable employee logs"""
     
     try:
         # Clean up orphaned paid holiday records before processing
@@ -925,7 +925,7 @@ def detailed_attendance_report():
 
 @final_report_bp.route('/detailed-attendance-report/employee-logs/<int:user_id>', methods=['GET'])
 @login_required
-@role_required(['admin', 'director', 'support'])
+@role_required(['admin', 'director', 'support', 'product_owner'])
 def get_employee_logs(user_id):
     """API endpoint to fetch detailed attendance data for a specific employee for all days in date range"""
     logging.info(f"User {user_id} requested detailed report from {request.args.get('start_date')} to {request.args.get('end_date')}")
@@ -1182,7 +1182,7 @@ def get_employee_logs(user_id):
 
 @final_report_bp.route('/detailed-attendance-report/export')
 @login_required
-@role_required(['admin', 'director', 'support'])
+@role_required(['admin', 'director', 'support', 'product_owner'])
 def export_detailed_attendance_report():
     """Export detailed attendance report to Excel"""
     

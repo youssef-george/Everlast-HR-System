@@ -897,41 +897,58 @@ def members():
 
     # Sort users by department name, then by last name, then by first name
     def sort_users_by_department(user_list):
+        # Define department order as requested
         custom_department_order = {
             'project management': 1,
-            'human resources': 2, # HR
-            'web development': 3, # Web
-            'marketing': 4, # Marketing
-            'finance': 5, # Finance
-            'call center': 6, # Call Center
-            'housekeeping': 7 # Housekeeping
+            'human resources': 2,  # HR Department
+            'hr department': 2,     # Alternative name
+            'web development': 3,    # Web Dev Department
+            'web dev department': 3, # Alternative name
+            'information technology': 4,  # Information Technology
+            'it department': 4,      # Alternative name
+            'marketing': 5,          # Marketing
+            'finance': 6,            # Finance
+            'call center': 7,        # Call Center
+            'housekeeping': 8         # Housekeeping
         }
+        
+        def get_department_priority(user):
+            """Get department priority for sorting"""
+            if not user.department:
+                return 999  # No department goes last
+            dept_name = user.department.department_name.lower()
+            return custom_department_order.get(dept_name, 999)
+        
+        def is_manager(user):
+            """Check if user is a manager (has managed_department or role is manager)"""
+            # Check if user has managed_department relationship (list)
+            has_managed_dept = (hasattr(user, 'managed_department') and 
+                               user.managed_department and 
+                               len(user.managed_department) > 0)
+            return user.role == 'manager' or has_managed_dept
+        
+        def is_youssef_george(user):
+            """Check if user is Youssef George"""
+            return (user.first_name and user.first_name.lower() == 'youssef' and
+                   user.last_name and user.last_name.lower() == 'george')
+        
         return sorted(user_list, key=lambda user: (
-            # Custom order for specific users
-            (0,) if user.first_name.lower() == 'george' and user.last_name.lower() == 'smair' else (
-                (1,) if user.first_name.lower() == 'maged' and user.last_name.lower() == 'grace' else (
-                    # 1. Global Role Priority (Director at top)
-                    -2 if user.role == 'director' else (
-                        custom_department_order.get(user.department.department_name.lower(), 8) if user.department else 9
-                    ),
-                    # 3. Role within Department (Manager first, then Admin, then others)
-                    0 if user.role == 'manager' else (
-                        1 if user.role == 'admin' else 2
-                    ),
-                    # 4. Alphabetical by Last Name, then First Name
-                    # 4. Custom order for 'web development' team
-                    (0 if user.department and user.department.department_name.lower() == 'web development' and user.first_name.lower() == 'mostafa' and user.last_name.lower() == 'ayman' else
-                     1 if user.department and user.department.department_name.lower() == 'web development' and user.first_name.lower() == 'youssef' and user.last_name.lower() == 'george' else
-                     2 if user.department and user.department.department_name.lower() == 'web development' and user.first_name.lower() == 'youssef' and user.last_name.lower() == 'karam' else
-                     3 if user.department and user.department.department_name.lower() == 'web development' and user.first_name.lower() == 'manar' else
-                     4 if user.department and user.department.department_name.lower() == 'web development' and user.first_name.lower() == 'samir' else
-                     5 if user.department and user.department.department_name.lower() == 'web development' else
-                     0), # Default priority for other departments
-                    # 5. Alphabetical by Last Name, then First Name (for users not in custom web dev order)
-                    user.last_name.lower(),
-                    user.first_name.lower()
-                )
-            )
+            # 1. Product Owner first (priority 0)
+            0 if user.role == 'product_owner' else (
+                # 2. Directors second (priority 1)
+                1 if user.role == 'director' else 2
+            ),
+            # 3. Department order (product owners and directors already sorted, so this applies to others)
+            get_department_priority(user) if user.role not in ['product_owner', 'director'] else 0,
+            # 4. Manager first within department (0 = manager, 1 = employee)
+            0 if is_manager(user) else 1,
+            # 5. Youssef George after manager (0 = manager, 1 = Youssef George, 2 = other employees)
+            1 if (not is_manager(user) and is_youssef_george(user)) else (
+                0 if is_manager(user) else 2
+            ),
+            # 6. Alphabetical by Last Name, then First Name
+            user.last_name.lower() if user.last_name else '',
+            user.first_name.lower() if user.first_name else ''
         ))
 
     active_users = sort_users_by_department(active_users)
@@ -1308,6 +1325,7 @@ def upload_attachment(user_id):
     from werkzeug.utils import secure_filename
     import os
     from models import EmployeeAttachment
+    from security import validate_file_upload, generate_secure_filename, rate_limit
     
     user = User.query.get_or_404(user_id)
     form = EmployeeAttachmentForm()
@@ -1315,26 +1333,36 @@ def upload_attachment(user_id):
     if form.validate_on_submit():
         file = form.file.data
         if file and file.filename:
+            # Validate file upload
+            is_valid, error_msg = validate_file_upload(
+                file, 
+                allowed_types=['images', 'documents', 'archives']
+            )
+            
+            if not is_valid:
+                flash(f'File upload validation failed: {error_msg}', 'danger')
+                return redirect(url_for('dashboard.edit_user', user_id=user_id))
+            
             # Create uploads directory if it doesn't exist
             upload_dir = os.path.join(current_app.instance_path, 'uploads', 'attachments')
             os.makedirs(upload_dir, exist_ok=True)
             
-            # Generate secure filename
-            filename = secure_filename(file.filename)
-            # Add timestamp to avoid conflicts
-            timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
-            filename = f"{timestamp}_{filename}"
+            # Generate secure filename with hash
+            filename = generate_secure_filename(file.filename)
             file_path = os.path.join(upload_dir, filename)
             
             # Save file
             file.save(file_path)
+            
+            # Store absolute path in database for reliability
+            absolute_file_path = os.path.abspath(file_path)
             
             # Create attachment record
             attachment = EmployeeAttachment(
                 user_id=user_id,
                 file_name=file.filename,
                 display_name=form.display_name.data,
-                file_path=file_path,
+                file_path=absolute_file_path,
                 file_size=os.path.getsize(file_path),
                 file_type=file.content_type,
                 description=form.description.data,
@@ -1368,8 +1396,45 @@ def view_attachment(attachment_id):
     
     attachment = EmployeeAttachment.query.get_or_404(attachment_id)
     
-    if not os.path.exists(attachment.file_path):
-        flash('File not found.', 'error')
+    # Get the stored file path
+    stored_path = attachment.file_path
+    
+    # Try multiple path resolution strategies
+    file_path = None
+    possible_paths = []
+    
+    # Strategy 1: Use path as-is if it's absolute and exists
+    if os.path.isabs(stored_path) and os.path.exists(stored_path):
+        file_path = stored_path
+    else:
+        possible_paths.append(stored_path)
+        
+        # Strategy 2: Normalize the path
+        normalized = os.path.normpath(stored_path)
+        if normalized != stored_path:
+            possible_paths.append(normalized)
+        
+        # Strategy 3: Try with instance_path (for relative paths)
+        if not os.path.isabs(stored_path):
+            possible_paths.append(os.path.join(current_app.instance_path, stored_path))
+            possible_paths.append(os.path.join(current_app.instance_path, normalized))
+        
+        # Strategy 4: Try with uploads/attachments directory
+        upload_dir = os.path.join(current_app.instance_path, 'uploads', 'attachments')
+        filename = os.path.basename(stored_path)
+        possible_paths.append(os.path.join(upload_dir, filename))
+        
+        # Try each possible path
+        for path in possible_paths:
+            if os.path.exists(path):
+                file_path = path
+                break
+    
+    # If still not found, log and redirect
+    if not file_path or not os.path.exists(file_path):
+        logging.error(f"Attachment file not found. Stored path: {attachment.file_path}")
+        logging.error(f"Tried paths: {possible_paths}")
+        flash('File not found. The file may have been moved or deleted.', 'error')
         return redirect(url_for('dashboard.edit_user', user_id=attachment.user_id))
     
     # Get file extension to determine content type
@@ -1378,7 +1443,7 @@ def view_attachment(attachment_id):
     # For PDFs and images, display in browser
     if file_ext in ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']:
         return send_file(
-            attachment.file_path,
+            file_path,
             as_attachment=False,
             mimetype=None  # Let Flask auto-detect
         )
@@ -1398,12 +1463,49 @@ def download_attachment(attachment_id):
     
     attachment = EmployeeAttachment.query.get_or_404(attachment_id)
     
-    if not os.path.exists(attachment.file_path):
-        flash('File not found.', 'error')
+    # Get the stored file path
+    stored_path = attachment.file_path
+    
+    # Try multiple path resolution strategies (same as view_attachment)
+    file_path = None
+    possible_paths = []
+    
+    # Strategy 1: Use path as-is if it's absolute and exists
+    if os.path.isabs(stored_path) and os.path.exists(stored_path):
+        file_path = stored_path
+    else:
+        possible_paths.append(stored_path)
+        
+        # Strategy 2: Normalize the path
+        normalized = os.path.normpath(stored_path)
+        if normalized != stored_path:
+            possible_paths.append(normalized)
+        
+        # Strategy 3: Try with instance_path (for relative paths)
+        if not os.path.isabs(stored_path):
+            possible_paths.append(os.path.join(current_app.instance_path, stored_path))
+            possible_paths.append(os.path.join(current_app.instance_path, normalized))
+        
+        # Strategy 4: Try with uploads/attachments directory
+        upload_dir = os.path.join(current_app.instance_path, 'uploads', 'attachments')
+        filename = os.path.basename(stored_path)
+        possible_paths.append(os.path.join(upload_dir, filename))
+        
+        # Try each possible path
+        for path in possible_paths:
+            if os.path.exists(path):
+                file_path = path
+                break
+    
+    # If still not found, log and redirect
+    if not file_path or not os.path.exists(file_path):
+        logging.error(f"Attachment file not found. Stored path: {attachment.file_path}")
+        logging.error(f"Tried paths: {possible_paths}")
+        flash('File not found. The file may have been moved or deleted.', 'error')
         return redirect(url_for('dashboard.edit_user', user_id=attachment.user_id))
     
     return send_file(
-        attachment.file_path,
+        file_path,
         as_attachment=True,
         download_name=attachment.file_name
     )
@@ -1418,25 +1520,99 @@ def delete_attachment(attachment_id):
     
     attachment = EmployeeAttachment.query.get_or_404(attachment_id)
     user_id = attachment.user_id
+    display_name = attachment.display_name
     
     try:
-        # Delete file from filesystem
-        if os.path.exists(attachment.file_path):
-            os.remove(attachment.file_path)
+        # Get the stored file path
+        stored_path = attachment.file_path
+        
+        # Try multiple path resolution strategies (same as view/download)
+        file_path = None
+        possible_paths = []
+        
+        # Strategy 1: Use path as-is if it's absolute and exists
+        if os.path.isabs(stored_path) and os.path.exists(stored_path):
+            file_path = stored_path
+        else:
+            possible_paths.append(stored_path)
+            
+            # Strategy 2: Normalize the path
+            normalized = os.path.normpath(stored_path)
+            if normalized != stored_path:
+                possible_paths.append(normalized)
+            
+            # Strategy 3: Try with instance_path (for relative paths)
+            if not os.path.isabs(stored_path):
+                possible_paths.append(os.path.join(current_app.instance_path, stored_path))
+                possible_paths.append(os.path.join(current_app.instance_path, normalized))
+            
+            # Strategy 4: Try with uploads/attachments directory
+            upload_dir = os.path.join(current_app.instance_path, 'uploads', 'attachments')
+            filename = os.path.basename(stored_path)
+            possible_paths.append(os.path.join(upload_dir, filename))
+            
+            # Try each possible path
+            for path in possible_paths:
+                if os.path.exists(path):
+                    file_path = path
+                    break
+        
+        # Delete file from filesystem if found
+        if file_path and os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+                logging.info(f"Deleted attachment file: {file_path}")
+            except Exception as e:
+                logging.warning(f"Could not delete attachment file {file_path}: {str(e)}")
+        else:
+            # Try additional strategies before giving up
+            upload_dir_root = os.path.join(os.path.dirname(current_app.instance_path), 'uploads', 'attachments')
+            filename = os.path.basename(stored_path)
+            if filename:
+                alt_path = os.path.join(upload_dir_root, filename)
+                if os.path.exists(alt_path):
+                    try:
+                        os.remove(alt_path)
+                        logging.info(f"Deleted attachment file from alternate location: {alt_path}")
+                    except Exception as e:
+                        logging.warning(f"Could not delete attachment file from alternate location {alt_path}: {str(e)}")
+            
+            logging.warning(f"Attachment file not found for deletion. Stored path: {stored_path}, Tried: {possible_paths}")
         
         # Delete database record
         db.session.delete(attachment)
         db.session.commit()
-        return jsonify({
-            'success': True,
-            'message': f'Attachment "{attachment.display_name}" deleted successfully.'
-        })
+        
+        # Return JSON for AJAX requests (check Accept header or X-Requested-With)
+        accept_header = request.headers.get('Accept', '')
+        if ('application/json' in accept_header or 
+            request.headers.get('X-Requested-With') == 'XMLHttpRequest' or
+            request.is_json):
+            return jsonify({
+                'success': True,
+                'message': f'Attachment "{display_name}" deleted successfully.'
+            })
+        else:
+            # For form submissions, redirect
+            flash(f'Attachment "{display_name}" deleted successfully.', 'success')
+            return redirect(url_for('dashboard.edit_user', user_id=user_id))
+            
     except Exception as e:
         db.session.rollback()
-        return jsonify({
-            'success': False,
-            'message': f'Error deleting attachment: {str(e)}'
-        }), 500
+        logging.error(f"Error deleting attachment {attachment_id}: {str(e)}", exc_info=True)
+        
+        # Return JSON for AJAX requests (check Accept header or X-Requested-With)
+        accept_header = request.headers.get('Accept', '')
+        if ('application/json' in accept_header or 
+            request.headers.get('X-Requested-With') == 'XMLHttpRequest' or
+            request.is_json):
+            return jsonify({
+                'success': False,
+                'message': f'Error deleting attachment: {str(e)}'
+            }), 500
+        else:
+            flash(f'Error deleting attachment: {str(e)}', 'danger')
+            return redirect(url_for('dashboard.edit_user', user_id=user_id))
 
 # Leave Management Routes
 @dashboard_bp.route('/leave-types')
@@ -1940,9 +2116,9 @@ def api_stats():
 
 @dashboard_bp.route('/smtp-configuration')
 @login_required
-@role_required(['admin', 'product_owner'])
+@role_required(['product_owner'])
 def smtp_configuration():
-    """SMTP Configuration management for admin only"""
+    """SMTP Configuration management for product owner only"""
     # Query active SMTP configuration (PostgreSQL boolean comparison)
     config = SMTPConfiguration.query.filter(SMTPConfiguration.is_active == True).first()
     form = SMTPConfigurationForm()

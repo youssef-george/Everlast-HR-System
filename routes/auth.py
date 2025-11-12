@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, session
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_wtf.csrf import CSRFError
@@ -6,6 +6,7 @@ from forms import LoginForm, RegistrationForm
 from models import db, User, Department
 from datetime import datetime
 import logging
+import os
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -17,9 +18,31 @@ def login():
     
     form = LoginForm()
     
+    # Debug: Check Turnstile config
+    turnstile_enabled = current_app.config.get('TURNSTILE_ENABLED', False)
+    turnstile_site_key = current_app.config.get('TURNSTILE_SITE_KEY', '')
+    logging.debug(f'Turnstile config - Enabled: {turnstile_enabled}, Site Key: {turnstile_site_key[:20] if turnstile_site_key else "NOT SET"}')
+    
     # When the form is submitted and passes validation
     if request.method == 'POST':
         try:
+            # Verify Turnstile if enabled (only in production)
+            # Smart detection: Check if we're in production
+            is_prod = (not current_app.config.get('DEBUG', True)) or \
+                     (os.environ.get('FLASK_ENV', '').lower() == 'production') or \
+                     (request.host and 'everlastdashboard.com' in request.host.lower())
+            
+            if is_prod and current_app.config.get('TURNSTILE_ENABLED'):
+                from turnstile_helper import verify_turnstile_token
+                turnstile_token = request.form.get('cf-turnstile-response')
+                remote_ip = request.remote_addr
+                
+                is_valid, error_msg = verify_turnstile_token(turnstile_token, remote_ip)
+                if not is_valid:
+                    flash(f'CAPTCHA verification failed: {error_msg}', 'danger')
+                    logging.warning(f'Turnstile verification failed for login attempt from {remote_ip}')
+                    return render_template('auth/login.html', form=form, title='Login')
+            
             # Validate the form which will include CSRF check
             if form.validate_on_submit():
                 # Handle potential duplicate emails - prioritize active users
@@ -99,6 +122,18 @@ def register():
     form.department_id.choices = [(0, 'No Department')] + [(d.id, d.department_name) for d in departments]
     
     if form.validate_on_submit():
+        # Verify Turnstile if enabled
+        if current_app.config.get('TURNSTILE_ENABLED'):
+            from turnstile_helper import verify_turnstile_token
+            turnstile_token = request.form.get('cf-turnstile-response')
+            remote_ip = request.remote_addr
+            
+            is_valid, error_msg = verify_turnstile_token(turnstile_token, remote_ip)
+            if not is_valid:
+                flash(f'CAPTCHA verification failed: {error_msg}', 'danger')
+                logging.warning(f'Turnstile verification failed for registration attempt from {remote_ip}')
+                return render_template('auth/register.html', form=form, title='Register New User', departments=departments)
+        
         try:
             # Check if user with this email already exists
             existing_user = User.query.filter_by(email=form.email.data).first()

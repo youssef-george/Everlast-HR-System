@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from datetime import datetime, date, timedelta
 from models import db, User, LeaveRequest, PermissionRequest, DailyAttendance, Department, LeaveBalance, LeaveType, PaidHoliday, AttendanceLog
 from helpers import role_required, get_dashboard_stats, get_employees_for_manager
+from security import rate_limit, require_human
 import logging
 import hashlib
 import hmac
@@ -12,6 +13,7 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 @api_bp.route('/dashboard/stats')
 @login_required
+@rate_limit(max_requests=60, window=60)  # 60 requests per minute
 def dashboard_stats():
     """API endpoint to get dashboard statistics for auto-fetch"""
     try:
@@ -29,6 +31,7 @@ def dashboard_stats():
 
 @api_bp.route('/requests/recent')
 @login_required
+@rate_limit(max_requests=60, window=60)  # 60 requests per minute
 def recent_requests():
     """API endpoint to get recent requests for auto-fetch"""
     try:
@@ -117,6 +120,7 @@ def recent_requests():
 @api_bp.route('/team/data')
 @login_required
 @role_required(['manager', 'admin', 'product_owner', 'director'])
+@rate_limit(max_requests=60, window=60)
 def team_data():
     """API endpoint to get team data for managers"""
     try:
@@ -160,6 +164,7 @@ def team_data():
 @api_bp.route('/approvals/pending')
 @login_required
 @role_required(['manager', 'admin', 'product_owner', 'director'])
+@rate_limit(max_requests=60, window=60)
 def pending_approvals():
     """API endpoint to get pending approvals"""
     try:
@@ -242,6 +247,7 @@ def pending_approvals():
 @api_bp.route('/requests/all-pending')
 @login_required
 @role_required(['admin', 'product_owner', 'director'])
+@rate_limit(max_requests=60, window=60)
 def all_pending_requests():
     """API endpoint to get all pending requests for admin/director"""
     try:
@@ -301,6 +307,7 @@ def all_pending_requests():
 @api_bp.route('/analytics/departments')
 @login_required
 @role_required(['admin', 'product_owner', 'director'])
+@rate_limit(max_requests=30, window=60)
 def department_analytics():
     """API endpoint to get department analytics"""
     try:
@@ -343,6 +350,7 @@ def department_analytics():
 @api_bp.route('/users/management')
 @login_required
 @role_required(['admin', 'product_owner', 'director'])
+@rate_limit(max_requests=30, window=60)
 def user_management():
     """API endpoint to get user management data"""
     try:
@@ -384,6 +392,7 @@ def user_management():
 @api_bp.route('/analytics/company')
 @login_required
 @role_required('director')
+@rate_limit(max_requests=30, window=60)
 def company_analytics():
     """API endpoint to get company-wide analytics for director"""
     try:
@@ -446,6 +455,7 @@ def company_analytics():
 @api_bp.route('/requests/overview')
 @login_required
 @role_required('director')
+@rate_limit(max_requests=30, window=60)
 def requests_overview():
     """API endpoint to get all requests overview for director"""
     try:
@@ -488,6 +498,7 @@ def requests_overview():
 
 @api_bp.route('/leave/requests')
 @login_required
+@rate_limit(max_requests=60, window=60)
 def leave_requests():
     """API endpoint to get leave requests"""
     try:

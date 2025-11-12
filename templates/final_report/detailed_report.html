@@ -2257,14 +2257,14 @@ function addDayExpandListeners() {
             const button = e.target.closest('.day-expand-btn');
             const date = button.getAttribute('data-date');
             const userId = button.getAttribute('data-user-id');
-            const icon = button.querySelector('.day-expand-icon');
+            // Find icon - it's an <i> tag inside the button, not necessarily with .day-expand-icon class
+            const icon = button.querySelector('i.fas') || button.querySelector('i') || button.querySelector('.day-expand-icon');
             const detailRow = document.querySelector(`tr.day-detail-row[data-date="${date}"]`);
             
             console.log('🖱️ Day expand button clicked for date:', date);
             console.log('   Button element:', button);
             console.log('   Detail row found:', !!detailRow);
-            
-            console.log(`Day expand button clicked for date: ${date}`);
+            console.log('   Icon found:', !!icon);
             
             if (detailRow) {
                 const isExpanded = detailRow.style.display !== 'none';
@@ -2273,16 +2273,20 @@ function addDayExpandListeners() {
                 if (isExpanded) {
                     // Collapse
                     detailRow.style.display = 'none';
-                    icon.classList.remove('fa-chevron-down');
-                    icon.classList.add('fa-chevron-right');
+                    if (icon) {
+                        icon.classList.remove('fa-chevron-down');
+                        icon.classList.add('fa-chevron-right');
+                    }
                     button.classList.remove('btn-primary');
                     button.classList.add('btn-outline-primary');
                     console.log('📉 Collapsed logs for date:', date);
                 } else {
                     // Expand
                     detailRow.style.display = 'table-row';
-                    icon.classList.remove('fa-chevron-right');
-                    icon.classList.add('fa-chevron-down');
+                    if (icon) {
+                        icon.classList.remove('fa-chevron-right');
+                        icon.classList.add('fa-chevron-down');
+                    }
                     button.classList.remove('btn-outline-primary');
                     button.classList.add('btn-primary');
                     console.log('📈 Expanded logs for date:', date);

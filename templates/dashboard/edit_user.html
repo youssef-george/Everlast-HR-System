@@ -323,11 +323,15 @@
                                                            class="btn btn-outline-primary btn-sm">
                                                             <i class="fas fa-download"></i> Download
                                                         </a>
-                                                        <a href="{{ url_for('dashboard.delete_attachment', attachment_id=attachment.id) }}" 
-                                                           class="btn btn-outline-danger btn-sm"
-                                                           onclick="return confirm('Are you sure you want to delete this attachment?')">
+                                                        <button type="button" 
+                                                                class="btn btn-outline-danger btn-sm delete-attachment-btn" 
+                                                                data-attachment-id="{{ attachment.id }}"
+                                                                title="Delete File"
+                                                                data-bs-toggle="tooltip"
+                                                                onclick="console.log('🔴 INLINE ONCLICK FIRED'); event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation(); var btn = this; var id = btn.getAttribute('data-attachment-id'); console.log('🔴 Attachment ID from onclick:', id); if(id && window.deleteAttachment) { console.log('🔴 Calling deleteAttachment with ID:', id); window.deleteAttachment(id); } else { console.error('❌ deleteAttachment not available or ID missing', {id: id, func: typeof window.deleteAttachment}); } return false;"
+                                                                style="cursor: pointer;">
                                                             <i class="fas fa-trash"></i> Delete
-                                                        </a>
+                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -415,6 +419,119 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 <script>
+    // Define deleteAttachment function IMMEDIATELY (before DOMContentLoaded)
+    (function() {
+        window.deleteAttachment = function(attachmentId) {
+            console.log('🔴 deleteAttachment() called with ID:', attachmentId);
+            
+            if (confirm('Are you sure you want to delete this attachment? This action cannot be undone.')) {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                                 document.querySelector('meta[name=csrf-token]')?.getAttribute('content');
+                
+                if (!csrfToken) {
+                    alert('Security token not found. Please refresh the page and try again.');
+                    return false;
+                }
+                
+                console.log('📤 Sending POST request to:', '/dashboard/delete-attachment/' + attachmentId);
+                
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '/dashboard/delete-attachment/' + attachmentId, true);
+                xhr.setRequestHeader('X-CSRFToken', csrfToken);
+                xhr.setRequestHeader('X-CSRF-Token', csrfToken);
+                xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                xhr.setRequestHeader('Accept', 'application/json');
+                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                xhr.withCredentials = true;
+                
+                xhr.onload = function() {
+                    console.log('📥 Response received:', xhr.status, xhr.statusText);
+                    if (xhr.status === 200) {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            if (data.success) {
+                                console.log('✅ Delete successful, reloading page');
+                                location.reload();
+                            } else {
+                                alert('Error: ' + (data.message || 'Unknown error'));
+                            }
+                        } catch (e) {
+                            console.error('❌ Parse error:', e);
+                            alert('Error parsing server response');
+                        }
+                    } else {
+                        console.error('❌ HTTP Error:', xhr.status, xhr.statusText);
+                        alert('Error: ' + xhr.statusText);
+                    }
+                };
+                
+                xhr.onerror = function() {
+                    console.error('❌ Network error');
+                    alert('Network error. Please check your connection.');
+                };
+                
+                xhr.send('csrf_token=' + encodeURIComponent(csrfToken));
+            }
+            return false;
+        };
+        console.log('✅ deleteAttachment function defined globally');
+    })();
+
+    // Delete attachment functionality - ULTRA AGGRESSIVE approach
+    // Intercept ALL clicks on delete buttons at the document level - RUNS IMMEDIATELY
+    (function() {
+        function handleDeleteClick(e) {
+            // Check if clicked element or its parent is a delete button
+            let deleteBtn = e.target.closest('.delete-attachment-btn');
+            
+            // Also check if the clicked element itself has the class
+            if (!deleteBtn && e.target.classList && e.target.classList.contains('delete-attachment-btn')) {
+                deleteBtn = e.target;
+            }
+            
+            // Also check if clicked element is inside a delete button (like an icon)
+            if (!deleteBtn) {
+                const icon = e.target.closest('i.fa-trash');
+                if (icon) {
+                    deleteBtn = icon.closest('.delete-attachment-btn');
+                }
+            }
+            
+            if (deleteBtn) {
+                console.log('🔴 DELETE BUTTON CLICKED - INTERCEPTING (Document Level)');
+                console.log('🔴 Event type:', e.type);
+                console.log('🔴 Target:', e.target);
+                console.log('🔴 Current target:', e.currentTarget);
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                
+                const attachmentId = deleteBtn.getAttribute('data-attachment-id');
+                
+                if (!attachmentId) {
+                    console.error('❌ Attachment ID not found');
+                    return false;
+                }
+                
+                console.log('✅ Attachment ID found:', attachmentId);
+                console.log('✅ deleteAttachment available:', typeof window.deleteAttachment);
+                
+                if (window.deleteAttachment) {
+                    window.deleteAttachment(attachmentId);
+                } else {
+                    console.error('❌ deleteAttachment function not available');
+                    alert('Delete function not loaded. Please refresh the page.');
+                }
+                
+                return false;
+            }
+        }
+        
+        // Attach immediately (before DOMContentLoaded) - use capture phase
+        document.addEventListener('click', handleDeleteClick, true);
+        console.log('✅ Delete attachment handler attached at document level (capture phase)');
+    })();
+
     document.addEventListener('DOMContentLoaded', function() {
         // Password strength validation
         const newPasswordInput = document.getElementById('new_password');

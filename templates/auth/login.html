@@ -139,7 +139,10 @@
                         <label for="{{ form.password.id }}" class="form-label">Password</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                            {{ form.password(class="form-control", placeholder="Enter your password") }}
+                            {{ form.password(class="form-control", placeholder="Enter your password", id="password-input") }}
+                            <button type="button" class="btn btn-outline-secondary" id="toggle-password" style="border-left: 0; border-top-right-radius: 0.375rem; border-bottom-right-radius: 0.375rem;">
+                                <i class="fas fa-eye" id="password-eye-icon"></i>
+                            </button>
                         </div>
                         {% if form.password.errors %}
                             <div class="text-danger mt-1">
@@ -155,6 +158,18 @@
                         {{ form.remember(class="form-check-input") }}
                         <label class="form-check-label" for="{{ form.remember.id }}">Remember me</label>
                     </div>
+                    
+                    <!-- Cloudflare Turnstile - Only in Production -->
+                    {% if is_production and config.TURNSTILE_ENABLED and config.TURNSTILE_SITE_KEY %}
+                    <div class="mb-3 d-flex justify-content-center" id="turnstile-container" style="min-height: 65px; padding: 10px;">
+                        <div class="cf-turnstile" 
+                             data-sitekey="{{ config.TURNSTILE_SITE_KEY }}" 
+                             data-theme="light" 
+                             data-size="normal"
+                             style="display: block !important; visibility: visible !important;">
+                        </div>
+                    </div>
+                    {% endif %}
                     
                     <!-- Submit Button -->
                     <div class="d-grid">
@@ -206,6 +221,71 @@
             sessionStorage.removeItem('everlast_sidebar_state');
             sessionStorage.removeItem('everlast_user_session');
         }
+        
+        // Password visibility toggle
+        const passwordInput = document.getElementById('password-input');
+        const togglePasswordBtn = document.getElementById('toggle-password');
+        const passwordEyeIcon = document.getElementById('password-eye-icon');
+        
+        if (passwordInput && togglePasswordBtn && passwordEyeIcon) {
+            togglePasswordBtn.addEventListener('click', function() {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                
+                // Toggle icon between eye and eye-slash
+                if (type === 'text') {
+                    passwordEyeIcon.classList.remove('fa-eye');
+                    passwordEyeIcon.classList.add('fa-eye-slash');
+                } else {
+                    passwordEyeIcon.classList.remove('fa-eye-slash');
+                    passwordEyeIcon.classList.add('fa-eye');
+                }
+            });
+        }
+        
+        // Load and initialize Turnstile - Only in Production
+        {% if is_production and config.TURNSTILE_ENABLED and config.TURNSTILE_SITE_KEY %}
+        (function() {
+            const turnstileScript = document.createElement('script');
+            turnstileScript.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+            turnstileScript.async = true;
+            turnstileScript.defer = true;
+            turnstileScript.onload = function() {
+                console.log('Turnstile script loaded successfully');
+                // Widget should render automatically when script loads
+                const container = document.querySelector('.cf-turnstile');
+                if (container) {
+                    console.log('Turnstile container found, widget should render');
+                    // Wait a bit and check if widget rendered
+                    setTimeout(function() {
+                        const widget = container.querySelector('iframe') || container.querySelector('[id^="cf-"]');
+                        if (!widget && typeof turnstile !== 'undefined') {
+                            console.log('Widget not auto-rendered, attempting manual render');
+                            try {
+                                turnstile.render(container, {
+                                    sitekey: '{{ config.TURNSTILE_SITE_KEY }}',
+                                    theme: 'light',
+                                    size: 'normal'
+                                });
+                            } catch (e) {
+                                console.error('Error manually rendering Turnstile:', e);
+                            }
+                        } else if (widget) {
+                            console.log('Turnstile widget rendered successfully');
+                        }
+                    }, 1000);
+                } else {
+                    console.error('Turnstile container not found');
+                }
+            };
+            turnstileScript.onerror = function() {
+                console.error('Failed to load Turnstile script - check CSP and network');
+            };
+            document.head.appendChild(turnstileScript);
+        })();
+        {% else %}
+        console.log('Turnstile disabled - running in local/development mode');
+        {% endif %}
     </script>
 </body>
 </html>

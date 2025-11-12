@@ -225,6 +225,13 @@
                     </div>
                     
                     
+                    <!-- Cloudflare Turnstile - Only in Production -->
+                    {% if is_production and config.TURNSTILE_ENABLED and config.TURNSTILE_SITE_KEY %}
+                    <div class="mb-3 d-flex justify-content-center">
+                        <div class="cf-turnstile" data-sitekey="{{ config.TURNSTILE_SITE_KEY }}" data-theme="light"></div>
+                    </div>
+                    {% endif %}
+                    
                     <!-- Submit Button -->
                     <div class="d-flex justify-content-end mt-4">
                         <a href="{{ url_for('dashboard.index') }}" class="btn btn-light me-2">Cancel</a>
