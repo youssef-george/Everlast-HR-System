@@ -29,6 +29,7 @@
     <link href="{{ url_for('static', filename='css/mobile-colors.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/mobile-tables.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/mobile-sidebar.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/mobile-complete-fix.css') }}" rel="stylesheet">
     
     {% block extra_css %}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -43,19 +44,32 @@
         // Suppress ALL errors from index.ts files and Chrome extensions immediately
         const originalError = window.onerror;
         window.onerror = function(msg, source, lineno, colno, error) {
-            const fullInfo = (msg + ' ' + (source || '') + ' ' + (error && error.stack ? error.stack : '')).toLowerCase();
+            const msgStr = String(msg || '').toLowerCase();
+            const srcStr = String(source || '').toLowerCase();
+            const stackStr = (error && error.stack ? String(error.stack) : '').toLowerCase();
+            const fullInfo = msgStr + ' ' + srcStr + ' ' + stackStr;
+            
+            // Suppress MutationObserver errors
             if (fullInfo.includes('mutationobserver') || 
                 fullInfo.includes('parameter 1 is not of type') ||
-                fullInfo.includes('index.ts-89f8331b.js') ||
+                fullInfo.includes('failed to execute \'observe\'') ||
+                (fullInfo.includes('observe') && fullInfo.includes('not of type'))) {
+                return true; // Suppress error
+            }
+            
+            // Suppress index.ts and extension-related errors
+            if (fullInfo.includes('index.ts-89f8331b.js') ||
                 fullInfo.includes('index.ts-loader3.js') ||
                 fullInfo.includes('index.ts-loader') ||
                 fullInfo.includes('index.js-loader') ||
                 fullInfo.includes('index.tsx-loader') ||
                 fullInfo.includes('chrome-extension://') ||
+                fullInfo.includes('extension context invalidated') ||
                 fullInfo.includes('failed to fetch dynamically imported module') ||
-                (fullInfo.includes('observe') && fullInfo.includes('not of type'))) {
+                srcStr.includes('vendor.js') && (fullInfo.includes('extension') || fullInfo.includes('invalidated'))) {
                 return true; // Suppress error
             }
+            
             if (originalError) {
                 return originalError.apply(this, arguments);
             }
@@ -96,11 +110,14 @@
             if (message.includes('runtime.lastError') || 
                 message.includes('message channel closed') ||
                 message.includes('Extension context invalidated') ||
+                message.includes('extension context invalidated') ||
                 message.includes('A listener indicated an asynchronous response') ||
                 message.includes('Failed to fetch dynamically imported module') ||
                 message.includes('chrome-extension://') ||
                 fullMessage.includes('chrome-extension://') ||
                 fullMessage.includes('failed to fetch dynamically imported module') ||
+                fullMessage.includes('extension context invalidated') ||
+                fullMessage.includes('vendor.js') && (fullMessage.includes('extension') || fullMessage.includes('invalidated')) ||
                 fullMessage.includes('index.tsx-') ||
                 fullMessage.includes('index.js-') ||
                 fullMessage.includes('index.ts-')) {
@@ -134,18 +151,29 @@
             }
         }, true);
         
-        // Suppress unhandled promise rejections related to MutationObserver
+        // Suppress unhandled promise rejections related to MutationObserver and extensions
         window.addEventListener('unhandledrejection', function(event) {
             const reason = event.reason;
             const message = (reason && reason.message) ? reason.message : String(reason || '');
             const stack = (reason && reason.stack) ? reason.stack : '';
+            const fullInfo = (message + ' ' + stack).toLowerCase();
             
             // Catch all MutationObserver errors
-            if (message.includes('MutationObserver') || 
-                message.includes('parameter 1 is not of type') || 
-                message.includes('Failed to execute \'observe\'') ||
-                message.includes('observe') && message.includes('not of type') ||
-                stack.includes('index.ts') && (message.includes('observe') || message.includes('MutationObserver'))) {
+            if (fullInfo.includes('mutationobserver') || 
+                fullInfo.includes('parameter 1 is not of type') || 
+                fullInfo.includes('failed to execute \'observe\'') ||
+                (fullInfo.includes('observe') && fullInfo.includes('not of type')) ||
+                (stack.includes('index.ts') && (fullInfo.includes('observe') || fullInfo.includes('mutationobserver')))) {
+                // Silently suppress
+                event.preventDefault();
+                event.stopPropagation();
+                return false;
+            }
+            
+            // Catch Chrome extension errors
+            if (fullInfo.includes('extension context invalidated') ||
+                fullInfo.includes('chrome-extension://') ||
+                (fullInfo.includes('vendor.js') && (fullInfo.includes('extension') || fullInfo.includes('invalidated')))) {
                 // Silently suppress
                 event.preventDefault();
                 event.stopPropagation();
@@ -1068,15 +1096,20 @@
     
     // Immediate error handler for errors that occur during page load
     window.addEventListener('error', function(event) {
+        const msg = String(event.message || '').toLowerCase();
+        const src = String(event.filename || '').toLowerCase();
+        
         // Catch all MutationObserver and related errors
         if (event.message && (
-            event.message.includes('MutationObserver') ||
-            event.message.includes('parameter 1 is not of type') ||
-            event.message.includes('Failed to execute \'observe\'') ||
-            event.message.includes('index.ts-') ||
-            event.message.includes('TypeError: Failed to execute')
+            msg.includes('mutationobserver') ||
+            msg.includes('parameter 1 is not of type') ||
+            msg.includes('failed to execute \'observe\'') ||
+            msg.includes('index.ts-') ||
+            msg.includes('typeerror: failed to execute') ||
+            msg.includes('extension context invalidated') ||
+            (src.includes('vendor.js') && (msg.includes('extension') || msg.includes('invalidated')))
         )) {
-            console.warn('External script error caught and suppressed (immediate):', event.message);
+            // Silently suppress - no console output
             event.preventDefault();
             return true;
         }
@@ -1111,10 +1144,24 @@
             if ((source.includes('index.ts') || source.includes('index.ts-') || 
                  source.includes('index.ts-loader') || source.includes('index.ts-89f8331b') ||
                  source.includes('index.ts-loader3') || source.includes('index.js-loader') ||
-                 source.includes('index.tsx-loader') || source.includes('chrome-extension://')) && 
+                 source.includes('index.tsx-loader') || source.includes('chrome-extension://') ||
+                 source.includes('vendor.js')) && 
                 (message.includes('observe') || message.includes('MutationObserver') || 
                  message.includes('parameter 1 is not of type') ||
-                 message.includes('Failed to fetch dynamically imported module'))) {
+                 message.includes('Failed to fetch dynamically imported module') ||
+                 message.includes('Extension context invalidated') ||
+                 message.includes('extension context invalidated'))) {
+                // Silently suppress
+                event.preventDefault();
+                event.stopPropagation();
+                return false;
+            }
+            
+            // Specifically catch "Extension context invalidated" errors from vendor.js
+            if ((source.includes('vendor.js') || fullInfo.includes('vendor.js')) && 
+                (message.includes('Extension context invalidated') || 
+                 message.includes('extension context invalidated') ||
+                 fullInfo.includes('extension context invalidated'))) {
                 // Silently suppress
                 event.preventDefault();
                 event.stopPropagation();
@@ -1162,14 +1209,19 @@
                 message.includes('Failed to execute \'observe\'') ||
                 message.includes('Failed to fetch dynamically imported module') ||
                 message.includes('chrome-extension://') ||
+                message.includes('Extension context invalidated') ||
+                message.includes('extension context invalidated') ||
                 (message.includes('observe') && message.includes('not of type')) ||
                 (stack.includes('index.ts') && (message.includes('observe') || message.includes('MutationObserver'))) ||
                 (stack.includes('chrome-extension://')) ||
+                (stack.includes('vendor.js') && (stack.includes('extension') || stack.includes('invalidated'))) ||
                 fullInfo.includes('index.ts-89f8331b.js') ||
                 fullInfo.includes('index.ts-loader3.js') ||
                 fullInfo.includes('index.ts-loader') ||
                 fullInfo.includes('index.js-loader') ||
                 fullInfo.includes('index.tsx-loader') ||
+                fullInfo.includes('extension context invalidated') ||
+                (fullInfo.includes('vendor.js') && (fullInfo.includes('extension') || fullInfo.includes('invalidated'))) ||
                 fullInfo.includes('chrome-extension://')) {
                 // Silently suppress
                 event.preventDefault();

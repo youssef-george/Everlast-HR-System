@@ -517,25 +517,56 @@ if __name__ == '__main__':
     local_ip = get_local_ip()
     
     # Print network access information
-    print("\n" + "=" * 70)
-    print("🚀 EverLast ERP Server Starting")
-    print("=" * 70)
-    print(f"\n📍 Server Configuration:")
-    print(f"   • Host: 0.0.0.0 (Listening on all network interfaces)")
-    print(f"   • Port: {port}")
-    print(f"\n🌐 Network Access URLs:")
-    print(f"   • Local:     http://localhost:{port}")
-    print(f"   • Local:     http://127.0.0.1:{port}")
-    if local_ip != '127.0.0.1':
-        print(f"   • Network:   http://{local_ip}:{port}")
-    print(f"\n🔐 Login URL:")
-    if local_ip != '127.0.0.1':
-        print(f"   • http://{local_ip}:{port}/auth/login")
-    print(f"   • http://localhost:{port}/auth/login")
-    print(f"\n💡 To access from other devices on your network:")
-    print(f"   1. Make sure Windows Firewall allows port {port}")
-    print(f"   2. Use the Network URL above from any device on the same network")
-    print(f"   3. All devices must be on the same local network (same router)")
-    print("\n" + "=" * 70 + "\n")
+    import sys
+    import io
+    # Set UTF-8 encoding for Windows console
+    if sys.platform == 'win32':
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+    
+    try:
+        print("\n" + "=" * 70)
+        print("EverLast ERP Server Starting")
+        print("=" * 70)
+        print(f"\nServer Configuration:")
+        print(f"   - Host: 0.0.0.0 (Listening on all network interfaces)")
+        print(f"   - Port: {port}")
+        print(f"\nNetwork Access URLs:")
+        print(f"   - Local:     http://localhost:{port}")
+        print(f"   - Local:     http://127.0.0.1:{port}")
+        if local_ip != '127.0.0.1':
+            print(f"   - Network:   http://{local_ip}:{port}")
+        print(f"\nLogin URL:")
+        if local_ip != '127.0.0.1':
+            print(f"   - http://{local_ip}:{port}/auth/login")
+        print(f"   - http://localhost:{port}/auth/login")
+        print(f"\nTo access from other devices on your network:")
+        print(f"   1. Make sure Windows Firewall allows port {port}")
+        print(f"   2. Use the Network URL above from any device on the same network")
+        print(f"   3. All devices must be on the same local network (same router)")
+        print("\n" + "=" * 70 + "\n")
+    except UnicodeEncodeError:
+        # Fallback without emojis if encoding still fails
+        print("\n" + "=" * 70)
+        print("EverLast ERP Server Starting")
+        print("=" * 70)
+        print(f"\nServer Configuration:")
+        print(f"   - Host: 0.0.0.0 (Listening on all network interfaces)")
+        print(f"   - Port: {port}")
+        print(f"\nNetwork Access URLs:")
+        print(f"   - Local:     http://localhost:{port}")
+        print(f"   - Local:     http://127.0.0.1:{port}")
+        if local_ip != '127.0.0.1':
+            print(f"   - Network:   http://{local_ip}:{port}")
+        print(f"\nLogin URL:")
+        if local_ip != '127.0.0.1':
+            print(f"   - http://{local_ip}:{port}/auth/login")
+        print(f"   - http://localhost:{port}/auth/login")
+        print(f"\nTo access from other devices on your network:")
+        print(f"   1. Make sure Windows Firewall allows port {port}")
+        print(f"   2. Use the Network URL above from any device on the same network")
+        print(f"   3. All devices must be on the same local network (same router)")
+        print("\n" + "=" * 70 + "\n")
     
     app.run(debug=True, host='0.0.0.0', port=port)
+

@@ -1,0 +1,1735 @@
+/* EverLast ERP - Stat Cards Mobile Fix */
+/* Centers stat cards and displays them in 2 columns on mobile */
+
+/* ===== GLOBAL TEXT FIXES - Prevent Letter Breaking ===== */
+@media (max-width: 991.98px) {
+    /* Specifically fix text elements that might break incorrectly */
+    .leave-type-name,
+    .leave-type-total,
+    .stat-label,
+    .stat-value,
+    .mini-stat-label,
+    .mini-stat-value,
+    .breakdown-label,
+    .breakdown-value {
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+        white-space: normal !important;
+        letter-spacing: normal !important;
+        word-spacing: normal !important;
+        hyphens: none !important;
+    }
+    
+    /* Fix for card content */
+    .card *,
+    .stat-card *,
+    .leave-type-stat-card * {
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+    }
+}
+
+/* ===== BASE MOBILE STYLES (All Screens < 992px) ===== */
+@media (max-width: 991.98px) {
+    /* ===== Row Container - Center and 2-Column Layout ===== */
+    .row {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        align-items: stretch !important;
+        margin-left: -0.5rem !important;
+        margin-right: -0.5rem !important;
+    }
+    
+    .row > * {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+    
+    /* 2-column layout for screens >= 360px - Target columns that typically contain stat cards */
+    @media (min-width: 360px) and (max-width: 991.98px) {
+        /* Stat cards columns - Force 2 columns - High priority - DIRECT RULE */
+        /* Target ALL columns that could contain stat cards */
+        .row > .col-md-6,
+        .row > .col-lg-3,
+        .row > .col-sm-6,
+        .row > [class*="col-md-6"],
+        .row > [class*="col-lg-3"],
+        .row > [class*="col-sm-6"],
+        /* More specific targeting */
+        .row .col-md-6,
+        .row .col-lg-3,
+        .row .col-sm-6 {
+            flex: 0 0 calc(50% - 1rem) !important;
+            max-width: calc(50% - 1rem) !important;
+            width: calc(50% - 1rem) !important;
+            margin: 0.5rem !important;
+        }
+        
+        /* Ensure stat cards in rows display in 2 columns - More specific */
+        .row:has(.stat-card) > .col-md-6,
+        .row:has(.stat-card) > .col-lg-3,
+        .row:has(.stat-card) > .col-sm-6,
+        .row:has(.stat-card) > [class*="col-md-6"],
+        .row:has(.stat-card) > [class*="col-lg-3"],
+        .row:has(.stat-card) > [class*="col-sm-6"],
+        /* Direct stat card column targeting */
+        .row .col-md-6:has(.stat-card),
+        .row .col-lg-3:has(.stat-card),
+        .row .col-sm-6:has(.stat-card) {
+            flex: 0 0 calc(50% - 1rem) !important;
+            max-width: calc(50% - 1rem) !important;
+            width: calc(50% - 1rem) !important;
+            margin: 0.5rem !important;
+        }
+        
+        /* Full width columns */
+        .row > .col-12,
+        .row > [class*="col-lg-12"],
+        .row > [class*="col-md-12"],
+        .row > [class*="col-sm-12"] {
+            flex: 0 0 100% !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            margin: 0.5rem 0 !important;
+        }
+    }
+    
+    /* Single column for screens < 360px */
+    @media (max-width: 359.98px) {
+        .row > .col-md-6,
+        .row > .col-lg-3,
+        .row > .col-sm-6,
+        .row > [class*="col-md-6"],
+        .row > [class*="col-lg-3"],
+        .row > [class*="col-sm-6"] {
+            flex: 0 0 100% !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            margin-bottom: 1rem !important;
+        }
+    }
+    
+    /* ===== Stat Cards - Centered & Mobile Optimized ===== */
+    .stat-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+        padding: 1.25rem 1rem !important;
+        min-height: 140px !important;
+        margin-bottom: 0 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        box-sizing: border-box !important;
+        background: white !important;
+        position: relative !important;
+        overflow: visible !important;
+        /* Ensure all content is visible */
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    /* Ensure all stat card children are visible */
+    .stat-card > * {
+        visibility: visible !important;
+        opacity: 1 !important;
+        display: block !important;
+    }
+    
+    /* Ensure stat cards inside columns take full width of their container */
+    .col-md-6 .stat-card,
+    .col-lg-3 .stat-card,
+    .col-sm-6 .stat-card,
+    [class*="col-md-6"] .stat-card,
+    [class*="col-lg-3"] .stat-card,
+    [class*="col-sm-6"] .stat-card {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    /* ===== Stat Card Content - All Centered ===== */
+    .stat-card * {
+        text-align: center !important;
+    }
+    
+    /* Stat Icon - Ensure visibility and proper display */
+    .stat-icon {
+        width: 55px !important;
+        height: 55px !important;
+        min-width: 55px !important;
+        min-height: 55px !important;
+        font-size: 1.6rem !important;
+        margin: 0 auto 0.75rem auto !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex-shrink: 0 !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: relative !important;
+        z-index: 1 !important;
+        /* Ensure icon container is always visible */
+        overflow: visible !important;
+    }
+    
+    /* Ensure icon inside stat-icon is visible */
+    .stat-icon i,
+    .stat-icon svg,
+    .stat-icon::before,
+    .stat-icon::after {
+        display: inline-block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        font-size: 1.6rem !important;
+        width: auto !important;
+        height: auto !important;
+        line-height: 1 !important;
+        /* Prevent icon from being hidden */
+        position: relative !important;
+        z-index: 2 !important;
+    }
+    
+    /* Ensure Font Awesome icons are visible */
+    .stat-icon .fas,
+    .stat-icon .far,
+    .stat-icon .fal,
+    .stat-icon .fab {
+        display: inline-block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        font-size: 1.6rem !important;
+    }
+    
+    .stat-content {
+        width: 100% !important;
+        text-align: center !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin: 0 auto !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    .stat-value {
+        font-size: 1.75rem !important;
+        font-weight: 700 !important;
+        margin: 0 auto 0.5rem auto !important;
+        text-align: center !important;
+        width: 100% !important;
+        display: block !important;
+        line-height: 1.2 !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        color: #2d3748 !important;
+    }
+    
+    .stat-label {
+        font-size: 0.85rem !important;
+        font-weight: 500 !important;
+        line-height: 1.3 !important;
+        text-align: center !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+        display: block !important;
+        color: #6c757d !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        /* Prevent text from being cut off */
+        overflow: visible !important;
+        white-space: normal !important;
+        word-wrap: break-word !important;
+    }
+    
+    /* Ensure all text inside stat cards is centered */
+    .stat-card p,
+    .stat-card span,
+    .stat-card div:not(.stat-icon):not(.stat-content) {
+        text-align: center !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+}
+
+/* ===== EXTRA SMALL DEVICES (< 360px) - Single Column ===== */
+@media (max-width: 359.98px) {
+    .stat-card {
+        padding: 1rem 0.75rem !important;
+        min-height: 100px !important;
+    }
+    
+    .stat-icon {
+        width: 40px !important;
+        height: 40px !important;
+        min-width: 40px !important;
+        min-height: 40px !important;
+        font-size: 1.2rem !important;
+        margin-bottom: 0.5rem !important;
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    .stat-icon i {
+        display: inline-block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        font-size: 1.2rem !important;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem !important;
+    }
+    
+    .stat-label {
+        font-size: 0.75rem !important;
+    }
+}
+
+/* ===== SMALL DEVICES (360px - 576px) - 2-Column Layout ===== */
+@media (min-width: 360px) and (max-width: 575.98px) {
+    .stat-card {
+        padding: 1rem 0.75rem !important;
+        min-height: 100px !important;
+    }
+    
+    .stat-icon {
+        width: 45px !important;
+        height: 45px !important;
+        min-width: 45px !important;
+        min-height: 45px !important;
+        font-size: 1.3rem !important;
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    .stat-icon i {
+        display: inline-block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        font-size: 1.3rem !important;
+    }
+    
+    .stat-value {
+        font-size: 1.6rem !important;
+    }
+    
+    .stat-label {
+        font-size: 0.75rem !important;
+    }
+}
+
+/* ===== MEDIUM DEVICES (576px - 768px) - 2-Column Layout ===== */
+@media (min-width: 576px) and (max-width: 767.98px) {
+    .stat-card {
+        padding: 1.25rem 1rem !important;
+        min-height: 110px !important;
+    }
+    
+    .stat-icon {
+        width: 48px !important;
+        height: 48px !important;
+        min-width: 48px !important;
+        min-height: 48px !important;
+        font-size: 1.4rem !important;
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    .stat-icon i {
+        display: inline-block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        font-size: 1.4rem !important;
+    }
+    
+    .stat-value {
+        font-size: 1.75rem !important;
+    }
+    
+    .stat-label {
+        font-size: 0.8rem !important;
+    }
+}
+
+/* ===== LARGE MOBILE DEVICES (768px - 991px) - 2-Column Layout ===== */
+@media (min-width: 768px) and (max-width: 991.98px) {
+    .stat-card {
+        padding: 1.5rem 1.25rem !important;
+        min-height: 120px !important;
+    }
+    
+    .stat-icon {
+        width: 50px !important;
+        height: 50px !important;
+        min-width: 50px !important;
+        min-height: 50px !important;
+        font-size: 1.5rem !important;
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    .stat-icon i {
+        display: inline-block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        font-size: 1.5rem !important;
+    }
+    
+    .stat-value {
+        font-size: 2rem !important;
+    }
+    
+    .stat-label {
+        font-size: 0.85rem !important;
+    }
+}
+
+/* ===== LANDSCAPE ORIENTATION ADJUSTMENTS ===== */
+@media (max-width: 991.98px) and (orientation: landscape) {
+    .stat-card {
+        min-height: 90px !important;
+        padding: 1rem 0.75rem !important;
+    }
+    
+    .stat-icon {
+        width: 40px !important;
+        height: 40px !important;
+        font-size: 1rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem !important;
+    }
+}
+
+/* ===== TOUCH DEVICE OPTIMIZATIONS ===== */
+@media (hover: none) and (pointer: coarse) {
+    .stat-card:hover {
+        transform: none !important;
+    }
+    
+    .stat-card:active {
+        transform: scale(0.98) !important;
+        opacity: 0.9 !important;
+    }
+}
+
+/* ===== STATISTICS OVERVIEW SECTION - Single Column & Centered ===== */
+@media (max-width: 991.98px) {
+    /* Statistics Overview Container - Single Column */
+    .employee-card,
+    .employee-card-body {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    /* Make the row inside Statistics Overview 1 column (Stacked Vertically) */
+    .employee-card-body .row.g-4,
+    .employee-card-body .row {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin: 0 auto !important;
+        gap: 1rem !important;
+    }
+    
+    /* Make col-md-6 inside Statistics Overview 1 column (Full Width) */
+    .employee-card-body .row .col-md-6,
+    .employee-card-body .row [class*="col-md-6"] {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0 auto 1rem auto !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+    
+    /* Stats Section - Centered */
+    .stats-section {
+        width: 100% !important;
+        text-align: center !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin: 0 auto !important;
+    }
+    
+    .stats-section-title {
+        text-align: center !important;
+        width: 100% !important;
+        margin: 0 auto 1rem auto !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    /* Mini Stat Cards Row - 1 Column (Stacked Vertically) */
+    .stats-section .row.g-3,
+    .stats-section .row {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin: 0 auto !important;
+        width: 100% !important;
+        gap: 0.75rem !important;
+    }
+    
+    /* Mini Stat Cards - 1 Column (Full Width) & Centered */
+    .stats-section .row .col-6,
+    .stats-section .row [class*="col-6"] {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0 auto 0.75rem auto !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+    
+    /* Mini Stat Card - Centered & Enhanced UI */
+    .mini-stat-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+        text-align: center !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 1.25rem 1rem !important;
+        background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%) !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 12px !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+        transition: all 0.3s ease !important;
+        min-height: 80px !important;
+    }
+    
+    .mini-stat-card:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+    }
+    
+    .mini-stat-value {
+        text-align: center !important;
+        width: 100% !important;
+        margin: 0 auto 0.5rem auto !important;
+        display: block !important;
+        font-size: 1.5rem !important;
+        font-weight: 700 !important;
+        color: #1f2937 !important;
+        line-height: 1.2 !important;
+        white-space: normal !important;
+        word-break: normal !important;
+    }
+    
+    .mini-stat-label {
+        text-align: center !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+        display: block !important;
+        font-size: 0.85rem !important;
+        font-weight: 500 !important;
+        color: #6c757d !important;
+        line-height: 1.3 !important;
+        white-space: normal !important;
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+    }
+    
+    /* Employee Card Header - Centered */
+    .employee-card-header {
+        text-align: center !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 1rem 1.25rem !important;
+    }
+    
+    .employee-card-header .card-title {
+        text-align: center !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    /* Employee Card Body - Centered */
+    .employee-card-body {
+        text-align: center !important;
+        padding: 1.25rem 1rem !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    /* Make col-lg-8 and col-lg-4 single column in Statistics Overview row */
+    .row.g-4 > .col-lg-8,
+    .row.g-4 > .col-lg-4,
+    .row.g-4 > [class*="col-lg-8"],
+    .row.g-4 > [class*="col-lg-4"] {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0 auto 1.5rem auto !important;
+    }
+    
+    /* ===== PERMISSION DURATION - 3 Columns Layout ===== */
+    .permission-breakdown {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        align-items: stretch !important;
+        gap: 0.75rem !important;
+        width: 100% !important;
+    }
+    
+    .breakdown-item {
+        flex: 0 0 calc(33.333% - 0.5rem) !important;
+        max-width: calc(33.333% - 0.5rem) !important;
+        width: calc(33.333% - 0.5rem) !important;
+        min-width: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        padding: 0.875rem 0.5rem !important;
+        margin: 0 !important;
+    }
+    
+    .breakdown-icon {
+        margin-right: 0 !important;
+        margin-bottom: 0.5rem !important;
+        width: 40px !important;
+        height: 40px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    .breakdown-content {
+        text-align: center !important;
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    .breakdown-value {
+        text-align: center !important;
+        width: 100% !important;
+        margin: 0 auto 0.25rem auto !important;
+        display: block !important;
+        font-size: 1.1rem !important;
+        font-weight: 700 !important;
+    }
+    
+    .breakdown-label {
+        text-align: center !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+        display: block !important;
+        font-size: 0.7rem !important;
+        line-height: 1.2 !important;
+    }
+}
+
+/* ===== PERMISSION DURATION - Extra Small Devices ===== */
+@media (max-width: 359.98px) {
+    .breakdown-item {
+        flex: 0 0 calc(33.333% - 0.4rem) !important;
+        max-width: calc(33.333% - 0.4rem) !important;
+        width: calc(33.333% - 0.4rem) !important;
+        padding: 0.75rem 0.375rem !important;
+    }
+    
+    .breakdown-icon {
+        width: 35px !important;
+        height: 35px !important;
+        font-size: 0.9rem !important;
+    }
+    
+    .breakdown-value {
+        font-size: 1rem !important;
+    }
+    
+    .breakdown-label {
+        font-size: 0.65rem !important;
+    }
+}
+
+/* ===== LEAVE TYPES BREAKDOWN - 3 Columns Layout ===== */
+@media (max-width: 991.98px) {
+    /* Leave Types Row - 3 Columns (only for leave types section) */
+    .employee-card-body .row.g-4:not(:has(.leave-balance-card)),
+    .row.g-4:not(:has(.leave-balance-card)):not(:has(.mini-stat-card)) {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        align-items: stretch !important;
+        gap: 0.75rem !important;
+        margin-left: -0.5rem !important;
+        margin-right: -0.5rem !important;
+    }
+    
+    /* Leave Type Cards - 3 Columns (33.333% each) - Only for leave types */
+    .employee-card-body .row.g-4:not(:has(.leave-balance-card)) .col-lg-3.col-md-6,
+    .row.g-4:not(:has(.leave-balance-card)):not(:has(.mini-stat-card)) .col-lg-3.col-md-6,
+    .employee-card-body .row.g-4:not(:has(.leave-balance-card)) [class*="col-lg-3"][class*="col-md-6"],
+    .row.g-4:not(:has(.leave-balance-card)):not(:has(.mini-stat-card)) [class*="col-lg-3"][class*="col-md-6"] {
+        flex: 0 0 calc(33.333% - 0.5rem) !important;
+        max-width: calc(33.333% - 0.5rem) !important;
+        width: calc(33.333% - 0.5rem) !important;
+        margin: 0 !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+        min-width: 90px !important; /* Ensure minimum width to prevent letter breaking */
+    }
+    
+    /* Fallback for browsers without :has() - target only rows with leave-type-stat-card */
+    .row.g-4 .col-lg-3.col-md-6:has(.leave-type-stat-card),
+    .row.g-4 [class*="col-lg-3"][class*="col-md-6"]:has(.leave-type-stat-card) {
+        flex: 0 0 calc(33.333% - 0.5rem) !important;
+        max-width: calc(33.333% - 0.5rem) !important;
+        width: calc(33.333% - 0.5rem) !important;
+    }
+    
+    /* Leave Type Stat Card - Enhanced UI */
+    .leave-type-stat-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        text-align: center !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        padding: 1rem 0.75rem !important;
+        margin: 0 !important;
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 12px !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+        transition: all 0.3s ease !important;
+        min-height: 140px !important;
+        height: auto !important;
+        box-sizing: border-box !important;
+        overflow: visible !important;
+        word-wrap: break-word !important;
+        min-width: 0 !important; /* Allow flex shrinking but prevent letter breaking */
+    }
+    
+    /* Prevent text from breaking incorrectly - Fix letter-by-letter breaking */
+    .leave-type-stat-card *,
+    .leave-type-stat-card h6,
+    .leave-type-stat-card span {
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+        white-space: normal !important;
+        letter-spacing: normal !important;
+        word-spacing: normal !important;
+    }
+    
+    /* Specifically fix leave type name to prevent letter breaking */
+    .leave-type-stat-card .leave-type-name,
+    .leave-type-stat-card h6.leave-type-name {
+        white-space: normal !important;
+        word-break: keep-all !important; /* Prevent breaking words unnecessarily */
+        overflow-wrap: break-word !important;
+        word-spacing: normal !important;
+        letter-spacing: normal !important;
+        display: block !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        text-align: center !important;
+        hyphens: none !important;
+    }
+    
+    /* Fix leave type total text */
+    .leave-type-stat-card .leave-type-total,
+    .leave-type-stat-card span.leave-type-total {
+        white-space: normal !important;
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+        display: block !important;
+        min-width: 0 !important;
+    }
+    
+    .leave-type-stat-card:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+    }
+    
+    /* Leave Type Header - Centered */
+    .leave-type-header {
+        text-align: center !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+        margin-bottom: 1rem !important;
+        padding-bottom: 0.75rem !important;
+        border-bottom: 1px solid #f3f4f6 !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+    }
+    
+    .leave-type-icon {
+        margin: 0 auto 0.5rem auto !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 40px !important;
+        height: 40px !important;
+        border-radius: 10px !important;
+        font-size: 1rem !important;
+        flex-shrink: 0 !important;
+    }
+    
+    .leave-type-info {
+        text-align: center !important;
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-width: 0 !important;
+    }
+    
+    /* Fix for text wrapping issues */
+    .leave-type-info h6,
+    .leave-type-info span {
+        white-space: normal !important;
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+        display: block !important;
+        width: 100% !important;
+    }
+    
+    .leave-type-name {
+        text-align: center !important;
+        width: 100% !important;
+        margin: 0 auto 0.25rem auto !important;
+        font-size: 0.85rem !important;
+        font-weight: 600 !important;
+        color: #1f2937 !important;
+        line-height: 1.3 !important;
+        white-space: normal !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+        hyphens: none !important;
+        display: block !important;
+    }
+    
+    /* Prevent text from breaking into individual letters */
+    .leave-type-name,
+    .leave-type-total,
+    .leave-type-info * {
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+        white-space: normal !important;
+    }
+    
+    .leave-type-total {
+        text-align: center !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+        font-size: 0.7rem !important;
+        color: #6c757d !important;
+        font-weight: 500 !important;
+        line-height: 1.2 !important;
+    }
+    
+    /* Leave Type Stats - Horizontal Layout */
+    .leave-type-stats {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: space-around !important;
+        align-items: flex-start !important;
+        width: 100% !important;
+        margin-top: 0.75rem !important;
+        gap: 0.5rem !important;
+        padding-top: 0.75rem !important;
+    }
+    
+    .leave-type-stat {
+        text-align: center !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex: 1 !important;
+        min-width: 0 !important;
+    }
+    
+    .leave-type-stat .stat-number {
+        text-align: center !important;
+        width: 100% !important;
+        margin: 0 auto 0.25rem auto !important;
+        display: block !important;
+        font-size: 1rem !important;
+        font-weight: 700 !important;
+        line-height: 1.2 !important;
+    }
+    
+    .leave-type-stat .stat-label {
+        text-align: center !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+        display: block !important;
+        font-size: 0.65rem !important;
+        color: #6c757d !important;
+        font-weight: 500 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.3px !important;
+        line-height: 1.2 !important;
+    }
+}
+
+/* ===== LEAVE TYPES - Extra Small Devices ===== */
+@media (max-width: 359.98px) {
+    .employee-card-body .row.g-4 .col-lg-3.col-md-6,
+    .row.g-4 .col-lg-3.col-md-6 {
+        flex: 0 0 calc(50% - 0.5rem) !important;
+        max-width: calc(50% - 0.5rem) !important;
+        width: calc(50% - 0.5rem) !important;
+    }
+    
+    .leave-type-stat-card {
+        padding: 0.875rem 0.5rem !important;
+        min-height: 120px !important;
+    }
+    
+    .leave-type-icon {
+        width: 35px !important;
+        height: 35px !important;
+        font-size: 0.9rem !important;
+    }
+    
+    .leave-type-name {
+        font-size: 0.8rem !important;
+    }
+    
+    .leave-type-total {
+        font-size: 0.65rem !important;
+    }
+    
+    .leave-type-stat .stat-number {
+        font-size: 0.9rem !important;
+    }
+    
+    .leave-type-stat .stat-label {
+        font-size: 0.6rem !important;
+    }
+}
+
+/* ===== ANNUAL LEAVE / LEAVE BALANCE - Full Width ===== */
+@media (max-width: 991.98px) {
+    /* Leave Balance Container - Full Width Row */
+    .leave-balance-card .row.g-4,
+    .leave-balance-card .row {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 1rem !important;
+    }
+    
+    /* Leave Balance Cards - Full Width (inside leave-balance-card container) */
+    .leave-balance-card .row.g-4 .col-lg-6,
+    .leave-balance-card .row.g-4 .col-md-6,
+    .leave-balance-card .row .col-lg-6,
+    .leave-balance-card .row .col-md-6,
+    .leave-balance-card .row.g-4 [class*="col-lg-6"],
+    .leave-balance-card .row.g-4 [class*="col-md-6"] {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0 auto 1rem auto !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+    
+    /* Leave Balance Card - Full Width & Centered */
+    .leave-balance-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+        text-align: center !important;
+    }
+    
+    .leave-balance-header {
+        text-align: center !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+    }
+    
+    .leave-balance-body {
+        text-align: center !important;
+        width: 100% !important;
+    }
+    
+    .balance-stats {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: space-around !important;
+        align-items: center !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+    }
+    
+    .stat-item {
+        text-align: center !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    .stat-value {
+        text-align: center !important;
+        width: 100% !important;
+        margin: 0 auto 0.5rem auto !important;
+    }
+    
+    .stat-label {
+        text-align: center !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+    }
+}
+
+/* ===== QUICK ACTIONS - 2 Columns Layout (All Dashboards) ===== */
+@media (max-width: 991.98px) {
+    /* Quick Actions Container - 2 Columns Layout */
+    .quick-action-card-body .row.g-4,
+    .quick-action-card-body .row {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        align-items: stretch !important;
+        gap: 0.75rem !important;
+        margin-left: -0.375rem !important;
+        margin-right: -0.375rem !important;
+    }
+    
+    /* Quick Action Columns - 2 Columns (50% each, 1 card per column) */
+    .quick-action-card-body .row.g-4 > .col-lg-3,
+    .quick-action-card-body .row.g-4 > .col-md-6,
+    .quick-action-card-body .row.g-4 > [class*="col-lg-3"],
+    .quick-action-card-body .row.g-4 > [class*="col-md-6"],
+    .quick-action-card-body .row > .col-lg-3,
+    .quick-action-card-body .row > .col-md-6,
+    .quick-action-card-body .row > [class*="col-lg-3"],
+    .quick-action-card-body .row > [class*="col-md-6"] {
+        flex: 0 0 calc(50% - 0.75rem) !important;
+        max-width: calc(50% - 0.75rem) !important;
+        width: calc(50% - 0.75rem) !important;
+        margin: 0 !important;
+        padding-left: 0.375rem !important;
+        padding-right: 0.375rem !important;
+        margin-bottom: 0.75rem !important;
+    }
+    
+    /* Quick Action Item - Enhanced UI with Better Colors */
+    .quick-action-item,
+    .employee-quick-action-item {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        padding: 1.5rem 1rem !important;
+        min-height: 150px !important;
+        width: 100% !important;
+        border-radius: 16px !important;
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+        border: 2px solid #e2e8f0 !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+        transition: all 0.3s ease !important;
+        text-decoration: none !important;
+        color: #2d3748 !important;
+    }
+    
+    /* Quick Action Item Hover State */
+    .quick-action-item:hover,
+    .employee-quick-action-item:hover {
+        transform: translateY(-4px) !important;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12) !important;
+        border-color: #667eea !important;
+        background: linear-gradient(135deg, #ffffff 0%, #f0f4ff 100%) !important;
+    }
+    
+    /* Quick Action Item Active State */
+    .quick-action-item:active,
+    .employee-quick-action-item:active {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2) !important;
+    }
+    
+    /* Quick Action Icons - Enhanced Colors */
+    .quick-action-item i,
+    .employee-quick-action-item i {
+        text-align: center !important;
+        width: 100% !important;
+        margin-bottom: 0.75rem !important;
+        font-size: 2.5rem !important;
+        display: block !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    /* Icon color overrides for better visibility */
+    .quick-action-item:hover i,
+    .employee-quick-action-item:hover i {
+        transform: scale(1.1) !important;
+    }
+    
+    /* Quick Action Text */
+    .quick-action-item span,
+    .quick-action-item .fw-bold,
+    .employee-quick-action-item span,
+    .employee-quick-action-item .fw-bold {
+        text-align: center !important;
+        width: 100% !important;
+        display: block !important;
+        font-size: 0.95rem !important;
+        font-weight: 600 !important;
+        color: #2d3748 !important;
+        margin-bottom: 0.5rem !important;
+        line-height: 1.3 !important;
+    }
+    
+    .quick-action-item:hover span,
+    .quick-action-item:hover .fw-bold,
+    .employee-quick-action-item:hover span,
+    .employee-quick-action-item:hover .fw-bold {
+        color: #667eea !important;
+    }
+    
+    /* Quick Action Small Text */
+    .quick-action-item small,
+    .employee-quick-action-item small {
+        text-align: center !important;
+        width: 100% !important;
+        display: block !important;
+        font-size: 0.8rem !important;
+        color: #64748b !important;
+        line-height: 1.4 !important;
+        margin-top: 0.25rem !important;
+    }
+    
+    /* Specific icon colors for different action types - Enhanced */
+    .quick-action-item i.fa-calendar-check,
+    .quick-action-item i.fa-calendar-alt,
+    .employee-quick-action-item i.fa-calendar-check,
+    .employee-quick-action-item i.fa-calendar-alt {
+        color: #10b981 !important;
+    }
+    
+    .quick-action-item i.fa-user-clock,
+    .quick-action-item i.fa-clock,
+    .employee-quick-action-item i.fa-user-clock,
+    .employee-quick-action-item i.fa-clock {
+        color: #3b82f6 !important;
+    }
+    
+    .quick-action-item i.fa-users,
+    .quick-action-item i.fa-user-friends,
+    .employee-quick-action-item i.fa-users,
+    .employee-quick-action-item i.fa-user-friends {
+        color: #8b5cf6 !important;
+    }
+    
+    .quick-action-item i.fa-chart-line,
+    .quick-action-item i.fa-chart-bar,
+    .employee-quick-action-item i.fa-chart-line,
+    .employee-quick-action-item i.fa-chart-bar {
+        color: #f59e0b !important;
+    }
+    
+    .quick-action-item i.fa-user,
+    .quick-action-item i.fa-id-card,
+    .employee-quick-action-item i.fa-user,
+    .employee-quick-action-item i.fa-id-card {
+        color: #667eea !important;
+    }
+}
+
+/* ===== QUICK ACTIONS - Single Column on Very Small Screens (< 360px) ===== */
+@media (max-width: 359.98px) {
+    /* Quick Action Columns - Single column on very small screens */
+    .quick-action-card-body .row.g-4 > .col-lg-3,
+    .quick-action-card-body .row.g-4 > .col-md-6,
+    .quick-action-card-body .row > .col-lg-3,
+    .quick-action-card-body .row > .col-md-6 {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        margin-bottom: 0.75rem !important;
+    }
+}
+
+/* ===== DIRECTOR DASHBOARD - Mobile Fixes ===== */
+@media (max-width: 991.98px) {
+    /* ===== TODAY'S SUMMARY CARDS - Same Width ===== */
+    .summary-card-item {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 auto 0.75rem auto !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        padding: 1rem 1.25rem !important;
+        border-radius: 12px !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    .summary-card-item:last-child {
+        margin-bottom: 0 !important;
+    }
+    
+    .summary-card-icon,
+    .summary-card-content,
+    .summary-card-arrow {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    .summary-card-content {
+        flex: 1 !important;
+        text-align: center !important;
+        margin: 0 1rem !important;
+    }
+    
+    .summary-card-number,
+    .summary-card-label {
+        text-align: center !important;
+        width: 100% !important;
+    }
+    
+    /* ===== PERMISSION REQUESTS OVERVIEW - Center Content ===== */
+    .overview-cards-grid {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        align-items: stretch !important;
+        gap: 1rem !important;
+        margin: 1rem 0 !important;
+    }
+    
+    /* Permission Overview Cards - 2 Columns on Mobile */
+    .overview-stat-card {
+        flex: 0 0 calc(50% - 0.5rem) !important;
+        max-width: calc(50% - 0.5rem) !important;
+        width: calc(50% - 0.5rem) !important;
+        min-width: 140px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        padding: 1.25rem 1rem !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    .overview-stat-card .card-icon-container,
+    .overview-stat-card .card-content {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        width: 100% !important;
+    }
+    
+    .overview-stat-card .card-icon {
+        margin: 0 auto 0.75rem auto !important;
+    }
+    
+    .overview-stat-card .stat-number,
+    .overview-stat-card .stat-label {
+        text-align: center !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+    }
+    
+    .overview-stat-card .stat-number {
+        font-size: 2rem !important;
+        font-weight: 700 !important;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    .overview-stat-card .stat-label {
+        font-size: 0.75rem !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+    }
+    
+    /* ===== LEAVE REQUESTS OVERVIEW - Center Content ===== */
+    /* Uses same styles as Permission Requests Overview */
+    
+    /* ===== RECENT LEAVE BALANCES & UPCOMING HOLIDAYS - 1 Column ===== */
+    /* Target col-md-6 that contains specific icons for Leave Management section */
+    .row .col-md-6:has(.fa-balance-scale),
+    .row .col-md-6:has(.fa-calendar-check) {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        margin-bottom: 1.5rem !important;
+    }
+    
+    /* More specific: Target the Leave Management Overview section */
+    /* This section comes after Leave Requests Overview, so we can target it specifically */
+    .row.mb-4:has(.col-md-6:has(.fa-balance-scale)) .col-md-6,
+    .row.mb-4:has(.col-md-6:has(.fa-calendar-check)) .col-md-6 {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        margin-bottom: 1.5rem !important;
+    }
+    
+    /* Fallback for browsers that don't support :has() - target by position */
+    /* This targets the row that contains both Recent Leave Balances and Upcoming Holidays */
+    .row.mb-4 > .col-md-6:first-child,
+    .row.mb-4 > .col-md-6:last-child {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        margin-bottom: 1.5rem !important;
+    }
+}
+
+/* ===== DIRECTOR DASHBOARD - Very Small Screens (< 360px) ===== */
+@media (max-width: 359.98px) {
+    /* Quick Actions - Single Column on Very Small Screens */
+    .quick-action-card-body .row.g-4 .col-lg-3.col-md-6,
+    .quick-action-card-body .row .col-lg-3.col-md-6 {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        margin-bottom: 0.75rem !important;
+    }
+    
+    /* Overview Cards - Single Column on Very Small Screens */
+    .overview-stat-card {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        margin-bottom: 1rem !important;
+    }
+}
+
+/* ===== MAIN CARDS - Full Width & Aligned (All Dashboards) ===== */
+@media (max-width: 991.98px) {
+    /* Main container cards - Full width and centered */
+    .employee-card,
+    .quick-action-card,
+    .dashboard-card,
+    .recent-requests-card,
+    .overview-header-container,
+    .chart-container,
+    .chart-container-enhanced {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 auto 1.5rem auto !important;
+        padding: 1.25rem 1rem !important;
+        border-radius: 16px !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+    }
+    
+    /* Column containers with main cards - Full width on mobile */
+    /* Exception: Don't apply to rows containing stat cards (they should be 2 columns) */
+    /* CRITICAL: Exclude col-md-6, col-lg-3, col-sm-6 from full-width rule */
+    .row:not(:has(.stat-card)) > .col-lg-8,
+    .row:not(:has(.stat-card)) > .col-lg-4,
+    .row:not(:has(.stat-card)) > .col-lg-12,
+    .row:not(:has(.stat-card)) > .col-md-8,
+    .row:not(:has(.stat-card)) > .col-md-4,
+    .row:not(:has(.stat-card)) > .col-md-12,
+    .row:not(:has(.stat-card)) > [class*="col-lg-8"],
+    .row:not(:has(.stat-card)) > [class*="col-lg-4"],
+    .row:not(:has(.stat-card)) > [class*="col-lg-12"],
+    .row:not(:has(.stat-card)) > [class*="col-md-8"],
+    .row:not(:has(.stat-card)) > [class*="col-md-4"],
+    .row:not(:has(.stat-card)) > [class*="col-md-12"] {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0 auto 1.5rem auto !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+    
+    /* CRITICAL: Ensure col-md-6, col-lg-3, col-sm-6 are NEVER full width - they must be 2 columns */
+    .row > .col-md-6:not([class*="col-md-12"]),
+    .row > .col-lg-3:not([class*="col-lg-12"]),
+    .row > .col-sm-6:not([class*="col-sm-12"]) {
+        flex: 0 0 calc(50% - 1rem) !important;
+        max-width: calc(50% - 1rem) !important;
+        width: calc(50% - 1rem) !important;
+        margin: 0.5rem !important;
+    }
+    
+    /* Ensure main cards inside columns are also full width */
+    .col-lg-8 .employee-card,
+    .col-lg-6 .employee-card,
+    .col-lg-4 .employee-card,
+    .col-md-8 .employee-card,
+    .col-md-6 .employee-card,
+    .col-md-4 .employee-card {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+}
+
+/* ===== STAT CARDS - 2 Columns Layout on Mobile (HIGH PRIORITY) ===== */
+@media (max-width: 991.98px) {
+    /* CRITICAL: Force ALL rows to use flexbox for proper 2-column layout */
+    .row {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        justify-content: flex-start !important;
+        align-items: stretch !important;
+        margin-left: -0.5rem !important;
+        margin-right: -0.5rem !important;
+    }
+    
+    /* Ensure rows containing stat cards use 2-column layout - EXACTLY 2 CARDS PER ROW */
+    .row:has(.stat-card),
+    .row.mb-4:has(.stat-card),
+    .row:has(.col-md-6 .stat-card),
+    .row:has(.col-lg-3 .stat-card),
+    .row:has(.col-sm-6 .stat-card),
+    /* Target any row that has stat cards anywhere */
+    .row:has([class*="col-"] .stat-card) {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        justify-content: flex-start !important;
+        align-items: stretch !important;
+        margin-left: -0.5rem !important;
+        margin-right: -0.5rem !important;
+        /* Ensure proper spacing for 2 columns */
+        gap: 0 !important;
+    }
+    
+    /* Ensure all stat card content is visible in 2-column layout */
+    .row:has(.stat-card) .stat-card,
+    .row.mb-4:has(.stat-card) .stat-card {
+        visibility: visible !important;
+        opacity: 1 !important;
+        display: flex !important;
+    }
+    
+    /* CRITICAL: Force stat card columns to be EXACTLY 2 columns (50% each) - HIGHEST PRIORITY */
+    /* This ensures exactly 2 cards per row on mobile - DIRECT TARGETING */
+    /* Target ALL columns that could contain stat cards - NO :has() needed */
+    .row > .col-md-6,
+    .row > .col-lg-3,
+    .row > .col-sm-6,
+    .row .col-md-6,
+    .row .col-lg-3,
+    .row .col-sm-6,
+    /* With stat cards - More specific */
+    .row .col-md-6:has(.stat-card),
+    .row .col-lg-3:has(.stat-card),
+    .row .col-sm-6:has(.stat-card),
+    .row .col-md-6.mb-4:has(.stat-card),
+    .row .col-lg-3.mb-4:has(.stat-card),
+    .row .col-sm-6.mb-4:has(.stat-card),
+    /* Row-based targeting */
+    .row:has(.stat-card) > .col-md-6,
+    .row:has(.stat-card) > .col-lg-3,
+    .row:has(.stat-card) > .col-sm-6,
+    .row.mb-4:has(.stat-card) > .col-md-6,
+    .row.mb-4:has(.stat-card) > .col-lg-3,
+    .row.mb-4:has(.stat-card) > .col-sm-6,
+    .row:has(.col-md-6 .stat-card) > .col-md-6,
+    .row:has(.col-lg-3 .stat-card) > .col-lg-3,
+    .row:has(.col-sm-6 .stat-card) > .col-sm-6,
+    /* Attribute selector fallback */
+    [class*="col-md-6"]:has(.stat-card),
+    [class*="col-lg-3"]:has(.stat-card),
+    [class*="col-sm-6"]:has(.stat-card),
+    /* Universal stat card column rule - Highest priority - EXACTLY 2 CARDS PER ROW */
+    [class*="col-"]:has(.stat-card):not([class*="col-12"]):not([class*="col-lg-12"]):not([class*="col-md-12"]),
+    /* Fallback without :has() - Target all col-md-6, col-lg-3, col-sm-6 */
+    .row > [class*="col-md-6"]:not([class*="col-md-12"]),
+    .row > [class*="col-lg-3"]:not([class*="col-lg-12"]),
+    .row > [class*="col-sm-6"]:not([class*="col-sm-12"]) {
+        flex: 0 0 calc(50% - 1rem) !important;
+        max-width: calc(50% - 1rem) !important;
+        width: calc(50% - 1rem) !important;
+        margin: 0.5rem !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+        /* Ensure content is visible */
+        overflow: visible !important;
+    }
+    
+    /* Override any full-width rules for stat card columns */
+    .row:not(:has(.stat-card)) > .col-md-6:has(.stat-card),
+    .row:not(:has(.stat-card)) > .col-lg-3:has(.stat-card),
+    .row:not(:has(.stat-card)) > .col-sm-6:has(.stat-card) {
+        flex: 0 0 calc(50% - 1rem) !important;
+        max-width: calc(50% - 1rem) !important;
+        width: calc(50% - 1rem) !important;
+        margin: 0.5rem !important;
+    }
+    
+    /* Ensure stat card icons are visible and properly styled */
+    .stat-card .stat-icon {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        width: 55px !important;
+        height: 55px !important;
+        min-width: 55px !important;
+        min-height: 55px !important;
+        font-size: 1.6rem !important;
+        margin: 0 auto 0.75rem auto !important;
+    }
+    
+    .stat-card .stat-icon i {
+        display: inline-block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        font-size: 1.6rem !important;
+        line-height: 1 !important;
+    }
+    
+    /* Ensure all stat card elements are visible in 2-column layout */
+    .row:has(.stat-card) .stat-card .stat-icon,
+    .row:has(.stat-card) .stat-card .stat-content,
+    .row:has(.stat-card) .stat-card .stat-value,
+    .row:has(.stat-card) .stat-card .stat-label {
+        visibility: visible !important;
+        opacity: 1 !important;
+        display: block !important;
+    }
+    
+    .row:has(.stat-card) .stat-card .stat-icon {
+        display: flex !important;
+    }
+    
+    .row:has(.stat-card) .stat-card .stat-content {
+        display: flex !important;
+    }
+}
+
+/* ===== SUB CARDS - Centered & Same Width (2 Columns) ===== */
+@media (max-width: 991.98px) {
+    /* Sub cards - Ensure they fill their column containers and are centered */
+    /* Columns are already set to 2-column layout (50% each) by existing rules */
+    /* Stat cards inside columns should be 100% width of their column */
+    .col-md-6 .stat-card,
+    .col-lg-3 .stat-card,
+    .col-sm-6 .stat-card,
+    .col-md-6 .overview-stat-card,
+    .col-lg-3 .overview-stat-card,
+    .col-sm-6 .overview-stat-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 auto 0.75rem auto !important;
+        padding: 1rem 0.75rem !important;
+        border-radius: 12px !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+    }
+    
+    /* Summary card items - Same width and centered */
+    .summary-card-item {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 auto 0.75rem auto !important;
+        padding: 1rem 0.75rem !important;
+        border-radius: 12px !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+    }
+    
+    /* Mini stat cards - Same width and centered */
+    .mini-stat-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 auto 0.75rem auto !important;
+        padding: 1rem 0.75rem !important;
+        border-radius: 12px !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+    }
+    
+    /* Preserve good layout - Total Employees, Present Today, Absent Today, Attendance Rate */
+    /* These cards are already in good 2-column layout via col-md-6 - existing column rules handle this */
+    
+    /* Ensure all sub cards have consistent styling */
+    .stat-card *,
+    .overview-stat-card *,
+    .summary-card-item *,
+    .mini-stat-card * {
+        text-align: center !important;
+    }
+}
+
+/* ===== SUB CARDS - Single Column on Very Small Screens (< 360px) ===== */
+@media (max-width: 359.98px) {
+    /* Sub cards - Single column on very small screens */
+    .row.g-4 .stat-card,
+    .row .stat-card,
+    .row.g-4 .overview-stat-card,
+    .row .overview-stat-card,
+    .row.g-4 .summary-card-item,
+    .row .summary-card-item,
+    .row.g-4 .mini-stat-card,
+    .row .mini-stat-card {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0 auto 0.75rem auto !important;
+    }
+}
+
+/* ===== DEPARTMENT ANALYTICS - Mobile UI Fix ===== */
+@media (max-width: 991.98px) {
+    /* Chart toggle buttons - Full width, stacked vertically */
+    .chart-toggle-btn,
+    .btn-group.chart-toggle-btn,
+    .employee-card-header .btn-group {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        gap: 0.5rem !important;
+    }
+    
+    .chart-toggle-btn,
+    .employee-card-header .btn-group .action-btn {
+        width: 100% !important;
+        margin-bottom: 0.5rem !important;
+        justify-content: center !important;
+        padding: 0.875rem 1rem !important;
+        min-height: 44px !important;
+        border-radius: 12px !important;
+    }
+    
+    /* Chart container - Full width */
+    .chart-container,
+    .chart-container-enhanced,
+    .chart-wrapper {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+        padding: 1rem 0.5rem !important;
+    }
+    
+    /* Chart canvas - Responsive */
+    .chart-container canvas,
+    .chart-container-enhanced canvas,
+    .chart-wrapper canvas {
+        max-width: 100% !important;
+        height: auto !important;
+    }
+    
+    /* Live data indicator - Properly positioned */
+    .realtime-indicator {
+        display: inline-block !important;
+        padding: 0.375rem 0.75rem !important;
+        border-radius: 20px !important;
+        font-size: 0.75rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    /* Chart header - Centered */
+    .chart-container-enhanced .d-flex.justify-content-between {
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+        gap: 0.5rem !important;
+        margin-bottom: 1rem !important;
+    }
+}
+
+/* ===== IMPROVED MOBILE UI - Consistent Styling ===== */
+@media (max-width: 991.98px) {
+    /* Consistent padding for all cards */
+    .employee-card,
+    .quick-action-card,
+    .dashboard-card,
+    .stat-card,
+    .overview-stat-card {
+        padding: 1.25rem 1rem !important;
+    }
+    
+    /* Consistent border radius */
+    .employee-card,
+    .quick-action-card,
+    .dashboard-card,
+    .stat-card,
+    .overview-stat-card,
+    .summary-card-item {
+        border-radius: 16px !important;
+    }
+    
+    /* Consistent shadows */
+    .employee-card,
+    .quick-action-card,
+    .dashboard-card {
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+    }
+    
+    .stat-card,
+    .overview-stat-card,
+    .summary-card-item {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    }
+    
+    /* Consistent spacing between cards */
+    .row.g-4,
+    .row {
+        margin-bottom: 1.5rem !important;
+    }
+    
+    /* Consistent gap between sub cards */
+    .row.g-4 > * {
+        margin-bottom: 0.75rem !important;
+    }
+}
