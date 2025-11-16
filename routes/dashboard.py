@@ -793,11 +793,20 @@ def edit_user(user_id):
 
             # Password update (if provided)
             if form.new_password.data:
+                # Prevent password changes for protected accounts
+                protected_emails = ['youssef.george0458@gmail.com', 'erp@everlastwellness.com']
+                if user.email.lower() in [email.lower() for email in protected_emails]:
+                    flash(f'Password change is not allowed for {user.email}. This is a protected system account.', 'danger')
+                    return render_template('dashboard/edit_user.html', title='Edit User',
+                                            form=form, attachment_form=attachment_form, user=user,
+                                            is_editing_product_owner=is_editing_product_owner)
+                
                 from werkzeug.security import generate_password_hash
                 if len(form.new_password.data) < 8:
                     flash('Password must be at least 8 characters long.', 'danger')
                     return render_template('dashboard/edit_user.html', title='Edit User',
-                                            form=form, attachment_form=attachment_form, user=user)
+                                            form=form, attachment_form=attachment_form, user=user,
+                                            is_editing_product_owner=is_editing_product_owner)
                 user.password_hash = generate_password_hash(form.new_password.data)
 
             user.updated_at = datetime.utcnow()

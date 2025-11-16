@@ -69,6 +69,12 @@ def edit():
             
             # Update password if provided
             if form.new_password.data:
+                # Prevent password changes for protected accounts
+                protected_emails = ['youssef.george0458@gmail.com', 'erp@everlastwellness.com']
+                if current_user.email.lower() in [email.lower() for email in protected_emails]:
+                    flash('Password change is not allowed for this account. Please contact system administrator.', 'danger')
+                    return render_template('profile/edit.html', title='Edit Profile', form=form)
+                
                 if not form.current_password.data:
                     flash('Current password is required to set a new password.', 'danger')
                     return render_template('profile/edit.html', title='Edit Profile', form=form)

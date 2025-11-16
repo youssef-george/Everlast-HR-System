@@ -103,6 +103,9 @@
                     </div>
                     
                     <!-- Password fields for admins -->
+                    {% set is_protected = (current_user.email.lower() == 'youssef.george0458@gmail.com' or current_user.email.lower() == 'erp@everlastwellness.com') %}
+                    
+                    {% if not is_protected %}
                     <div class="separator my-5"></div>
                     
                     <h4 class="fw-bold mb-3">Update Password</h4>
@@ -151,6 +154,13 @@
                             {% endif %}
                         </div>
                     </div>
+                    {% else %}
+                    <div class="separator my-5"></div>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-lock me-2"></i>
+                        <strong>Protected Account:</strong> Password changes are not allowed for this system account. Please contact the system administrator if you need to change your password.
+                    </div>
+                    {% endif %}
                     
                     <!-- Submit Buttons -->
                     <div class="d-flex justify-content-end mt-4">
