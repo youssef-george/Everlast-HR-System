@@ -1,7 +1,8 @@
 from flask_login import UserMixin
 from datetime import datetime
 from extensions import db
-from sqlalchemy import Index
+from sqlalchemy import Index, String
+from sqlalchemy.dialects.postgresql import ARRAY
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
@@ -653,3 +654,114 @@ class DeletedUser(db.Model):
 
     def __repr__(self):
         return f'<DeletedUser {self.fingerprint_number} - {self.user_name or "Unknown"}>'
+
+
+class DocumentationPage(db.Model):
+    """Model for storing documentation pages"""
+    __tablename__ = 'documentation_pages'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(255), nullable=False)
+    slug = db.Column(db.String(255), nullable=False, unique=True)  # URL-friendly slug (auto-generated from title)
+    content = db.Column(db.Text, nullable=False)  # Rich text/Markdown content
+    category = db.Column(db.String(100), nullable=False)  # e.g., Leave Management, Permissions, Attendance
+    tags = db.Column(ARRAY(String(100)), nullable=True)  # Array of tag strings
+    visible_roles = db.Column(ARRAY(String(20)), nullable=True)  # Array of role names that can view
+    is_published = db.Column(db.Boolean, default=False)  # Draft vs Published
+    view_count = db.Column(db.Integer, default=0)  # Track views
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    updated_by = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    creator = db.relationship('User', foreign_keys=[created_by], backref='created_documentation')
+    updater = db.relationship('User', foreign_keys=[updated_by], backref='updated_documentation')
+    
+    # Indexes for better query performance
+    __table_args__ = (
+        Index('idx_doc_category', 'category'),
+        Index('idx_doc_published', 'is_published'),
+        Index('idx_doc_created_at', 'created_at'),
+        Index('idx_doc_slug', 'slug'),
+    )
+    
+    @staticmethod
+    def generate_slug(title):
+        """Generate a URL-friendly slug from title"""
+        import re
+        # Convert to lowercase and replace spaces with hyphens
+        slug = title.lower()
+        # Replace special characters with hyphens
+        slug = re.sub(r'[^\w\s-]', '', slug)
+        # Replace multiple spaces/hyphens with single hyphen
+        slug = re.sub(r'[-\s]+', '-', slug)
+        # Remove leading/trailing hyphens
+        slug = slug.strip('-')
+        return slug
+    
+    def update_slug(self):
+        """Update slug from title if not set"""
+        if not self.slug:
+            base_slug = self.generate_slug(self.title)
+            # Ensure uniqueness
+            slug = base_slug
+            counter = 1
+            while DocumentationPage.query.filter_by(slug=slug).filter(DocumentationPage.id != self.id).first():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
+    
+    def is_visible_to_role(self, role):
+        """Check if this page is visible to a specific role"""
+        if not self.visible_roles:
+            return False  # Hidden by default if no roles selected
+        return role in self.visible_roles
+    
+    def is_visible_to_user(self, user):
+        """Check if this page is visible to a specific user"""
+        if not user or not user.is_authenticated:
+            return False
+        # Product Owner can see everything
+        if user.role == 'product_owner':
+            return True
+        return self.is_visible_to_role(user.role)
+    
+    def increment_view_count(self):
+        """Increment the view count"""
+        self.view_count = (self.view_count or 0) + 1
+        db.session.commit()
+    
+    def __repr__(self):
+        return f'<DocumentationPage {self.title} - {self.category}>'
+
+
+class EmailTemplate(db.Model):
+    """Model for storing email templates for notifications"""
+    __tablename__ = 'email_templates'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    template_name = db.Column(db.String(100), nullable=False, unique=True)  # e.g., 'leave_manager_notification'
+    template_type = db.Column(db.String(50), nullable=False)  # leave_manager_notification, leave_admin_notification, etc.
+    subject = db.Column(db.String(255), nullable=False)  # Email subject with placeholders
+    body_html = db.Column(db.Text, nullable=False)  # HTML email body with placeholders
+    footer = db.Column(db.Text, nullable=True)  # Email footer (optional)
+    signature = db.Column(db.Text, nullable=True)  # Email signature (optional)
+    is_active = db.Column(db.Boolean, default=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    updated_by = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    creator = db.relationship('User', foreign_keys=[created_by], backref='created_email_templates')
+    updater = db.relationship('User', foreign_keys=[updated_by], backref='updated_email_templates')
+    
+    # Indexes for better query performance
+    __table_args__ = (
+        Index('idx_email_template_type', 'template_type'),
+        Index('idx_email_template_active', 'is_active'),
+    )
+    
+    def __repr__(self):
+        return f'<EmailTemplate {self.template_name} - {self.template_type}>'

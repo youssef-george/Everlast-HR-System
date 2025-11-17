@@ -1,0 +1,119 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="content-header">
+    <h1 class="page-title">
+        <i class="fas fa-envelope me-2"></i>Email Templates Management
+    </h1>
+    <div class="content-header-actions">
+        <a href="{{ url_for('dashboard.smtp_configuration') }}" class="btn btn-secondary">
+            <i class="fas fa-cog me-1"></i>SMTP Configuration
+        </a>
+    </div>
+</div>
+
+<!-- Placeholders Reference -->
+<div class="row mb-4">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Available Placeholders
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Use these placeholders in your email templates. They will be automatically replaced with actual values.</p>
+                <div class="row">
+                    {% for key, description in placeholders.items() %}
+                    <div class="col-md-6 mb-2">
+                        <code>{<strong>{{ key }}</strong>}</code> - {{ description }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Email Templates List -->
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Email Templates</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Template Name</th>
+                                <th>Type</th>
+                                <th>Subject Preview</th>
+                                <th>Status</th>
+                                <th>Last Updated</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if templates %}
+                                {% for template in templates %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="symbol symbol-35px me-2">
+                                                <span class="symbol-label bg-light-primary text-primary">
+                                                    <i class="fas fa-envelope"></i>
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <strong>{{ template.template_name.replace('_', ' ').title() }}</strong>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ template.template_type.split('_')[0].title() }}</span>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ template.subject[:60] }}{% if template.subject|length > 60 %}...{% endif %}</small>
+                                    </td>
+                                    <td>
+                                        {% if template.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ template.updated_at|safe_datetime('%Y-%m-%d %H:%M') if template.updated_at else template.created_at|safe_datetime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('email_templates.preview', template_id=template.id) }}" 
+                                               class="btn btn-sm btn-icon btn-light" 
+                                               data-bs-toggle="tooltip" title="Preview">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{{ url_for('email_templates.edit', template_id=template.id) }}" 
+                                               class="btn btn-sm btn-icon btn-light" 
+                                               data-bs-toggle="tooltip" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center p-4">
+                                        No email templates found. Default templates should be created automatically.
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

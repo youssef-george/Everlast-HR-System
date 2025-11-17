@@ -1,0 +1,217 @@
+{% extends "layout.html" %}
+
+{% block extra_css %}
+<!-- CKEditor 5 -->
+<script src="https://cdn.ckeditor.com/ckeditor5/40.0.0/classic/ckeditor.js"></script>
+<style>
+.ck-editor__editable {
+    min-height: 300px;
+}
+.placeholder-reference {
+    background-color: #f8f9fa;
+    border-left: 4px solid #007bff;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+}
+.placeholder-reference code {
+    background-color: #e9ecef;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <h1 class="page-title">
+        <i class="fas fa-edit me-2"></i>Edit Email Template
+    </h1>
+    <div class="content-header-actions">
+        <a href="{{ url_for('email_templates.index') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back to Templates
+        </a>
+        <a href="{{ url_for('email_templates.preview', template_id=template.id) }}" class="btn btn-info">
+            <i class="fas fa-eye me-1"></i>Preview
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-9">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" id="templateForm">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.template_name.label(class="form-label") }}
+                        {{ form.template_name(class="form-control") }}
+                        <small class="form-text text-muted">Template identifier (cannot be changed)</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.subject.label(class="form-label") }}
+                        {{ form.subject(class="form-control") }}
+                        {% if form.subject.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.subject.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Email subject line. Use placeholders like {employee_name}, {request_type}, etc.</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.body_html.label(class="form-label") }}
+                        {{ form.body_html(class="form-control", id="email_body") }}
+                        {% if form.body_html.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.body_html.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">HTML email body. Use placeholders for dynamic content.</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.footer.label(class="form-label") }}
+                        {{ form.footer(class="form-control") }}
+                        {% if form.footer.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.footer.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Optional footer text (appears at bottom of email)</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.signature.label(class="form-label") }}
+                        {{ form.signature(class="form-control") }}
+                        {% if form.signature.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.signature.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Optional signature (appears after footer)</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.is_active(class="form-check-input") }}
+                            {{ form.is_active.label(class="form-check-label") }}
+                        </div>
+                        {% if form.is_active.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.is_active.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Inactive templates will not be used for sending emails</small>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Save Template
+                        </button>
+                        <a href="{{ url_for('email_templates.index') }}" class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar - Placeholders Reference -->
+    <div class="col-lg-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Available Placeholders</h5>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted mb-3">Click to copy placeholder to clipboard</p>
+                {% for key, description in placeholders.items() %}
+                <div class="mb-2">
+                    <code class="placeholder-code" style="cursor: pointer;" 
+                          onclick="copyToClipboard('{{ '{' }}{{ key }}{{ '}' }}')" 
+                          title="Click to copy">
+                        {<strong>{{ key }}</strong>}
+                    </code>
+                    <br>
+                    <small class="text-muted">{{ description }}</small>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Initialize CKEditor
+let editor;
+
+ClassicEditor
+    .create(document.querySelector('#email_body'), {
+        toolbar: {
+            items: [
+                'heading', '|',
+                'bold', 'italic', 'link', '|',
+                'bulletedList', 'numberedList', '|',
+                'outdent', 'indent', '|',
+                'blockQuote', 'insertTable', '|',
+                'undo', 'redo'
+            ]
+        },
+        heading: {
+            options: [
+                { model: 'paragraph', title: 'Paragraph', class: 'ck-heading_paragraph' },
+                { model: 'heading1', view: 'h1', title: 'Heading 1', class: 'ck-heading_heading1' },
+                { model: 'heading2', view: 'h2', title: 'Heading 2', class: 'ck-heading_heading2' },
+                { model: 'heading3', view: 'h3', title: 'Heading 3', class: 'ck-heading_heading3' }
+            ]
+        },
+        table: {
+            contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells']
+        }
+    })
+    .then(ed => {
+        editor = ed;
+    })
+    .catch(error => {
+        console.error('Error initializing CKEditor:', error);
+    });
+
+// Handle form submission
+document.getElementById('templateForm').addEventListener('submit', function(e) {
+    // Update textarea with editor content
+    if (editor) {
+        editor.updateSourceElement();
+    }
+});
+
+// Copy to clipboard function
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        // Show temporary feedback
+        const originalText = event.target.textContent;
+        event.target.style.backgroundColor = '#d4edda';
+        setTimeout(() => {
+            event.target.style.backgroundColor = '';
+        }, 500);
+    }, function(err) {
+        console.error('Failed to copy: ', err);
+    });
+}
+</script>
+{% endblock %}
+
+

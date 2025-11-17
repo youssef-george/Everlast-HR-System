@@ -67,8 +67,8 @@ def recent_requests():
                     PermissionRequest.admin_status == 'pending'
                 ).order_by(PermissionRequest.created_at.desc()).limit(5).all()
         
-        elif user_role in ['admin', 'director']:
-            # Admin/Director sees all pending requests
+        elif user_role in ['admin', 'product_owner', 'director']:
+            # Admin/Product Owner/Director sees all pending requests
             leave_requests = LeaveRequest.query.filter_by(
                 status='pending'
             ).order_by(LeaveRequest.created_at.desc()).limit(5).all()
@@ -195,8 +195,8 @@ def pending_approvals():
                         'reason': lr.reason
                     })
         
-        elif user_role in ['admin', 'director']:
-            # Admin/Director sees all pending requests
+        elif user_role in ['admin', 'product_owner', 'director']:
+            # Admin/Product Owner/Director sees all pending requests
             leave_requests = LeaveRequest.query.filter_by(
                 status='pending'
             ).order_by(LeaveRequest.created_at.desc()).limit(10).all()
@@ -316,11 +316,15 @@ def department_analytics():
         
         for dept in departments:
             dept_employees = User.query.filter_by(department_id=dept.id).count()
-            dept_leaves = LeaveRequest.query.join(User).filter(
+            dept_leaves = LeaveRequest.query.join(
+                User, LeaveRequest.user_id == User.id
+            ).filter(
                 User.department_id == dept.id,
                 LeaveRequest.status == 'approved'
             ).count()
-            dept_permissions = PermissionRequest.query.join(User).filter(
+            dept_permissions = PermissionRequest.query.join(
+                User, PermissionRequest.user_id == User.id
+            ).filter(
                 User.department_id == dept.id,
                 PermissionRequest.status == 'approved'
             ).count()
@@ -521,8 +525,8 @@ def leave_requests():
                     LeaveRequest.user_id.in_(employee_ids)
                 ).order_by(LeaveRequest.created_at.desc()).all()
         
-        elif user_role in ['admin', 'director']:
-            # Admin/Director sees all requests
+        elif user_role in ['admin', 'product_owner', 'director']:
+            # Admin/Product Owner/Director sees all requests
             leave_requests = LeaveRequest.query.order_by(LeaveRequest.created_at.desc()).all()
         
         # Convert to JSON-serializable format
@@ -595,8 +599,8 @@ def leave_balances():
         user_role = current_user.role
         current_year = datetime.now().year
         
-        if user_role in ['admin', 'director']:
-            # Admin/Director sees all balances
+        if user_role in ['admin', 'product_owner', 'director']:
+            # Admin/Product Owner/Director sees all balances
             balances = LeaveBalance.query.join(LeaveType).join(User).filter(
                 LeaveBalance.year == current_year
             ).all()

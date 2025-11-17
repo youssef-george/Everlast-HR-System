@@ -37,16 +37,23 @@ def index():
                     PermissionRequest.user_id.in_(employee_ids)
                 ).order_by(PermissionRequest.created_at.desc()).all()
     
-    elif user_role in ['admin', 'product_owner']:
-        # Admins and Product Owners see all permission requests from their departments, if assigned
+    elif user_role == 'product_owner':
+        # Product Owners see all permission requests regardless of department assignments
+        page_title = 'All Permission Requests'
+        permission_requests = PermissionRequest.query.order_by(PermissionRequest.created_at.desc()).all()
+    
+    elif user_role == 'admin':
+        # Admins see permission requests from their departments, if assigned
         if current_user.managed_department:
-            # If admin/product_owner is assigned to specific departments, show only requests from those departments
+            # If admin is assigned to specific departments, show only requests from those departments
             admin_dept_ids = [dept.id for dept in current_user.managed_department]
-            permission_requests = PermissionRequest.query.join(User).filter(
+            permission_requests = PermissionRequest.query.join(
+                User, PermissionRequest.user_id == User.id
+            ).filter(
                 User.department_id.in_(admin_dept_ids)
             ).order_by(PermissionRequest.created_at.desc()).all()
         else:
-            # If admin/product_owner is not assigned to specific departments, show all requests
+            # If admin is not assigned to specific departments, show all requests
             permission_requests = PermissionRequest.query.order_by(PermissionRequest.created_at.desc()).all()
     
     elif user_role == 'director':
@@ -96,28 +103,78 @@ def create():
         db.session.add(permission_request)
         db.session.commit()
         
-        # Send email notification to admins
+        # Send confirmation email to employee first
         try:
-            employee_name = current_user.get_full_name()
-            start_date = form.start_date.data.strftime('%B %d, %Y')
-            start_time = form.start_time.data.strftime('%I:%M %p')
-            end_time = form.end_time.data.strftime('%I:%M %p')
+            from helpers import send_email_to_employee
+            from flask import url_for
+            
+            start_date_str = form.start_date.data.strftime('%B %d, %Y')
+            start_time_str = form.start_time.data.strftime('%I:%M %p')
+            end_time_str = form.end_time.data.strftime('%I:%M %p')
             duration_hours = (permission_request.end_time - permission_request.start_time).total_seconds() / 3600
             
-            subject = f"New Permission Request - {employee_name}"
-            message = f"""
-            A new permission request has been submitted and requires your review:
+            # Get submission timestamp
+            submission_datetime = datetime.utcnow()
+            submission_date_str = submission_datetime.strftime('%B %d, %Y')
+            submission_time_str = submission_datetime.strftime('%I:%M %p')
             
-            <strong>Employee:</strong> {employee_name}<br>
-            <strong>Date:</strong> {start_date}<br>
-            <strong>Time:</strong> {start_time} - {end_time}<br>
-            <strong>Duration:</strong> {duration_hours:.1f} hour(s)<br>
-            <strong>Reason:</strong> {form.reason.data}<br>
-            """
-            
-            send_admin_email_notification(subject, message, "permission", permission_request.id)
+            # Send employee confirmation email
+            employee_request_data = {
+                'request_type': 'Permission Request',
+                'start_date': start_date_str,
+                'end_date': f"{start_time_str} - {end_time_str}",
+                'duration': f"{duration_hours:.1f} hour(s)",
+                'reason': form.reason.data,
+                'request_id': str(permission_request.id),
+                'submission_date': submission_date_str,
+                'submission_time': submission_time_str,
+                'status': 'Pending Manager Review'
+            }
+            email_sent = send_email_to_employee(current_user, 'permission_employee_submission_confirmation', employee_request_data)
+            if email_sent:
+                logging.info(f"Employee confirmation email sent successfully to {current_user.email}")
+            else:
+                logging.warning(f"Failed to send employee confirmation email to {current_user.email}")
         except Exception as e:
-            logging.error(f"Failed to send admin email notification: {str(e)}")
+            logging.error(f"Exception while sending employee confirmation email: {str(e)}", exc_info=True)
+        
+        # Send email notification to manager (or admin if no manager)
+        try:
+            from helpers import send_email_to_manager, send_email_to_admin
+            from flask import url_for
+            
+            start_date_str = form.start_date.data.strftime('%B %d, %Y')
+            start_time_str = form.start_time.data.strftime('%I:%M %p')
+            end_time_str = form.end_time.data.strftime('%I:%M %p')
+            duration_hours = (permission_request.end_time - permission_request.start_time).total_seconds() / 3600
+            
+            # Only send to manager if employee is not a manager
+            if current_user.role != 'manager':
+                approval_link = url_for('permission.view', id=permission_request.id, _external=True)
+                request_data = {
+                    'request_type': 'Permission Request',
+                    'start_date': f"{start_date_str}",
+                    'end_date': f"{start_time_str} - {end_time_str}",
+                    'duration': f"{duration_hours:.1f} hour(s)",
+                    'reason': form.reason.data,
+                    'request_id': str(permission_request.id),
+                    'approval_link': approval_link
+                }
+                send_email_to_manager(current_user, 'permission_manager_notification', request_data)
+            else:
+                # If manager submits, send directly to admin
+                request_data = {
+                    'request_type': 'Permission Request',
+                    'start_date': f"{start_date_str}",
+                    'end_date': f"{start_time_str} - {end_time_str}",
+                    'duration': f"{duration_hours:.1f} hour(s)",
+                    'reason': form.reason.data,
+                    'request_id': str(permission_request.id),
+                    'approval_link': url_for('permission.view', id=permission_request.id, _external=True)
+                }
+                send_email_to_admin(current_user, 'permission_admin_notification', request_data)
+        except Exception as e:
+            logging.error(f"Failed to send email notification: {str(e)}")
         
         flash('Your permission request has been submitted successfully!', 'success')
         return redirect(url_for('permission.index'))
@@ -145,22 +202,19 @@ def view(id):
     can_approve = False
     approval_form = None
     
-    # SIMPLIFIED WORKFLOW: Only admin approval required for all permission requests
-    if user_role == 'admin':
-        # Get the department of the requester
-        requester_department = requester.department
-        
-        # Admins can approve any pending permission request
-        if permission_request.status == 'pending' and permission_request.admin_status != 'approved':
-            # If the admin is specifically assigned to handle a department
-            if current_user.managed_department:
-                # Check if the requester is from a department this admin manages
-                admin_managed_departments = [dept.id for dept in current_user.managed_department]
-                if requester_department and requester_department.id in admin_managed_departments:
+    # Check if requester is a manager (special case - managers skip manager approval)
+    requester_is_manager = requester.role == 'manager'
+    
+    # Manager can approve if they are the department manager and request is pending
+    if user_role == 'manager' and not requester_is_manager:
+        if (requester.department and requester.department.manager_id == current_user.id and 
+            permission_request.status == 'pending' and permission_request.admin_status == 'pending'):
                     can_approve = True
                     approval_form = ApprovalForm()
-            else:
-                # If admin is not assigned to any specific department, they can approve any department
+    
+    # Admin can approve if request has manager approval or if requester is manager
+    elif user_role in ['admin', 'product_owner']:
+        if permission_request.status == 'pending' and permission_request.admin_status == 'pending':
                 can_approve = True
                 approval_form = ApprovalForm()
     
@@ -169,7 +223,57 @@ def view(id):
         approval_status = approval_form.status.data
         comment = approval_form.comment.data
         
-        if user_role == 'admin':
+        if user_role == 'manager':
+            # Manager approval - set a flag or comment, then notify admin
+            # Since PermissionRequest model doesn't have manager_status, we'll use admin_status
+            # but mark it as manager-approved in the comment
+            permission_request.admin_comment = f"Manager approved: {comment}" if comment else "Manager approved"
+            
+            # Send email notification
+            try:
+                from helpers import send_email_to_admin, send_email_to_employee
+                from flask import url_for
+                
+                start_date_str = permission_request.start_time.strftime('%B %d, %Y')
+                start_time_str = permission_request.start_time.strftime('%I:%M %p')
+                end_time_str = permission_request.end_time.strftime('%I:%M %p')
+                duration_hours = (permission_request.end_time - permission_request.start_time).total_seconds() / 3600
+                
+                if approval_status == 'approved':
+                    # Manager approved - notify admin
+                    request_data = {
+                        'request_type': 'Permission Request',
+                        'start_date': start_date_str,
+                        'end_date': f"{start_time_str} - {end_time_str}",
+                        'duration': f"{duration_hours:.1f} hour(s)",
+                        'reason': permission_request.reason,
+                        'comment': comment or 'Approved by manager',
+                        'manager_name': current_user.get_full_name(),
+                        'request_id': str(permission_request.id),
+                        'approval_link': url_for('permission.view', id=permission_request.id, _external=True)
+                    }
+                    send_email_to_admin(requester, 'permission_admin_notification', request_data)
+                else:
+                    # Manager rejected - notify employee
+                    request_data = {
+                        'request_type': 'Permission Request',
+                        'start_date': start_date_str,
+                        'end_date': f"{start_time_str} - {end_time_str}",
+                        'duration': f"{duration_hours:.1f} hour(s)",
+                        'reason': permission_request.reason,
+                        'comment': comment or 'Rejected by manager',
+                        'status': 'Rejected',
+                        'manager_name': current_user.get_full_name(),
+                        'request_id': str(permission_request.id)
+                    }
+                    send_email_to_employee(requester, 'permission_employee_rejection', request_data)
+                    # Update status to rejected
+                    permission_request.admin_status = 'rejected'
+                    permission_request.update_overall_status()
+            except Exception as e:
+                logging.error(f"Failed to send email notification: {str(e)}")
+        
+        elif user_role in ['admin', 'product_owner']:
             permission_request.admin_status = approval_status
             permission_request.admin_comment = comment
             permission_request.admin_updated_at = datetime.utcnow()
@@ -177,7 +281,50 @@ def view(id):
             # Update overall status
             permission_request.update_overall_status()
             
-            # User notification removed - will be replaced with SMTP email notifications
+            # Send email notification
+            try:
+                from helpers import send_email_to_employee
+                
+                start_date_str = permission_request.start_time.strftime('%B %d, %Y')
+                start_time_str = permission_request.start_time.strftime('%I:%M %p')
+                end_time_str = permission_request.end_time.strftime('%I:%M %p')
+                duration_hours = (permission_request.end_time - permission_request.start_time).total_seconds() / 3600
+                
+                if approval_status == 'approved':
+                    # Admin approved - notify employee with confirmation
+                    request_data = {
+                        'request_type': 'Permission Request',
+                        'start_date': start_date_str,
+                        'end_date': f"{start_time_str} - {end_time_str}",
+                        'duration': f"{duration_hours:.1f} hour(s)",
+                        'reason': permission_request.reason,
+                        'comment': comment or 'Approved',
+                        'status': 'Approved',
+                        'admin_name': current_user.get_full_name(),
+                        'manager_name': requester.department.manager.get_full_name() if requester.department and requester.department.manager else 'Manager',
+                        'request_id': str(permission_request.id)
+                    }
+                    send_email_to_employee(requester, 'permission_employee_confirmation', request_data)
+                else:
+                    # Admin rejected - notify employee
+                    request_data = {
+                        'request_type': 'Permission Request',
+                        'start_date': start_date_str,
+                        'end_date': f"{start_time_str} - {end_time_str}",
+                        'duration': f"{duration_hours:.1f} hour(s)",
+                        'reason': permission_request.reason,
+                        'comment': comment or 'Rejected',
+                        'status': 'Rejected',
+                        'admin_name': current_user.get_full_name(),
+                        'request_id': str(permission_request.id)
+                    }
+                    send_email_to_employee(requester, 'permission_employee_rejection', request_data)
+            except Exception as e:
+                logging.error(f"Failed to send email notification: {str(e)}")
+            
+            db.session.commit()
+            flash(f'Permission request has been {approval_status}.', 'success')
+            return redirect(url_for('permission.index'))
             
             db.session.commit()
             flash(f'Permission request has been {approval_status}.', 'success')

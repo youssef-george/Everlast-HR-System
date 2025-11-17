@@ -2,11 +2,11 @@ from datetime import datetime, date, timedelta
 from functools import wraps
 from flask import flash, redirect, url_for, abort, request
 from flask_login import current_user
-from models import LeaveRequest, PermissionRequest, User, SMTPConfiguration
+from models import LeaveRequest, PermissionRequest, User, SMTPConfiguration, EmailTemplate
 from extensions import db
 from zk import ZK, const
 import logging
-from datetime import date, datetime, timedelta
+import re
 
 def role_required(*roles):
     """Decorator that checks if the current user has one of the required roles."""
@@ -542,14 +542,65 @@ def sync_users_from_device(ip="192.168.11.2", port=4370):
             user = User.query.filter_by(fingerprint_number=str(device_user.uid)).first()
             
             if user:
-                # User already exists, skip updating their data
-                logging.info(f"Existing user skipped: {user.first_name} (Fingerprint ID: {user.fingerprint_number})")
+                # User already exists - only update email if it's a placeholder
+                if user.email and ('placeholder' in user.email.lower() or 
+                                  user.email.startswith('fp_user_') or 
+                                  (user.email.startswith('fp_') and '@placeholder' in user.email) or
+                                  '@company.com' in user.email.lower()):
+                    # Generate proper email from user's name
+                    name_parts = (user.first_name + ' ' + (user.last_name or '')).strip().split()
+                    if len(name_parts) >= 2:
+                        first_name = name_parts[0].lower()
+                        last_name = name_parts[-1].lower()
+                        base_email = f"{first_name}.{last_name}@everlastwellness.com"
+                    else:
+                        name_lower = name_parts[0].lower() if name_parts else "user"
+                        base_email = f"{name_lower}.{name_lower}@everlastwellness.com"
+                    
+                    # Ensure email uniqueness
+                    email = base_email
+                    counter = 1
+                    while User.query.filter_by(email=email).filter(User.id != user.id).first():
+                        if len(name_parts) >= 2:
+                            email = f"{first_name}.{last_name}{counter}@everlastwellness.com"
+                        else:
+                            email = f"{name_lower}{counter}@everlastwellness.com"
+                        counter += 1
+                    
+                    old_email = user.email
+                    user.email = email
+                    logging.info(f"Updated placeholder email for existing user: {user.first_name} (Old: {old_email}, New: {email})")
+                else:
+                    # User has proper email, keep it
+                    logging.info(f"Existing user skipped: {user.first_name} (Fingerprint ID: {user.fingerprint_number}, Email: {user.email})")
             else:
+                # Generate proper email from user's name
+                # Format: firstname.lastname@everlastwellness.com
+                name_parts = device_user.name.strip().split()
+                if len(name_parts) >= 2:
+                    first_name = name_parts[0].lower()
+                    last_name = name_parts[-1].lower()
+                    base_email = f"{first_name}.{last_name}@everlastwellness.com"
+                else:
+                    # If only one name, use it for both
+                    name_lower = name_parts[0].lower() if name_parts else "user"
+                    base_email = f"{name_lower}.{name_lower}@everlastwellness.com"
+                
+                # Ensure email uniqueness
+                email = base_email
+                counter = 1
+                while User.query.filter_by(email=email).first():
+                    if len(name_parts) >= 2:
+                        email = f"{first_name}.{last_name}{counter}@everlastwellness.com"
+                    else:
+                        email = f"{name_lower}{counter}@everlastwellness.com"
+                    counter += 1
+                
                 # Create new user
                 new_user = User(
                     first_name=device_user.name,
                     last_name="",  # Device might not provide last name
-                    email=f"fp_{device_user.uid}@placeholder.com",  # Placeholder email
+                    email=email,  # Proper email based on name
                     password_hash="",  # Will need to be set later
                     fingerprint_number=str(device_user.uid),
                     role='employee',  # Default role
@@ -557,7 +608,7 @@ def sync_users_from_device(ip="192.168.11.2", port=4370):
                 )
                 db.session.add(new_user)
                 db.session.commit()
-                logging.info(f"New user created: {new_user.first_name} (Fingerprint ID: {new_user.fingerprint_number})")
+                logging.info(f"New user created: {new_user.first_name} (Fingerprint ID: {new_user.fingerprint_number}, Email: {email})")
 
         db.session.commit()
         return True, f"Successfully synced {len(device_users)} users from the device"
@@ -680,7 +731,6 @@ def send_admin_email_notification(subject, message, request_type=None, request_i
                             <p>{message}</p>
                             
                             {f'<p><strong>Request Type:</strong> {request_type.title()}</p>' if request_type else ''}
-                            {f'<p><strong>Request ID:</strong> #{request_id}</p>' if request_id else ''}
                             
                             <div style="margin: 20px 0; padding: 15px; background: #e3f2fd; border-radius: 6px;">
                                 <p style="margin: 0; font-size: 14px; color: #1565c0;">
@@ -713,4 +763,325 @@ def send_admin_email_notification(subject, message, request_type=None, request_i
         
     except Exception as e:
         logging.error(f"Failed to send admin email notifications: {str(e)}")
+        return False
+
+
+def get_email_template(template_type):
+    """Get active email template by type"""
+    try:
+        template = EmailTemplate.query.filter_by(
+            template_type=template_type,
+            is_active=True
+        ).first()
+        if not template:
+            logging.warning(f"Email template '{template_type}' not found or not active")
+        return template
+    except Exception as e:
+        logging.error(f"Error retrieving email template {template_type}: {str(e)}")
+        return None
+
+
+def render_email_template(template, context_dict):
+    """Render email template by replacing placeholders with context values"""
+    if not template:
+        logging.warning("Cannot render email template: template is None")
+        return None, None
+    
+    try:
+        logging.info(f"Rendering email template '{template.template_name}' with {len(context_dict)} context variables")
+        
+        # Replace placeholders in subject
+        subject = template.subject
+        for key, value in context_dict.items():
+            placeholder = f"{{{key}}}"
+            subject = subject.replace(placeholder, str(value) if value is not None else "")
+        
+        # Replace placeholders in body
+        body = template.body_html
+        if not body:
+            logging.error(f"Email template '{template.template_name}' has empty body_html")
+            return None, None
+            
+        for key, value in context_dict.items():
+            placeholder = f"{{{key}}}"
+            body = body.replace(placeholder, str(value) if value is not None else "")
+        
+        # Add footer if exists
+        if template.footer:
+            footer = template.footer
+            for key, value in context_dict.items():
+                placeholder = f"{{{key}}}"
+                footer = footer.replace(placeholder, str(value) if value is not None else "")
+            body += f"\n<br><br>{footer}"
+        
+        # Add signature if exists
+        if template.signature:
+            signature = template.signature
+            for key, value in context_dict.items():
+                placeholder = f"{{{key}}}"
+                signature = signature.replace(placeholder, str(value) if value is not None else "")
+            body += f"\n<br><br>{signature}"
+        
+        logging.info(f"Email template rendered successfully. Subject length: {len(subject)}, Body length: {len(body)}")
+        return subject, body
+    except Exception as e:
+        logging.error(f"Error rendering email template '{template.template_name if template else 'Unknown'}': {str(e)}", exc_info=True)
+        return None, None
+
+
+def send_email_to_user(user, subject, html_body):
+    """Send email to a specific user"""
+    if not user:
+        logging.warning(f"Cannot send email: user is None")
+        return False
+    
+    if not user.email:
+        logging.warning(f"Cannot send email to user {user.id} ({user.get_full_name()}): email address is missing")
+        return False
+    
+    try:
+        smtp_config = SMTPConfiguration.query.filter_by(is_active=True).first()
+        if not smtp_config:
+            logging.warning("No active SMTP configuration found. Email not sent.")
+            return False
+        
+        logging.info(f"=== EMAIL SENDING PROCESS ===")
+        logging.info(f"Recipient: {user.get_full_name()} ({user.email})")
+        logging.info(f"Subject: {subject[:100]}")
+        logging.info(f"SMTP Server: {smtp_config.smtp_server}:{smtp_config.smtp_port}")
+        logging.info(f"SMTP Username: {smtp_config.smtp_username}")
+        logging.info(f"Use SSL: {smtp_config.use_ssl}, Use TLS: {smtp_config.use_tls}")
+        logging.info(f"Attempting to send email...")
+        
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        
+        # Connect to SMTP server with timeout
+        try:
+            if smtp_config.use_ssl:
+                server = smtplib.SMTP_SSL(smtp_config.smtp_server, smtp_config.smtp_port, timeout=30)
+            else:
+                server = smtplib.SMTP(smtp_config.smtp_server, smtp_config.smtp_port, timeout=30)
+                if smtp_config.use_tls:
+                    server.starttls()
+        except Exception as conn_error:
+            logging.error(f"SMTP connection failed to {smtp_config.smtp_server}:{smtp_config.smtp_port}: {str(conn_error)}", exc_info=True)
+            return False
+        
+        try:
+            logging.info(f"Attempting SMTP login with username: {smtp_config.smtp_username}")
+            server.login(smtp_config.smtp_username, smtp_config.smtp_password)
+            logging.info(f"✅ SMTP login successful for {smtp_config.smtp_username}")
+        except Exception as login_error:
+            logging.error(f"❌ SMTP login FAILED for {smtp_config.smtp_username}")
+            logging.error(f"   Error: {str(login_error)}")
+            logging.error(f"   This usually means the SMTP password is incorrect or has expired.")
+            logging.error(f"   Please update the SMTP password in Settings > SMTP Configuration")
+            try:
+                server.quit()
+            except:
+                pass
+            return False
+        
+        try:
+            msg = MIMEMultipart()
+            msg['From'] = f"{smtp_config.sender_name} <{smtp_config.sender_email}>"
+            msg['To'] = user.email
+            msg['Subject'] = subject
+            
+            msg.attach(MIMEText(html_body, 'html'))
+            server.send_message(msg)
+            logging.info(f"Email sent successfully to {user.email}: {subject}")
+            return True
+        except Exception as send_error:
+            logging.error(f"Failed to send email to {user.email}: {str(send_error)}", exc_info=True)
+            return False
+        finally:
+            try:
+                server.quit()
+            except Exception as quit_error:
+                logging.warning(f"Error closing SMTP connection: {str(quit_error)}")
+        
+    except Exception as e:
+        logging.error(f"Failed to send email to {user.email}: {str(e)}", exc_info=True)
+        return False
+
+
+def send_email_to_manager(employee, template_type, request_data):
+    """Send email to employee's direct manager"""
+    try:
+        # Get employee's manager
+        manager = None
+        if employee.department and employee.department.manager_id:
+            manager = User.query.get(employee.department.manager_id)
+        
+        # If no manager, fallback to admin
+        if not manager:
+            manager = User.query.filter(User.role.in_(['admin', 'product_owner'])).first()
+        
+        if not manager:
+            logging.warning(f"No manager or admin found for employee {employee.id}")
+            return False
+        
+        # Get template
+        template = get_email_template(template_type)
+        if not template:
+            logging.warning(f"Email template {template_type} not found")
+            return False
+        
+        # Prepare context
+        context = {
+            'employee_name': employee.get_full_name(),
+            'manager_name': manager.get_full_name(),
+            'request_type': request_data.get('request_type', 'Request'),
+            'start_date': request_data.get('start_date', ''),
+            'end_date': request_data.get('end_date', ''),
+            'duration': request_data.get('duration', ''),
+            'reason': request_data.get('reason', ''),
+            'request_id': request_data.get('request_id', ''),
+            'approval_link': request_data.get('approval_link', ''),
+        }
+        
+        # Render template
+        subject, html_body = render_email_template(template, context)
+        if not subject or not html_body:
+            logging.error(f"Failed to render email template {template_type}")
+            return False
+        
+        # Send email
+        return send_email_to_user(manager, subject, html_body)
+        
+    except Exception as e:
+        logging.error(f"Error sending email to manager: {str(e)}")
+        return False
+
+
+def send_email_to_admin(employee, template_type, request_data):
+    """Send email to admin users"""
+    try:
+        # Get template
+        template = get_email_template(template_type)
+        if not template:
+            logging.warning(f"Email template {template_type} not found")
+            return False
+        
+        # Get ALL admin users (admin and product_owner roles)
+        admins = User.query.filter(
+            User.role.in_(['admin', 'product_owner']),
+            User.status == 'active'
+        ).all()
+        
+        if not admins:
+            logging.warning("No active admin users found")
+            return False
+        
+        logging.info(f"Found {len(admins)} active admin/product_owner users to notify:")
+        for admin in admins:
+            logging.info(f"  - {admin.get_full_name()} ({admin.email}) - Role: {admin.role}")
+        
+        # Prepare context
+        context = {
+            'employee_name': employee.get_full_name(),
+            'admin_name': 'Admin',
+            'request_type': request_data.get('request_type', 'Request'),
+            'start_date': request_data.get('start_date', ''),
+            'end_date': request_data.get('end_date', ''),
+            'duration': request_data.get('duration', ''),
+            'reason': request_data.get('reason', ''),
+            'comment': request_data.get('comment', ''),
+            'manager_name': request_data.get('manager_name', ''),
+            'request_id': request_data.get('request_id', ''),
+            'approval_link': request_data.get('approval_link', ''),
+        }
+        
+        # Render template
+        subject, html_body = render_email_template(template, context)
+        if not subject or not html_body:
+            logging.error(f"Failed to render email template {template_type}")
+            return False
+        
+        # Send to ALL admins
+        logging.info(f"=== SENDING EMAIL TO ALL ADMIN USERS ===")
+        logging.info(f"Template: {template_type}")
+        logging.info(f"Employee: {employee.get_full_name()} ({employee.email})")
+        logging.info(f"Total admins to notify: {len(admins)}")
+        
+        success_count = 0
+        failed_count = 0
+        
+        for admin in admins:
+            # Personalize for each admin
+            context['admin_name'] = admin.get_full_name()
+            subject_personalized, html_body_personalized = render_email_template(template, context)
+            
+            logging.info(f"Attempting to send email to admin: {admin.get_full_name()} ({admin.email}) - Role: {admin.role}")
+            
+            if send_email_to_user(admin, subject_personalized, html_body_personalized):
+                success_count += 1
+                logging.info(f"✅ Email sent successfully to {admin.get_full_name()} ({admin.email})")
+            else:
+                failed_count += 1
+                logging.error(f"❌ Failed to send email to {admin.get_full_name()} ({admin.email})")
+        
+        logging.info(f"=== EMAIL SENDING SUMMARY ===")
+        logging.info(f"Total admins: {len(admins)}")
+        logging.info(f"Successfully sent: {success_count}")
+        logging.info(f"Failed: {failed_count}")
+        
+        return success_count > 0
+        
+    except Exception as e:
+        logging.error(f"Error sending email to admin: {str(e)}")
+        return False
+
+
+def send_email_to_employee(employee, template_type, request_data):
+    """Send email to employee"""
+    try:
+        # Check if employee has email
+        if not employee or not employee.email:
+            logging.warning(f"Cannot send email to employee {employee.id if employee else 'None'}: no email address")
+            return False
+        
+        # Get template
+        logging.info(f"Retrieving email template '{template_type}' for employee {employee.id}")
+        template = get_email_template(template_type)
+        if not template:
+            logging.error(f"Email template '{template_type}' not found or not active. Cannot send email to {employee.email}")
+            return False
+        
+        logging.info(f"Email template '{template_type}' found: {template.template_name} (active: {template.is_active})")
+        
+        # Prepare context
+        context = {
+            'employee_name': employee.get_full_name(),
+            'request_type': request_data.get('request_type', 'Request'),
+            'start_date': request_data.get('start_date', ''),
+            'end_date': request_data.get('end_date', ''),
+            'duration': request_data.get('duration', ''),
+            'reason': request_data.get('reason', ''),
+            'comment': request_data.get('comment', ''),
+            'status': request_data.get('status', ''),
+            'request_id': request_data.get('request_id', ''),
+            'manager_name': request_data.get('manager_name', ''),
+            'admin_name': request_data.get('admin_name', ''),
+            'submission_date': request_data.get('submission_date', ''),
+            'submission_time': request_data.get('submission_time', ''),
+        }
+        
+        # Render template
+        logging.info(f"Rendering email template '{template_type}' for employee {employee.id} ({employee.get_full_name()})")
+        subject, html_body = render_email_template(template, context)
+        if not subject or not html_body:
+            logging.error(f"Failed to render email template {template_type}: subject={subject is not None}, body={html_body is not None}")
+            return False
+        
+        logging.info(f"Email template rendered. Subject: {subject[:50]}..., Body length: {len(html_body)} chars")
+        
+        # Send email
+        return send_email_to_user(employee, subject, html_body)
+        
+    except Exception as e:
+        logging.error(f"Error sending email to employee: {str(e)}", exc_info=True)
         return False

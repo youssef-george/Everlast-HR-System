@@ -385,7 +385,9 @@ def admin():
     # Get pending requests that need admin approval based on department assignments
     if current_user.managed_department:  # If admin is assigned to specific departments
         admin_dept_ids = [dept.id for dept in current_user.managed_department]
-        pending_leave_requests = LeaveRequest.query.join(User).filter(
+        pending_leave_requests = LeaveRequest.query.join(
+            User, LeaveRequest.user_id == User.id
+        ).filter(
             LeaveRequest.status == 'pending',
             User.department_id.in_(admin_dept_ids)
         ).order_by(LeaveRequest.created_at.desc()).limit(5).all()
@@ -397,7 +399,9 @@ def admin():
     # Get pending permission requests that need admin approval based on department assignments
     if current_user.managed_department:
         admin_dept_ids = [dept.id for dept in current_user.managed_department]
-        pending_permission_requests = PermissionRequest.query.join(User).filter(
+        pending_permission_requests = PermissionRequest.query.join(
+            User, PermissionRequest.user_id == User.id
+        ).filter(
             PermissionRequest.status == 'pending',
             User.department_id.in_(admin_dept_ids)
         ).order_by(PermissionRequest.created_at.desc()).limit(5).all()
@@ -409,11 +413,15 @@ def admin():
     # Get recent activity - filter by department for department-specific admins
     if current_user.managed_department:
         admin_dept_ids = [dept.id for dept in current_user.managed_department]
-        recent_leaves = LeaveRequest.query.join(User).filter(
+        recent_leaves = LeaveRequest.query.join(
+            User, LeaveRequest.user_id == User.id
+        ).filter(
             User.department_id.in_(admin_dept_ids)
         ).order_by(LeaveRequest.updated_at.desc()).limit(5).all()
         
-        recent_permissions = PermissionRequest.query.join(User).filter(
+        recent_permissions = PermissionRequest.query.join(
+            User, PermissionRequest.user_id == User.id
+        ).filter(
             User.department_id.in_(admin_dept_ids)
         ).order_by(PermissionRequest.updated_at.desc()).limit(5).all()
     else:
@@ -484,7 +492,9 @@ def admin():
             User.department_id == dept.id,
             LeaveRequest.status == 'approved'
         ).count()
-        dept_permissions = PermissionRequest.query.join(User).filter(
+        dept_permissions = PermissionRequest.query.join(
+            User, PermissionRequest.user_id == User.id
+        ).filter(
             User.department_id == dept.id,
             PermissionRequest.status == 'approved'
         ).count()
@@ -2136,7 +2146,8 @@ def smtp_configuration():
         form.smtp_server.data = config.smtp_server
         form.smtp_port.data = config.smtp_port
         form.smtp_username.data = config.smtp_username
-        form.smtp_password.data = config.smtp_password
+        # Don't pre-populate password field for security (user must enter it to change)
+        # form.smtp_password.data = config.smtp_password  # Commented out - password fields should be empty
         form.use_tls.data = config.use_tls
         form.use_ssl.data = config.use_ssl
         form.sender_name.data = config.sender_name
@@ -2164,43 +2175,141 @@ def save_smtp_configuration():
     form = SMTPConfigurationForm()
     
     if form.validate_on_submit():
-        # Deactivate existing configurations
-        existing_configs = SMTPConfiguration.query.all()
-        for config in existing_configs:
-            config.is_active = False
+        # Get existing active configuration
+        existing_config = SMTPConfiguration.query.filter(SMTPConfiguration.is_active == True).first()
         
-        # Create new configuration
-        new_config = SMTPConfiguration(
-            smtp_server=form.smtp_server.data,
-            smtp_port=form.smtp_port.data,
-            smtp_username=form.smtp_username.data,
-            smtp_password=form.smtp_password.data,  # In production, encrypt this
-            use_tls=form.use_tls.data,
-            use_ssl=form.use_ssl.data,
-            sender_name=form.sender_name.data,
-            sender_email=form.sender_email.data,
-            is_active=form.is_active.data,
+        # Log password field status for debugging - check both form.data and request.form
+        password_provided = form.smtp_password.data and form.smtp_password.data.strip()
+        password_value = form.smtp_password.data if form.smtp_password.data else None
+        
+        # Also check raw request data as fallback
+        if not password_value and request.form.get('smtp_password'):
+            password_value = request.form.get('smtp_password')
+            password_provided = password_value and password_value.strip()
+            logging.warning("Password not found in form.data, using request.form instead")
+        
+        logging.info(f"SMTP Configuration Save: Password provided = {password_provided}")
+        logging.info(f"  - Password field value type: {type(password_value)}")
+        logging.info(f"  - Password length: {len(password_value) if password_value else 0}")
+        if password_value:
+            logging.info(f"  - Password first 3 chars: {repr(password_value[:3])}")
+            logging.info(f"  - Password last 3 chars: {repr(password_value[-3:])}")
+        
+        if existing_config:
+            # Update existing configuration
+            existing_config.smtp_server = form.smtp_server.data
+            existing_config.smtp_port = form.smtp_port.data
+            existing_config.smtp_username = form.smtp_username.data
+            # Update password if a new one was provided
+            if password_provided:
+                # Don't strip password - preserve all characters including spaces and special chars
+                old_password = existing_config.smtp_password
+                # Ensure we're using the actual password value (not None or empty)
+                if password_value:
+                    existing_config.smtp_password = password_value  # Use the raw value from form
+                    logging.info(f"✅ SMTP password updated")
+                    logging.info(f"  - Old password length: {len(old_password) if old_password else 0}")
+                    logging.info(f"  - New password length: {len(existing_config.smtp_password)}")
+                    logging.info(f"  - New password first 3: {repr(existing_config.smtp_password[:3])}")
+                    logging.info(f"  - New password last 3: {repr(existing_config.smtp_password[-3:])}")
+                    # Verify password was saved by reading it back (for debugging, but don't log the actual password)
+                    db.session.flush()  # Flush to ensure it's in the session
+                    logging.info(f"✅ Password saved to database successfully")
+                else:
+                    logging.error("❌ Password value is None or empty even though password_provided is True!")
+                    logging.error(f"  - form.smtp_password.data: {repr(form.smtp_password.data)}")
+                    logging.error(f"  - request.form.get('smtp_password'): {repr(request.form.get('smtp_password'))}")
+            else:
+                logging.info("ℹ️ SMTP password not changed (keeping existing password)")
+                logging.info(f"  - form.smtp_password.data: {repr(form.smtp_password.data)}")
+                logging.info(f"  - request.form.get('smtp_password'): {repr(request.form.get('smtp_password'))}")
+            existing_config.use_tls = form.use_tls.data
+            existing_config.use_ssl = form.use_ssl.data
+            existing_config.sender_name = form.sender_name.data  # Ensure sender_name is updated
+            existing_config.sender_email = form.sender_email.data
+            existing_config.is_active = form.is_active.data
             # Module-specific email lists
-            leave_notification_emails=form.leave_notification_emails.data or '',
-            permission_notification_emails=form.permission_notification_emails.data or '',
-            admin_notification_emails=form.admin_notification_emails.data or '',
+            existing_config.leave_notification_emails = form.leave_notification_emails.data or ''
+            existing_config.permission_notification_emails = form.permission_notification_emails.data or ''
+            existing_config.admin_notification_emails = form.admin_notification_emails.data or ''
             # Notification settings
-            notify_leave_requests=form.notify_leave_requests.data,
-            notify_permission_requests=form.notify_permission_requests.data,
-            notify_admin_only=form.notify_admin_only.data
-        )
+            existing_config.notify_leave_requests = form.notify_leave_requests.data
+            existing_config.notify_permission_requests = form.notify_permission_requests.data
+            existing_config.notify_admin_only = form.notify_admin_only.data
+            
+            config_to_save = existing_config
+        else:
+            # Deactivate all existing configurations
+            existing_configs = SMTPConfiguration.query.all()
+            for config in existing_configs:
+                config.is_active = False
+            
+            # Create new configuration
+            # For new config, password is required
+            if not form.smtp_password.data or not form.smtp_password.data.strip():
+                flash('❌ Password is required when creating a new SMTP configuration.', 'danger')
+                return redirect(url_for('dashboard.smtp_configuration'))
+            
+            new_config = SMTPConfiguration(
+                smtp_server=form.smtp_server.data,
+                smtp_port=form.smtp_port.data,
+                smtp_username=form.smtp_username.data,
+                smtp_password=form.smtp_password.data,  # Don't strip - preserve all characters
+                use_tls=form.use_tls.data,
+                use_ssl=form.use_ssl.data,
+                sender_name=form.sender_name.data,  # Ensure sender_name is saved
+                sender_email=form.sender_email.data,
+                is_active=form.is_active.data,
+                # Module-specific email lists
+                leave_notification_emails=form.leave_notification_emails.data or '',
+                permission_notification_emails=form.permission_notification_emails.data or '',
+                admin_notification_emails=form.admin_notification_emails.data or '',
+                # Notification settings
+                notify_leave_requests=form.notify_leave_requests.data,
+                notify_permission_requests=form.notify_permission_requests.data,
+                notify_admin_only=form.notify_admin_only.data
+            )
+            db.session.add(new_config)
+            config_to_save = new_config
         
         try:
-            db.session.add(new_config)
             db.session.commit()
-            flash('SMTP configuration saved successfully!', 'success')
+            
+            # Verify password was actually saved by reading it back
+            if password_provided and existing_config:
+                db.session.refresh(existing_config)  # Refresh to get latest from DB
+                saved_password = existing_config.smtp_password
+                logging.info(f"Password verification after commit:")
+                logging.info(f"  - Expected length: {len(password_value)}")
+                logging.info(f"  - Saved length: {len(saved_password)}")
+                logging.info(f"  - Match: {saved_password == password_value}")
+                if saved_password != password_value:
+                    logging.error(f"❌ PASSWORD MISMATCH! Password was NOT saved correctly!")
+                    logging.error(f"  - Expected: {repr(password_value[:5])}...{repr(password_value[-3:])}")
+                    logging.error(f"  - Saved: {repr(saved_password[:5])}...{repr(saved_password[-3:])}")
+                    flash('⚠️ Warning: Password may not have been saved correctly. Please verify and try again.', 'warning')
+                else:
+                    logging.info(f"✅ Password verified - saved correctly")
+            
+            # Log successful save (without password, but indicate if password was updated)
+            password_updated_msg = " (password updated)" if password_provided and existing_config else ""
+            logging.info(f"SMTP configuration saved successfully: Server={form.smtp_server.data}, Port={form.smtp_port.data}, Username={form.smtp_username.data}, Sender Name={form.sender_name.data}, Sender Email={form.sender_email.data}, SSL={form.use_ssl.data}, TLS={form.use_tls.data}{password_updated_msg}")
+            
+            if password_provided and existing_config:
+                flash('SMTP configuration saved successfully! Password has been updated. You can now test the connection.', 'success')
+            else:
+                flash('SMTP configuration saved successfully! You can now test the connection.', 'success')
         except Exception as e:
             db.session.rollback()
+            logging.error(f"Error saving SMTP configuration: {str(e)}", exc_info=True)
             flash(f'Error saving SMTP configuration: {str(e)}', 'danger')
     else:
+        # Log form validation errors for debugging
+        logging.warning(f"SMTP Configuration form validation failed. Errors: {form.errors}")
         for field, errors in form.errors.items():
             for error in errors:
                 flash(f'{field}: {error}', 'danger')
+                logging.warning(f"Form error - {field}: {error}")
     
     return redirect(url_for('dashboard.smtp_configuration'))
 
@@ -2208,18 +2317,30 @@ def save_smtp_configuration():
 @login_required
 @role_required(['product_owner'])  # Only Product Owner can test
 def test_smtp_configuration():
-    """Test SMTP Configuration - Force use of working Everlast settings"""
+    """Test SMTP Configuration using stored database settings"""
     
-    # Use the exact working settings that we know work
-    smtp_server = "mail.everlastwellness.com"
-    smtp_port = 465
-    smtp_username = "erp@everlastwellness.com"
-    smtp_password = "L$^F3HmP~HVx"
-    use_tls = False
-    use_ssl = True
-    sender_name = "EverLastERP System"
-    sender_email = "erp@everlastwellness.com"
-    source = "hardcoded working settings"
+    # Get SMTP configuration from database
+    config = SMTPConfiguration.query.filter(SMTPConfiguration.is_active == True).first()
+    
+    if not config:
+        flash('❌ No active SMTP configuration found. Please save your SMTP settings first.', 'danger')
+        return redirect(url_for('dashboard.smtp_configuration'))
+    
+    # Use settings from database
+    smtp_server = config.smtp_server
+    smtp_port = config.smtp_port
+    smtp_username = config.smtp_username
+    smtp_password = config.smtp_password
+    use_tls = config.use_tls
+    use_ssl = config.use_ssl
+    sender_name = config.sender_name
+    sender_email = config.sender_email
+    source = "database configuration"
+    
+    # Validate password exists
+    if not smtp_password or not smtp_password.strip():
+        flash('❌ SMTP password is missing. Please update your SMTP configuration with a valid password.', 'danger')
+        return redirect(url_for('dashboard.smtp_configuration'))
     
     try:
         # Import email libraries
@@ -2229,7 +2350,7 @@ def test_smtp_configuration():
         import logging
         
         # Log the configuration being tested (without password)
-        logging.info(f"Testing SMTP config from {source}: {smtp_server}:{smtp_port}, SSL:{use_ssl}, TLS:{use_tls}")
+        logging.info(f"Testing SMTP config from {source}: {smtp_server}:{smtp_port}, SSL:{use_ssl}, TLS:{use_tls}, Username:{smtp_username}, Sender:{sender_email}")
         
         # Create test message
         msg = MIMEMultipart()
@@ -2281,13 +2402,29 @@ Everlast Wellness
                     server.starttls()
             
             logging.info("Attempting authentication...")
+            logging.info(f"Username: {smtp_username}")
+            logging.info(f"Password length: {len(smtp_password) if smtp_password else 0} characters")
+            # Log first and last character (for debugging without exposing full password)
+            if smtp_password and len(smtp_password) > 0:
+                logging.info(f"Password starts with: '{smtp_password[0]}', ends with: '{smtp_password[-1]}'")
             server.login(smtp_username, smtp_password)
             
             logging.info("Sending test email...")
             server.send_message(msg)
-            flash(f'✅ Test email sent successfully using {source}! Check your inbox at {current_user.email}', 'success')
-            logging.info(f"SMTP test completed successfully using {source}")
+            flash(f'✅ Test email sent successfully using your saved SMTP configuration! Check your inbox at {current_user.email}', 'success')
+            logging.info(f"SMTP test completed successfully using database configuration: {smtp_server}:{smtp_port}")
             
+        except smtplib.SMTPAuthenticationError as auth_error:
+            error_code = auth_error.smtp_code if hasattr(auth_error, 'smtp_code') else 'Unknown'
+            error_message = str(auth_error)
+            logging.error(f"SMTP authentication failed: {error_message}", exc_info=True)
+            
+            # Check if password might be empty or incorrect
+            if not smtp_password or len(smtp_password.strip()) == 0:
+                flash(f'❌ SMTP Test Failed: Password is missing or empty. Please update your SMTP password in the configuration.', 'danger')
+            else:
+                flash(f'❌ SMTP Test Failed: Authentication error (Code: {error_code}). Please verify your username ({smtp_username}) and password are correct. The password may have expired or been changed.', 'danger')
+        
         except Exception as smtp_error:
             if server:
                 try:
@@ -2299,12 +2436,17 @@ Everlast Wellness
     except Exception as e:
         error_message = str(e)
         
-        # Log the error for debugging but don't show confusing messages to user
+        # Log the error for debugging
         import logging
-        logging.error(f"SMTP test failed with working credentials: {error_message}")
+        logging.error(f"SMTP test failed: {error_message}", exc_info=True)
         
-        # Simple, clear error message
-        flash('❌ SMTP Test Failed: There may be a network issue or server problem. Please try again in a moment.', 'danger')
+        # Provide detailed error message based on error type
+        if "authentication failed" in str(e).lower() or "login" in str(e).lower():
+            flash(f'❌ SMTP Test Failed: Authentication error. Please check your username ({smtp_username}) and password are correct.', 'danger')
+        elif "connection" in str(e).lower() or "timeout" in str(e).lower():
+            flash(f'❌ SMTP Test Failed: Could not connect to {smtp_server}:{smtp_port}. Please check your server settings.', 'danger')
+        else:
+            flash(f'❌ SMTP Test Failed: {str(e)[:100]}. Please check your configuration and try again.', 'danger')
     
     return redirect(url_for('dashboard.smtp_configuration'))
 

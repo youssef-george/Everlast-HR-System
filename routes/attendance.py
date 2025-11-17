@@ -2003,7 +2003,7 @@ def index():
             # Get historical logs
             query = AttendanceLog.query\
                 .filter(AttendanceLog.timestamp.between(start_date_obj, end_datetime_obj))\
-                .join(User)
+                .join(User, AttendanceLog.user_id == User.id)
             
             # If employee filter is applied and user is admin, or if employee is viewing their own data
             if (is_admin and employee_id) or is_employee_viewing_own_data:
@@ -2861,17 +2861,73 @@ def create_system_user_from_device_user(device_user_data, device_user_id):
         import secrets
         import string
         
-        # Generate a temporary email and password
-        device_name = device_user_data.get('name', f'User{device_user_id}')
-        base_email = f"{device_name.lower().replace(' ', '.')}@company.com"
-        temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8))
+        # Check if user already exists by fingerprint number
+        existing_user = User.query.filter_by(fingerprint_number=device_user_id).first()
+        if existing_user:
+            # If user exists and has a proper email, return existing user
+            if existing_user.email and '@everlastwellness.com' in existing_user.email and \
+               'placeholder' not in existing_user.email.lower() and \
+               '@company.com' not in existing_user.email.lower():
+                logging.info(f'Existing user found with proper email: {existing_user.first_name} ({existing_user.email})')
+                return existing_user
+            # If user exists but has placeholder email, update it
+            elif existing_user.email and ('placeholder' in existing_user.email.lower() or 
+                                         existing_user.email.startswith('fp_user_') or 
+                                         '@company.com' in existing_user.email.lower()):
+                # Generate proper email from user's name
+                device_name = device_user_data.get('name', existing_user.first_name or f'User{device_user_id}')
+                name_parts = (existing_user.first_name + ' ' + (existing_user.last_name or '')).strip().split()
+                if not name_parts or len(name_parts) < 2:
+                    name_parts = device_name.strip().split()
+                
+                if len(name_parts) >= 2:
+                    first_name = name_parts[0].lower()
+                    last_name = name_parts[-1].lower()
+                    base_email = f"{first_name}.{last_name}@everlastwellness.com"
+                else:
+                    name_lower = name_parts[0].lower() if name_parts else "user"
+                    base_email = f"{name_lower}.{name_lower}@everlastwellness.com"
+                
+                # Ensure email uniqueness
+                email = base_email
+                counter = 1
+                while User.query.filter_by(email=email).filter(User.id != existing_user.id).first():
+                    if len(name_parts) >= 2:
+                        email = f"{first_name}.{last_name}{counter}@everlastwellness.com"
+                    else:
+                        email = f"{name_lower}{counter}@everlastwellness.com"
+                    counter += 1
+                
+                existing_user.email = email
+                db.session.commit()
+                logging.info(f'Updated placeholder email for existing user: {existing_user.first_name} (New: {email})')
+                return existing_user
         
-        # Check if email already exists, if so, add a number
+        # Generate proper email from user's name for new user
+        # Format: firstname.lastname@everlastwellness.com
+        device_name = device_user_data.get('name', f'User{device_user_id}')
+        name_parts = device_name.strip().split()
+        
+        if len(name_parts) >= 2:
+            first_name = name_parts[0].lower()
+            last_name = name_parts[-1].lower()
+            base_email = f"{first_name}.{last_name}@everlastwellness.com"
+        else:
+            # If only one name, use it for both
+            name_lower = name_parts[0].lower() if name_parts else "user"
+            base_email = f"{name_lower}.{name_lower}@everlastwellness.com"
+        
+        # Ensure email uniqueness
         email = base_email
         counter = 1
         while User.query.filter_by(email=email).first():
-            email = f"{base_email.split('@')[0]}{counter}@company.com"
+            if len(name_parts) >= 2:
+                email = f"{first_name}.{last_name}{counter}@everlastwellness.com"
+            else:
+                email = f"{name_lower}{counter}@everlastwellness.com"
             counter += 1
+        
+        temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8))
         
         # Create the system user
         new_user = User(

@@ -474,6 +474,12 @@
                         <span class="nav-text">SMTP Configuration</span>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('email_templates.index') }}" class="nav-link {{ 'active' if request.path.startswith('/dashboard/email-templates') }}">
+                        <i class="fas fa-envelope nav-icon"></i>
+                        <span class="nav-text">Email Templates</span>
+                    </a>
+                </li>
                 {% endif %}
                 {% if current_user.role in ['admin', 'product_owner', 'director'] %}
                 <li class="nav-item dropdown">
@@ -533,6 +539,12 @@
                     <a href="{{ url_for('profile.index') }}" class="nav-link {{ 'active' if request.path.startswith('/profile') }}">
                         <i class="fas fa-user-cog nav-icon"></i>
                         <span class="nav-text">Profile Settings</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('documentation.index') }}" class="nav-link {{ 'active' if request.path.startswith('/documentation') }}">
+                        <i class="fas fa-book nav-icon"></i>
+                        <span class="nav-text">Documentation</span>
                     </a>
                 </li>
                 

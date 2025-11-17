@@ -291,6 +291,104 @@ def create_app(config_name='default'):
                 logging.warning(f"employee_attachments table check: {e}")
                 db.session.rollback()
             
+            # Create documentation_pages table if missing
+            try:
+                db.session.execute(text("""
+                    CREATE TABLE IF NOT EXISTS documentation_pages (
+                        id SERIAL PRIMARY KEY,
+                        title VARCHAR(255) NOT NULL,
+                        slug VARCHAR(255) NOT NULL UNIQUE,
+                        content TEXT NOT NULL,
+                        category VARCHAR(100) NOT NULL,
+                        tags VARCHAR(100)[],
+                        visible_roles VARCHAR(20)[],
+                        is_published BOOLEAN DEFAULT FALSE,
+                        view_count INTEGER DEFAULT 0,
+                        created_by INTEGER,
+                        updated_by INTEGER,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        CONSTRAINT fk_doc_created_by 
+                            FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+                        CONSTRAINT fk_doc_updated_by 
+                            FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+                    )
+                """))
+                
+                # Add slug column if table exists but column doesn't
+                db.session.execute(text("""
+                    DO $$ 
+                    BEGIN
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE table_name='documentation_pages' AND column_name='slug'
+                        ) THEN
+                            ALTER TABLE documentation_pages ADD COLUMN slug VARCHAR(255);
+                            -- Update existing rows with slugs generated from titles
+                            UPDATE documentation_pages SET slug = LOWER(REGEXP_REPLACE(REGEXP_REPLACE(title, '[^a-zA-Z0-9\s-]', '', 'g'), '\s+', '-', 'g')) WHERE slug IS NULL;
+                            ALTER TABLE documentation_pages ALTER COLUMN slug SET NOT NULL;
+                            CREATE UNIQUE INDEX IF NOT EXISTS idx_doc_slug ON documentation_pages(slug);
+                        END IF;
+                    END $$;
+                """))
+                # Create indexes
+                db.session.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_doc_category ON documentation_pages(category)
+                """))
+                db.session.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_doc_published ON documentation_pages(is_published)
+                """))
+                db.session.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_doc_created_at ON documentation_pages(created_at)
+                """))
+                db.session.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_doc_slug ON documentation_pages(slug)
+                """))
+                db.session.commit()
+                logging.info("✅ documentation_pages table checked/created")
+            except (OperationalError, SQLAlchemyOperationalError) as e:
+                db.session.rollback()
+            except Exception as e:
+                logging.warning(f"documentation_pages table check: {e}")
+                db.session.rollback()
+            
+            # Create email_templates table if missing
+            try:
+                db.session.execute(text("""
+                    CREATE TABLE IF NOT EXISTS email_templates (
+                        id SERIAL PRIMARY KEY,
+                        template_name VARCHAR(100) NOT NULL UNIQUE,
+                        template_type VARCHAR(50) NOT NULL,
+                        subject VARCHAR(255) NOT NULL,
+                        body_html TEXT NOT NULL,
+                        footer TEXT,
+                        signature TEXT,
+                        is_active BOOLEAN DEFAULT TRUE,
+                        created_by INTEGER,
+                        updated_by INTEGER,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        CONSTRAINT fk_email_template_created_by 
+                            FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+                        CONSTRAINT fk_email_template_updated_by 
+                            FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+                    )
+                """))
+                # Create indexes
+                db.session.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_email_template_type ON email_templates(template_type)
+                """))
+                db.session.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_email_template_active ON email_templates(is_active)
+                """))
+                db.session.commit()
+                logging.info("✅ email_templates table checked/created")
+            except (OperationalError, SQLAlchemyOperationalError) as e:
+                db.session.rollback()
+            except Exception as e:
+                logging.warning(f"email_templates table check: {e}")
+                db.session.rollback()
+            
             # Break tables removed
             
             # Fix Department sequence
@@ -359,6 +457,8 @@ def create_app(config_name='default'):
         from routes.paid_holidays import paid_holidays_bp
         from routes.api import api_bp
         from routes.final_report import final_report_bp
+        from routes.documentation import documentation_bp
+        from routes.email_templates import email_templates_bp
         
         # Register blueprints
         app.register_blueprint(auth_bp)
@@ -372,9 +472,514 @@ def create_app(config_name='default'):
         app.register_blueprint(paid_holidays_bp, url_prefix='/paid-holidays')
         app.register_blueprint(api_bp)
         app.register_blueprint(final_report_bp)
+        app.register_blueprint(documentation_bp)
+        app.register_blueprint(email_templates_bp)
         
         # Initialize database
         # db.create_all()  # Commented out - using migrations instead
+        
+        # Create default email templates if they don't exist
+        try:
+            from models import EmailTemplate, User
+            from helpers import get_email_template
+            
+            # Get first product owner or admin for created_by
+            creator = User.query.filter(User.role.in_(['product_owner', 'admin'])).first()
+            creator_id = creator.id if creator else None
+            
+            default_templates = [
+                {
+                    'template_name': 'leave_manager_notification',
+                    'template_type': 'leave_manager_notification',
+                    'subject': 'New Leave Request from {employee_name} - Action Required',
+                    'body_html': '''
+                    <html>
+                    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                                <h2 style="margin: 0; font-size: 24px;">New Leave Request</h2>
+                            </div>
+                            
+                            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea;">
+                                <h3 style="color: #667eea; margin-top: 0;">Hello {manager_name},</h3>
+                                <p>A new leave request has been submitted by <strong>{employee_name}</strong> and requires your review.</p>
+                                
+                                <div style="background: white; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                                    <p style="margin: 5px 0;"><strong>Request Type:</strong> {request_type}</p>
+                                    <p style="margin: 5px 0;"><strong>Start Date:</strong> {start_date}</p>
+                                    <p style="margin: 5px 0;"><strong>End Date:</strong> {end_date}</p>
+                                    <p style="margin: 5px 0;"><strong>Duration:</strong> {duration}</p>
+                                    <p style="margin: 5px 0;"><strong>Reason:</strong> {reason}</p>
+                                </div>
+                                
+                                <div style="margin: 20px 0; padding: 15px; background: #e3f2fd; border-radius: 6px;">
+                                    <p style="margin: 0; font-size: 14px; color: #1565c0;">
+                                        <strong>Action Required:</strong> Please review and approve or reject this request.
+                                    </p>
+                                    <p style="margin: 10px 0 0 0;">
+                                        <a href="{approval_link}" style="background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Review Request</a>
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; text-align: center;">
+                                <p style="margin: 0; font-size: 12px; color: #666;">
+                                    This is an automated message from EverLastERP System.<br>
+                                    Please do not reply to this email.
+                                </p>
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                    ''',
+                    'footer': None,
+                    'signature': None
+                },
+                {
+                    'template_name': 'leave_admin_notification',
+                    'template_type': 'leave_admin_notification',
+                    'subject': 'Leave Request Approved by Manager - Final Approval Required',
+                    'body_html': '''
+                    <html>
+                    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                                <h2 style="margin: 0; font-size: 24px;">Leave Request - Final Approval</h2>
+                            </div>
+                            
+                            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea;">
+                                <h3 style="color: #667eea; margin-top: 0;">Hello {admin_name},</h3>
+                                <p>A leave request from <strong>{employee_name}</strong> has been approved by their manager <strong>{manager_name}</strong> and now requires your final approval.</p>
+                                
+                                <div style="background: white; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                                    <p style="margin: 5px 0;"><strong>Employee:</strong> {employee_name}</p>
+                                    <p style="margin: 5px 0;"><strong>Request Type:</strong> {request_type}</p>
+                                    <p style="margin: 5px 0;"><strong>Start Date:</strong> {start_date}</p>
+                                    <p style="margin: 5px 0;"><strong>End Date:</strong> {end_date}</p>
+                                    <p style="margin: 5px 0;"><strong>Duration:</strong> {duration}</p>
+                                    <p style="margin: 5px 0;"><strong>Reason:</strong> {reason}</p>
+                                    <p style="margin: 5px 0;"><strong>Manager Comment:</strong> {comment}</p>
+                                </div>
+                                
+                                <div style="margin: 20px 0; padding: 15px; background: #e3f2fd; border-radius: 6px;">
+                                    <p style="margin: 0; font-size: 14px; color: #1565c0;">
+                                        <strong>Action Required:</strong> Please review and provide final approval or rejection.
+                                    </p>
+                                    <p style="margin: 10px 0 0 0;">
+                                        <a href="{approval_link}" style="background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Review Request</a>
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; text-align: center;">
+                                <p style="margin: 0; font-size: 12px; color: #666;">
+                                    This is an automated message from EverLastERP System.<br>
+                                    Please do not reply to this email.
+                                </p>
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                    ''',
+                    'footer': None,
+                    'signature': None
+                },
+                {
+                    'template_name': 'leave_employee_confirmation',
+                    'template_type': 'leave_employee_confirmation',
+                    'subject': 'Your Leave Request Has Been Approved',
+                    'body_html': '''
+                    <html>
+                    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                            <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                                <h2 style="margin: 0; font-size: 24px;">✓ Leave Request Approved</h2>
+                            </div>
+                            
+                            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #28a745;">
+                                <h3 style="color: #28a745; margin-top: 0;">Hello {employee_name},</h3>
+                                <p>Great news! Your leave request has been fully approved.</p>
+                                
+                                <div style="background: white; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                                    <p style="margin: 5px 0;"><strong>Request Type:</strong> {request_type}</p>
+                                    <p style="margin: 5px 0;"><strong>Start Date:</strong> {start_date}</p>
+                                    <p style="margin: 5px 0;"><strong>End Date:</strong> {end_date}</p>
+                                    <p style="margin: 5px 0;"><strong>Duration:</strong> {duration}</p>
+                                    <p style="margin: 5px 0;"><strong>Status:</strong> <span style="color: #28a745; font-weight: bold;">{status}</span></p>
+                                </div>
+                                
+                                <div style="margin: 20px 0; padding: 15px; background: #d4edda; border-radius: 6px; border-left: 4px solid #28a745;">
+                                    <p style="margin: 0; font-size: 14px; color: #155724;">
+                                        <strong>Approved by:</strong> {admin_name}<br>
+                                        <strong>Comment:</strong> {comment}
+                                    </p>
+                                </div>
+                                
+                                <p>Your leave balance has been updated accordingly. Please ensure your team is informed about your absence.</p>
+                            </div>
+                            
+                            <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; text-align: center;">
+                                <p style="margin: 0; font-size: 12px; color: #666;">
+                                    This is an automated message from EverLastERP System.<br>
+                                    Please do not reply to this email.
+                                </p>
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                    ''',
+                    'footer': None,
+                    'signature': None
+                },
+                {
+                    'template_name': 'leave_employee_rejection',
+                    'template_type': 'leave_employee_rejection',
+                    'subject': 'Your Leave Request Has Been Rejected',
+                    'body_html': '''
+                    <html>
+                    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                            <div style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                                <h2 style="margin: 0; font-size: 24px;">Leave Request Rejected</h2>
+                            </div>
+                            
+                            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #dc3545;">
+                                <h3 style="color: #dc3545; margin-top: 0;">Hello {employee_name},</h3>
+                                <p>We regret to inform you that your leave request has been rejected.</p>
+                                
+                                <div style="background: white; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                                    <p style="margin: 5px 0;"><strong>Request Type:</strong> {request_type}</p>
+                                    <p style="margin: 5px 0;"><strong>Start Date:</strong> {start_date}</p>
+                                    <p style="margin: 5px 0;"><strong>End Date:</strong> {end_date}</p>
+                                    <p style="margin: 5px 0;"><strong>Duration:</strong> {duration}</p>
+                                    <p style="margin: 5px 0;"><strong>Status:</strong> <span style="color: #dc3545; font-weight: bold;">{status}</span></p>
+                                </div>
+                                
+                                <div style="margin: 20px 0; padding: 15px; background: #f8d7da; border-radius: 6px; border-left: 4px solid #dc3545;">
+                                    <p style="margin: 0; font-size: 14px; color: #721c24;">
+                                        <strong>Rejection Reason:</strong><br>
+                                        {comment}
+                                    </p>
+                                </div>
+                                
+                                <p>If you have any questions or concerns, please contact your manager or HR department.</p>
+                            </div>
+                            
+                            <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; text-align: center;">
+                                <p style="margin: 0; font-size: 12px; color: #666;">
+                                    This is an automated message from EverLastERP System.<br>
+                                    Please do not reply to this email.
+                                </p>
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                    ''',
+                    'footer': None,
+                    'signature': None
+                },
+                {
+                    'template_name': 'permission_manager_notification',
+                    'template_type': 'permission_manager_notification',
+                    'subject': 'New Permission Request from {employee_name} - Action Required',
+                    'body_html': '''
+                    <html>
+                    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                                <h2 style="margin: 0; font-size: 24px;">New Permission Request</h2>
+                            </div>
+                            
+                            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea;">
+                                <h3 style="color: #667eea; margin-top: 0;">Hello {manager_name},</h3>
+                                <p>A new permission request has been submitted by <strong>{employee_name}</strong> and requires your review.</p>
+                                
+                                <div style="background: white; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                                    <p style="margin: 5px 0;"><strong>Request Type:</strong> {request_type}</p>
+                                    <p style="margin: 5px 0;"><strong>Date:</strong> {start_date}</p>
+                                    <p style="margin: 5px 0;"><strong>Time:</strong> {end_date}</p>
+                                    <p style="margin: 5px 0;"><strong>Duration:</strong> {duration}</p>
+                                    <p style="margin: 5px 0;"><strong>Reason:</strong> {reason}</p>
+                                </div>
+                                
+                                <div style="margin: 20px 0; padding: 15px; background: #e3f2fd; border-radius: 6px;">
+                                    <p style="margin: 0; font-size: 14px; color: #1565c0;">
+                                        <strong>Action Required:</strong> Please review and approve or reject this request.
+                                    </p>
+                                    <p style="margin: 10px 0 0 0;">
+                                        <a href="{approval_link}" style="background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Review Request</a>
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; text-align: center;">
+                                <p style="margin: 0; font-size: 12px; color: #666;">
+                                    This is an automated message from EverLastERP System.<br>
+                                    Please do not reply to this email.
+                                </p>
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                    ''',
+                    'footer': None,
+                    'signature': None
+                },
+                {
+                    'template_name': 'permission_admin_notification',
+                    'template_type': 'permission_admin_notification',
+                    'subject': 'Permission Request Approved by Manager - Final Approval Required',
+                    'body_html': '''
+                    <html>
+                    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                                <h2 style="margin: 0; font-size: 24px;">Permission Request - Final Approval</h2>
+                            </div>
+                            
+                            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea;">
+                                <h3 style="color: #667eea; margin-top: 0;">Hello {admin_name},</h3>
+                                <p>A permission request from <strong>{employee_name}</strong> has been approved by their manager <strong>{manager_name}</strong> and now requires your final approval.</p>
+                                
+                                <div style="background: white; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                                    <p style="margin: 5px 0;"><strong>Employee:</strong> {employee_name}</p>
+                                    <p style="margin: 5px 0;"><strong>Request Type:</strong> {request_type}</p>
+                                    <p style="margin: 5px 0;"><strong>Date:</strong> {start_date}</p>
+                                    <p style="margin: 5px 0;"><strong>Time:</strong> {end_date}</p>
+                                    <p style="margin: 5px 0;"><strong>Duration:</strong> {duration}</p>
+                                    <p style="margin: 5px 0;"><strong>Reason:</strong> {reason}</p>
+                                    <p style="margin: 5px 0;"><strong>Manager Comment:</strong> {comment}</p>
+                                </div>
+                                
+                                <div style="margin: 20px 0; padding: 15px; background: #e3f2fd; border-radius: 6px;">
+                                    <p style="margin: 0; font-size: 14px; color: #1565c0;">
+                                        <strong>Action Required:</strong> Please review and provide final approval or rejection.
+                                    </p>
+                                    <p style="margin: 10px 0 0 0;">
+                                        <a href="{approval_link}" style="background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Review Request</a>
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; text-align: center;">
+                                <p style="margin: 0; font-size: 12px; color: #666;">
+                                    This is an automated message from EverLastERP System.<br>
+                                    Please do not reply to this email.
+                                </p>
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                    ''',
+                    'footer': None,
+                    'signature': None
+                },
+                {
+                    'template_name': 'permission_employee_confirmation',
+                    'template_type': 'permission_employee_confirmation',
+                    'subject': 'Your Permission Request Has Been Approved',
+                    'body_html': '''
+                    <html>
+                    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                            <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                                <h2 style="margin: 0; font-size: 24px;">✓ Permission Request Approved</h2>
+                            </div>
+                            
+                            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #28a745;">
+                                <h3 style="color: #28a745; margin-top: 0;">Hello {employee_name},</h3>
+                                <p>Great news! Your permission request has been fully approved.</p>
+                                
+                                <div style="background: white; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                                    <p style="margin: 5px 0;"><strong>Request Type:</strong> {request_type}</p>
+                                    <p style="margin: 5px 0;"><strong>Date:</strong> {start_date}</p>
+                                    <p style="margin: 5px 0;"><strong>Time:</strong> {end_date}</p>
+                                    <p style="margin: 5px 0;"><strong>Duration:</strong> {duration}</p>
+                                    <p style="margin: 5px 0;"><strong>Status:</strong> <span style="color: #28a745; font-weight: bold;">{status}</span></p>
+                                </div>
+                                
+                                <div style="margin: 20px 0; padding: 15px; background: #d4edda; border-radius: 6px; border-left: 4px solid #28a745;">
+                                    <p style="margin: 0; font-size: 14px; color: #155724;">
+                                        <strong>Approved by:</strong> {admin_name}<br>
+                                        <strong>Comment:</strong> {comment}
+                                    </p>
+                                </div>
+                                
+                                <p>Please ensure your team is informed about your absence during this time.</p>
+                            </div>
+                            
+                            <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; text-align: center;">
+                                <p style="margin: 0; font-size: 12px; color: #666;">
+                                    This is an automated message from EverLastERP System.<br>
+                                    Please do not reply to this email.
+                                </p>
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                    ''',
+                    'footer': None,
+                    'signature': None
+                },
+                {
+                    'template_name': 'permission_employee_rejection',
+                    'template_type': 'permission_employee_rejection',
+                    'subject': 'Your Permission Request Has Been Rejected',
+                    'body_html': '''
+                    <html>
+                    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                            <div style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                                <h2 style="margin: 0; font-size: 24px;">Permission Request Rejected</h2>
+                            </div>
+                            
+                            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #dc3545;">
+                                <h3 style="color: #dc3545; margin-top: 0;">Hello {employee_name},</h3>
+                                <p>We regret to inform you that your permission request has been rejected.</p>
+                                
+                                <div style="background: white; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                                    <p style="margin: 5px 0;"><strong>Request Type:</strong> {request_type}</p>
+                                    <p style="margin: 5px 0;"><strong>Date:</strong> {start_date}</p>
+                                    <p style="margin: 5px 0;"><strong>Time:</strong> {end_date}</p>
+                                    <p style="margin: 5px 0;"><strong>Duration:</strong> {duration}</p>
+                                    <p style="margin: 5px 0;"><strong>Status:</strong> <span style="color: #dc3545; font-weight: bold;">{status}</span></p>
+                                </div>
+                                
+                                <div style="margin: 20px 0; padding: 15px; background: #f8d7da; border-radius: 6px; border-left: 4px solid #dc3545;">
+                                    <p style="margin: 0; font-size: 14px; color: #721c24;">
+                                        <strong>Rejection Reason:</strong><br>
+                                        {comment}
+                                    </p>
+                                </div>
+                                
+                                <p>If you have any questions or concerns, please contact your manager or HR department.</p>
+                            </div>
+                            
+                            <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; text-align: center;">
+                                <p style="margin: 0; font-size: 12px; color: #666;">
+                                    This is an automated message from EverLastERP System.<br>
+                                    Please do not reply to this email.
+                                </p>
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                    ''',
+                    'footer': None,
+                    'signature': None
+                },
+                {
+                    'template_name': 'leave_employee_submission_confirmation',
+                    'template_type': 'leave_employee_submission_confirmation',
+                    'subject': 'Your Leave Request Has Been Submitted - Pending Review',
+                    'body_html': '''<html>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 24px;">Leave Request Submitted</h2>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea;">
+            <h3 style="color: #667eea; margin-top: 0;">Hello {employee_name},</h3>
+            <p>Your leave request has been successfully submitted and is now pending manager review.</p>
+            
+            <div style="background: white; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                <p style="margin: 5px 0;"><strong>Request Type:</strong> {request_type}</p>
+                <p style="margin: 5px 0;"><strong>Start Date:</strong> {start_date}</p>
+                <p style="margin: 5px 0;"><strong>End Date:</strong> {end_date}</p>
+                <p style="margin: 5px 0;"><strong>Duration:</strong> {duration}</p>
+                <p style="margin: 5px 0;"><strong>Reason:</strong> {reason}</p>
+                <p style="margin: 5px 0;"><strong>Submitted On:</strong> {submission_date} at {submission_time}</p>
+                <p style="margin: 5px 0;"><strong>Status:</strong> <span style="color: #ffc107; font-weight: bold;">{status}</span></p>
+            </div>
+            
+            <div style="margin: 20px 0; padding: 15px; background: #fff3cd; border-radius: 6px; border-left: 4px solid #ffc107;">
+                <p style="margin: 0; font-size: 14px; color: #856404;">
+                    <strong>Next Steps:</strong> Your request is now pending manager review. You will be notified once your manager has reviewed your request.
+                </p>
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; text-align: center;">
+            <p style="margin: 0; font-size: 12px; color: #666;">
+                This is an automated message from EverLastERP System.<br>
+                Please do not reply to this email.
+            </p>
+        </div>
+    </div>
+</body>
+</html>''',
+                    'footer': None,
+                    'signature': None
+                },
+                {
+                    'template_name': 'permission_employee_submission_confirmation',
+                    'template_type': 'permission_employee_submission_confirmation',
+                    'subject': 'Your Permission Request Has Been Submitted - Pending Review',
+                    'body_html': '''<html>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 24px;">Permission Request Submitted</h2>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea;">
+            <h3 style="color: #667eea; margin-top: 0;">Hello {employee_name},</h3>
+            <p>Your permission request has been successfully submitted and is now pending manager review.</p>
+            
+            <div style="background: white; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                <p style="margin: 5px 0;"><strong>Request Type:</strong> {request_type}</p>
+                <p style="margin: 5px 0;"><strong>Date:</strong> {start_date}</p>
+                <p style="margin: 5px 0;"><strong>Time:</strong> {end_date}</p>
+                <p style="margin: 5px 0;"><strong>Duration:</strong> {duration}</p>
+                <p style="margin: 5px 0;"><strong>Reason:</strong> {reason}</p>
+                <p style="margin: 5px 0;"><strong>Submitted On:</strong> {submission_date} at {submission_time}</p>
+                <p style="margin: 5px 0;"><strong>Status:</strong> <span style="color: #ffc107; font-weight: bold;">{status}</span></p>
+            </div>
+            
+            <div style="margin: 20px 0; padding: 15px; background: #fff3cd; border-radius: 6px; border-left: 4px solid #ffc107;">
+                <p style="margin: 0; font-size: 14px; color: #856404;">
+                    <strong>Next Steps:</strong> Your request is now pending manager review. You will be notified once your manager has reviewed your request.
+                </p>
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; text-align: center;">
+            <p style="margin: 0; font-size: 12px; color: #666;">
+                This is an automated message from EverLastERP System.<br>
+                Please do not reply to this email.
+            </p>
+        </div>
+    </div>
+</body>
+</html>''',
+                    'footer': None,
+                    'signature': None
+                }
+            ]
+            
+            for template_data in default_templates:
+                existing = EmailTemplate.query.filter_by(template_name=template_data['template_name']).first()
+                if not existing:
+                    template = EmailTemplate(
+                        template_name=template_data['template_name'],
+                        template_type=template_data['template_type'],
+                        subject=template_data['subject'],
+                        body_html=template_data['body_html'],
+                        footer=template_data['footer'],
+                        signature=template_data['signature'],
+                        is_active=True,
+                        created_by=creator_id,
+                        updated_by=creator_id
+                    )
+                    db.session.add(template)
+                    logging.info(f"Created default email template: {template_data['template_name']}")
+            
+            db.session.commit()
+            logging.info("Default email templates checked/created")
+        except Exception as e:
+            logging.warning(f"Error creating default email templates: {str(e)}")
+            db.session.rollback()
         
         # Create default admin user if doesn't exist
         # from models import User

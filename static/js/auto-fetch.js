@@ -121,6 +121,12 @@ class AutoFetchSystem {
     async performFetch() {
         if (this.fetchInProgress) return;
         
+        // Check if we're on HTTPS but server might be HTTP (common in development)
+        const currentProtocol = window.location.protocol;
+        if (currentProtocol === 'https:' && window.location.hostname === '127.0.0.1') {
+            console.warn('⚠️ Page loaded over HTTPS but server may be HTTP. Some API calls may fail.');
+        }
+        
         this.fetchInProgress = true;
         console.log('🔄 Auto-fetching data...');
         
@@ -149,15 +155,27 @@ class AutoFetchSystem {
             
             // Process results
             let successCount = 0;
+            let sslErrorCount = 0;
             results.forEach((result, index) => {
                 if (result.status === 'fulfilled') {
                     this.handleFetchSuccess(result.value);
                     successCount++;
                 } else {
-                    console.warn(`❌ Fetch operation ${index} failed:`, result.reason);
+                    // Check if it's an SSL error (HTTP/HTTPS mismatch)
+                    const error = result.reason;
+                    if (error && (error.message && (error.message.includes('SSL') || error.message.includes('ERR_SSL_PROTOCOL_ERROR') || error.message.includes('Failed to fetch')))) {
+                        sslErrorCount++;
+                        // Suppress SSL errors - they're expected when page is HTTPS but server is HTTP
+                        console.debug(`⚠️ SSL protocol error suppressed (HTTP/HTTPS mismatch)`);
+                    } else {
+                        console.warn(`❌ Fetch operation ${index} failed:`, result.reason);
+                    }
                 }
             });
             
+            if (sslErrorCount > 0) {
+                console.debug(`⚠️ ${sslErrorCount} SSL errors suppressed (likely HTTP/HTTPS protocol mismatch)`);
+            }
             console.log(`✅ Auto-fetch completed: ${successCount}/${results.length} successful`);
             
             // Reset connection failures on successful fetch
@@ -392,6 +410,8 @@ class AutoFetchSystem {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken()
                 },
+                credentials: 'same-origin',
+                redirect: 'follow',
                 signal: controller.signal
             });
             
@@ -410,6 +430,11 @@ class AutoFetchSystem {
         } catch (error) {
             // Only log if it's not an abort (timeout) or if it's a real error
             if (error.name !== 'AbortError' && error.name !== 'TimeoutError') {
+                // Suppress SSL protocol errors (usually means HTTP/HTTPS mismatch)
+                if (error.message && (error.message.includes('SSL') || error.message.includes('ERR_SSL_PROTOCOL_ERROR') || error.message.includes('Failed to fetch'))) {
+                    console.debug('SSL protocol error (likely HTTP/HTTPS mismatch) - suppressing');
+                    return null;
+                }
                 console.warn('Failed to fetch dashboard stats:', error.message || error);
             }
             return null;
@@ -426,6 +451,8 @@ class AutoFetchSystem {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken()
                 },
+                credentials: 'same-origin',
+                redirect: 'follow',
                 signal: controller.signal
             });
             
@@ -442,6 +469,11 @@ class AutoFetchSystem {
         } catch (error) {
             // Only log if it's not an abort (timeout) or if it's a real error
             if (error.name !== 'AbortError' && error.name !== 'TimeoutError') {
+                // Suppress SSL protocol errors (usually means HTTP/HTTPS mismatch)
+                if (error.message && (error.message.includes('SSL') || error.message.includes('ERR_SSL_PROTOCOL_ERROR'))) {
+                    console.debug('SSL protocol error (likely HTTP/HTTPS mismatch) - suppressing');
+                    return null;
+                }
                 console.warn('Failed to fetch leave balance:', error.message || error);
             }
             return null;
@@ -450,14 +482,20 @@ class AutoFetchSystem {
     
     async fetchRecentRequests() {
         try {
+            const { controller, timeoutId } = this._createTimeoutSignal(5000);
+            
             const response = await fetch('/api/requests/recent', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken()
                 },
-                signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : null
+                credentials: 'same-origin',
+                redirect: 'follow',
+                signal: controller.signal
             });
+            
+            clearTimeout(timeoutId);
             
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             
@@ -468,6 +506,11 @@ class AutoFetchSystem {
             const data = result.data || result;
             return { type: 'recent_requests', data };
         } catch (error) {
+            // Suppress SSL protocol errors (usually means HTTP/HTTPS mismatch)
+            if (error.message && (error.message.includes('SSL') || error.message.includes('ERR_SSL_PROTOCOL_ERROR') || error.message.includes('Failed to fetch'))) {
+                console.debug('SSL protocol error (likely HTTP/HTTPS mismatch) - suppressing');
+                return null;
+            }
             console.warn('Failed to fetch recent requests:', error);
             return null;
         }

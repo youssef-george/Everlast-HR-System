@@ -1,0 +1,193 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="content-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <a href="{{ url_for('documentation.index') }}" class="btn btn-sm btn-secondary mb-2">
+                <i class="fas fa-arrow-left me-1"></i>Back to Documentation
+            </a>
+            <h1 class="page-title mt-2">{{ page.title }}</h1>
+        </div>
+        {% if current_user.role == 'product_owner' %}
+        <div>
+            <a href="{{ url_for('documentation.edit', page_id=page.id) }}" class="btn btn-primary">
+                <i class="fas fa-edit me-1"></i>Edit
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-9">
+        <div class="card">
+            <div class="card-body">
+                <!-- Page Metadata -->
+                <div class="mb-4 pb-3 border-bottom">
+                    <div class="d-flex flex-wrap gap-2 mb-2">
+                        <span class="badge bg-primary">{{ page.category }}</span>
+                        {% if page.tags %}
+                            {% for tag in page.tags %}
+                            <span class="badge bg-secondary">{{ tag }}</span>
+                            {% endfor %}
+                        {% endif %}
+                        {% if not page.is_published %}
+                        <span class="badge bg-warning">Draft</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-muted small">
+                        <i class="fas fa-user me-1"></i>
+                        Created by {{ page.creator.get_full_name() if page.creator else 'Unknown' }}
+                        on {{ page.created_at|datetime('%B %d, %Y at %I:%M %p') }}
+                        {% if page.updated_at != page.created_at %}
+                        <br>
+                        <i class="fas fa-edit me-1"></i>
+                        Last updated by {{ page.updater.get_full_name() if page.updater else 'Unknown' }}
+                        on {{ page.updated_at|datetime('%B %d, %Y at %I:%M %p') }}
+                        {% endif %}
+                        <br>
+                        <i class="fas fa-eye me-1"></i>{{ page.view_count or 0 }} views
+                    </div>
+                </div>
+                
+                <!-- Page Content -->
+                <div class="documentation-content">
+                    {{ page.content|safe }}
+                </div>
+                
+                <!-- Technical Support Footer -->
+                <div class="mt-5 pt-4 border-top">
+                    <div class="alert alert-info mb-0">
+                        <p class="mb-0">
+                            <strong>Technical Support:</strong> For technical support, please contact 
+                            <strong>Eng. Youssef George</strong> at 
+                            <a href="mailto:youssef.george@everlastwellness.com" class="alert-link">
+                                youssef.george@everlastwellness.com
+                            </a>
+                            <br>
+                            <small class="text-muted">Software Developer</small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Page Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Category:</strong><br>
+                    <span class="badge bg-primary">{{ page.category }}</span>
+                </div>
+                {% if page.tags %}
+                <div class="mb-3">
+                    <strong>Tags:</strong><br>
+                    {% for tag in page.tags %}
+                    <span class="badge bg-secondary me-1">{{ tag }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% if current_user.role == 'product_owner' %}
+                <div class="mb-3">
+                    <strong>Visible to:</strong><br>
+                    {% if page.visible_roles %}
+                        {% for role in page.visible_roles %}
+                        <span class="badge bg-info me-1">{{ role|title }}</span>
+                        {% endfor %}
+                    {% else %}
+                        <span class="text-muted">No roles selected</span>
+                    {% endif %}
+                </div>
+                <div>
+                    <strong>Status:</strong><br>
+                    {% if page.is_published %}
+                    <span class="badge bg-success">Published</span>
+                    {% else %}
+                    <span class="badge bg-warning">Draft</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <a href="{{ url_for('documentation.index') }}" class="btn btn-sm btn-outline-primary w-100 mb-2">
+                    <i class="fas fa-list me-1"></i>All Documentation
+                </a>
+                {% if current_user.role == 'product_owner' %}
+                <a href="{{ url_for('documentation.edit', page_id=page.id) }}" class="btn btn-sm btn-outline-primary w-100 mb-2">
+                    <i class="fas fa-edit me-1"></i>Edit Page
+                </a>
+                <a href="{{ url_for('documentation.admin_panel') }}" class="btn btn-sm btn-outline-secondary w-100">
+                    <i class="fas fa-cog me-1"></i>Admin Panel
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.documentation-content {
+    line-height: 1.8;
+    font-size: 1.05rem;
+}
+
+.documentation-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 1rem 0;
+}
+
+.documentation-content h1,
+.documentation-content h2,
+.documentation-content h3 {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+}
+
+.documentation-content p {
+    margin-bottom: 1rem;
+}
+
+.documentation-content ul,
+.documentation-content ol {
+    margin-bottom: 1rem;
+    padding-left: 2rem;
+}
+
+.documentation-content code {
+    background-color: #f4f4f4;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.documentation-content pre {
+    background-color: #f4f4f4;
+    padding: 1rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 1rem 0;
+}
+
+.documentation-content blockquote {
+    border-left: 4px solid #007bff;
+    padding-left: 1rem;
+    margin: 1rem 0;
+    color: #666;
+}
+</style>
+{% endblock %}
+

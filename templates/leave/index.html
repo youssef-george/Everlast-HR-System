@@ -692,14 +692,14 @@ table thead th * {
                                                     </form>
                                                 {% endif %}
                                                 
-                                                <!-- Admin can edit/delete any request -->
-                                                {% if current_user.role in ['admin', 'director'] %}
-                                                    <a href="{{ url_for('leave.edit_leave', leave_id=leave.id) }}" class="btn btn-sm btn-icon btn-light-warning" data-bs-toggle="tooltip" title="Edit (Admin)">
+                                                <!-- Admin and Product Owner can edit/delete any request -->
+                                                {% if current_user.role in ['admin', 'product_owner', 'director'] %}
+                                                    <a href="{{ url_for('leave.edit_leave', leave_id=leave.id) }}" class="btn btn-sm btn-icon btn-light-warning" data-bs-toggle="tooltip" title="Edit">
                                                         <i class="fas fa-edit"></i>
                                                     </a>
                                                     <form method="POST" action="{{ url_for('leave.delete_leave', leave_id=leave.id) }}" class="d-inline" data-confirm="Are you sure you want to delete this leave request? This action cannot be undone.">
                                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                        <button type="submit" class="btn btn-sm btn-icon btn-light-danger" data-bs-toggle="tooltip" title="Delete (Admin)">
+                                                        <button type="submit" class="btn btn-sm btn-icon btn-light-danger" data-bs-toggle="tooltip" title="Delete">
                                                             <i class="fas fa-trash"></i>
                                                         </button>
                                                     </form>

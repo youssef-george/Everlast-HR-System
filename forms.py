@@ -1,6 +1,8 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, TextAreaField, SelectField, DateField, TimeField, BooleanField, HiddenField, SubmitField, EmailField, ValidationError, IntegerField, FileField, DecimalField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, Optional, Regexp, IPAddress, NumberRange
+from wtforms.widgets import CheckboxInput, ListWidget
+from wtforms.fields import SelectMultipleField
 from datetime import datetime, date
 
 # Custom validator for allowed domains
@@ -270,8 +272,8 @@ class SMTPConfigurationForm(FlaskForm):
                             default=587)
     smtp_username = StringField('SMTP Username', validators=[DataRequired(), Length(max=255)], 
                                render_kw={'placeholder': 'your-email@example.com'})
-    smtp_password = PasswordField('SMTP Password', validators=[DataRequired()], 
-                                 render_kw={'placeholder': 'App password or account password'})
+    smtp_password = PasswordField('SMTP Password', validators=[Optional()], 
+                                 render_kw={'placeholder': 'Leave blank to keep current password'})
     use_tls = BooleanField('Use TLS', default=True)
     use_ssl = BooleanField('Use SSL', default=False)
     sender_name = StringField('Sender Name', validators=[DataRequired(), Length(max=255)], 
@@ -310,3 +312,52 @@ class SMTPConfigurationForm(FlaskForm):
     
     submit = SubmitField('Save SMTP Configuration')
     test_email = SubmitField('Test Configuration')
+
+
+class DocumentationPageForm(FlaskForm):
+    """Form for creating/editing documentation pages"""
+    title = StringField('Title', validators=[DataRequired(), Length(min=1, max=255)])
+    content = TextAreaField('Content', validators=[DataRequired()], 
+                           render_kw={'rows': 20, 'id': 'doc_content'})
+    category = SelectField('Category', validators=[DataRequired()], choices=[
+        ('Leave Management', 'Leave Management'),
+        ('Permissions', 'Permissions'),
+        ('Attendance', 'Attendance'),
+        ('Settings', 'Settings'),
+        ('Reports', 'Reports'),
+        ('General', 'General'),
+        ('Getting Started', 'Getting Started'),
+        ('Troubleshooting', 'Troubleshooting')
+    ])
+    tags = StringField('Tags', validators=[Optional()], 
+                      render_kw={'placeholder': 'Comma-separated tags (e.g., leave, request, how-to)'})
+    visible_roles = SelectMultipleField('Visible to Roles', 
+                                       choices=[
+                                           ('employee', 'Employee'),
+                                           ('manager', 'Manager'),
+                                           ('admin', 'Admin'),
+                                           ('product_owner', 'Product Owner'),
+                                           ('director', 'Director')
+                                       ],
+                                       validators=[Optional()],
+                                       widget=ListWidget(prefix_label=False),
+                                       option_widget=CheckboxInput())
+    is_published = BooleanField('Publish (uncheck to save as draft)', default=False)
+    submit = SubmitField('Save Documentation')
+    save_draft = SubmitField('Save as Draft')
+
+
+class EmailTemplateForm(FlaskForm):
+    """Form for creating/editing email templates"""
+    template_name = StringField('Template Name', validators=[DataRequired()], 
+                               render_kw={'readonly': True})
+    subject = StringField('Subject', validators=[DataRequired(), Length(max=255)],
+                         render_kw={'placeholder': 'Email subject with placeholders like {employee_name}'})
+    body_html = TextAreaField('Email Body (HTML)', validators=[DataRequired()],
+                             render_kw={'rows': 20, 'id': 'email_body'})
+    footer = TextAreaField('Footer (Optional)', validators=[Optional()],
+                          render_kw={'rows': 5, 'placeholder': 'Email footer text with placeholders'})
+    signature = TextAreaField('Signature (Optional)', validators=[Optional()],
+                             render_kw={'rows': 3, 'placeholder': 'Email signature with placeholders'})
+    is_active = BooleanField('Active', default=True)
+    submit = SubmitField('Save Template')

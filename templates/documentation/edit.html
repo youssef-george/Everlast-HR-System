@@ -1,0 +1,195 @@
+{% extends "layout.html" %}
+
+{% block extra_css %}
+<!-- CKEditor 5 -->
+<script src="https://cdn.ckeditor.com/ckeditor5/40.0.0/classic/ckeditor.js"></script>
+<style>
+.ck-editor__editable {
+    min-height: 400px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <h1 class="page-title">
+        <i class="fas fa-{% if is_create %}plus{% else %}edit{% endif %} me-2"></i>
+        {% if is_create %}Create{% else %}Edit{% endif %} Documentation Page
+    </h1>
+    <div class="content-header-actions">
+        <a href="{{ url_for('documentation.admin_panel') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back to Admin Panel
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" id="docForm">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.title.label(class="form-label") }}
+                        {{ form.title(class="form-control") }}
+                        {% if form.title.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.title.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.category.label(class="form-label") }}
+                        {{ form.category(class="form-select") }}
+                        {% if form.category.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.category.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.content.label(class="form-label") }}
+                        {{ form.content(class="form-control", id="doc_content") }}
+                        {% if form.content.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.content.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">
+                            Use the rich text editor to format your content. You can add images, links, and format text.
+                        </small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.tags.label(class="form-label") }}
+                        {{ form.tags(class="form-control") }}
+                        {% if form.tags.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.tags.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">
+                            Enter comma-separated tags (e.g., leave, request, how-to)
+                        </small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.visible_roles.label(class="form-label") }}
+                        <div class="border rounded p-3">
+                            {% for choice in form.visible_roles %}
+                            <div class="form-check">
+                                {{ choice(class="form-check-input") }}
+                                {{ choice.label(class="form-check-label") }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% if form.visible_roles.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.visible_roles.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">
+                            Select which roles can view this documentation page. If no roles are selected, the page will be hidden.
+                        </small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.is_published(class="form-check-input") }}
+                            {{ form.is_published.label(class="form-check-label") }}
+                        </div>
+                        {% if form.is_published.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.is_published.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" name="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Save & Publish
+                        </button>
+                        <button type="submit" name="save_draft" class="btn btn-secondary">
+                            <i class="fas fa-file-alt me-1"></i>Save as Draft
+                        </button>
+                        <a href="{{ url_for('documentation.admin_panel') }}" class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Initialize CKEditor
+let editor;
+
+ClassicEditor
+    .create(document.querySelector('#doc_content'), {
+        toolbar: {
+            items: [
+                'heading', '|',
+                'bold', 'italic', 'link', '|',
+                'bulletedList', 'numberedList', '|',
+                'outdent', 'indent', '|',
+                'blockQuote', 'insertTable', '|',
+                'imageUpload', 'mediaEmbed', '|',
+                'undo', 'redo'
+            ]
+        },
+        heading: {
+            options: [
+                { model: 'paragraph', title: 'Paragraph', class: 'ck-heading_paragraph' },
+                { model: 'heading1', view: 'h1', title: 'Heading 1', class: 'ck-heading_heading1' },
+                { model: 'heading2', view: 'h2', title: 'Heading 2', class: 'ck-heading_heading2' },
+                { model: 'heading3', view: 'h3', title: 'Heading 3', class: 'ck-heading_heading3' }
+            ]
+        },
+        image: {
+            toolbar: ['imageTextAlternative', 'imageStyle:full', 'imageStyle:side']
+        },
+        table: {
+            contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells']
+        },
+        simpleUpload: {
+            uploadUrl: '{{ url_for("documentation.upload_image") }}',
+            withCredentials: true,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+            }
+        }
+    })
+    .then(ed => {
+        editor = ed;
+    })
+    .catch(error => {
+        console.error('Error initializing CKEditor:', error);
+    });
+
+// Handle form submission
+document.getElementById('docForm').addEventListener('submit', function(e) {
+    // Update textarea with editor content
+    if (editor) {
+        editor.updateSourceElement();
+    }
+});
+</script>
+{% endblock %}
+

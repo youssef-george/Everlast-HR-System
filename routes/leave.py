@@ -58,12 +58,26 @@ def index():
             # Get employees from all departments managed by this manager
             managed_dept_ids = [dept.id for dept in current_user.managed_department]
             if managed_dept_ids:
-                leave_requests = LeaveRequest.query.join(User).filter(
+                leave_requests = LeaveRequest.query.join(
+                    User, LeaveRequest.user_id == User.id
+                ).filter(
                     User.department_id.in_(managed_dept_ids),
                     LeaveRequest.user_id != current_user.id  # Exclude manager's own requests
                 ).order_by(LeaveRequest.created_at.desc()).all()
     
-    elif user_role in ['admin', 'product_owner']:
+    elif user_role == 'product_owner':
+        # Product Owners see all leave requests by default
+        if view_type == 'my':
+            page_title = 'My Leave Requests'
+            leave_requests = LeaveRequest.query.filter_by(
+                user_id=current_user.id
+            ).order_by(LeaveRequest.created_at.desc()).all()
+        else:
+            page_title = 'All Leave Requests'
+            # Product Owners see all requests regardless of department assignments
+            leave_requests = LeaveRequest.query.order_by(LeaveRequest.created_at.desc()).all()
+    
+    elif user_role == 'admin':
         if view_type == 'my':
             page_title = 'My Leave Requests'
             leave_requests = LeaveRequest.query.filter_by(
@@ -75,10 +89,12 @@ def index():
             leave_requests = LeaveRequest.query.order_by(LeaveRequest.created_at.desc()).all()
         else:
             page_title = 'Leave Requests for Approval'
-            # Get requests that need admin/product_owner approval based on department assignments
+            # Get requests that need admin approval based on department assignments
             if current_user.managed_department:
                 admin_dept_ids = [dept.id for dept in current_user.managed_department]
-                leave_requests = LeaveRequest.query.join(User).filter(
+                leave_requests = LeaveRequest.query.join(
+                    User, LeaveRequest.user_id == User.id
+                ).filter(
                     LeaveRequest.manager_status == 'approved',
                     LeaveRequest.admin_status == 'pending',
                     User.department_id.in_(admin_dept_ids)
@@ -212,30 +228,102 @@ def create():
         db.session.add(leave_request)
         db.session.commit()
         
-        # Send email notification to admins
-        try:
-            employee_name = current_user.get_full_name()
-            leave_type_name = leave_type.name if leave_type else "Leave"
-            start_date = form.start_date.data.strftime('%B %d, %Y')
-            end_date = form.end_date.data.strftime('%B %d, %Y')
-            
-            subject = f"New Leave Request - {employee_name}"
-            message = f"""
-            A new leave request has been submitted and requires your review:
-            
-            <strong>Employee:</strong> {employee_name}<br>
-            <strong>Leave Type:</strong> {leave_type_name}<br>
-            <strong>Start Date:</strong> {start_date}<br>
-            <strong>End Date:</strong> {end_date}<br>
-            <strong>Duration:</strong> {duration} day(s)<br>
-            <strong>Reason:</strong> {form.reason.data}<br>
-            """
-            
-            send_admin_email_notification(subject, message, "leave", leave_request.id)
-        except Exception as e:
-            logging.error(f"Failed to send admin email notification: {str(e)}")
+        # Track if email was sent successfully
+        email_sent = False
         
-        flash('Your leave request has been submitted successfully!', 'success')
+        # Send confirmation email to employee first
+        try:
+            from helpers import send_email_to_employee
+            from flask import url_for
+            
+            leave_type_obj = LeaveType.query.get(form.leave_type_id.data)
+            leave_type_name = leave_type_obj.name if leave_type_obj else "Leave"
+            duration = (form.end_date.data - form.start_date.data).days + 1
+            start_date_str = form.start_date.data.strftime('%B %d, %Y')
+            end_date_str = form.end_date.data.strftime('%B %d, %Y')
+            
+            # Get submission timestamp
+            submission_datetime = datetime.utcnow()
+            submission_date_str = submission_datetime.strftime('%B %d, %Y')
+            submission_time_str = submission_datetime.strftime('%I:%M %p')
+            
+            # Send employee confirmation email
+            employee_request_data = {
+                'request_type': 'Leave Request',
+                'start_date': start_date_str,
+                'end_date': end_date_str,
+                'duration': f"{duration} day(s)",
+                'reason': form.reason.data,
+                'request_id': str(leave_request.id),
+                'submission_date': submission_date_str,
+                'submission_time': submission_time_str,
+                'status': 'Pending Manager Review'
+            }
+            # Log email attempt details
+            logging.info(f"=== LEAVE REQUEST EMAIL NOTIFICATION ===")
+            logging.info(f"Employee: {current_user.id} - {current_user.get_full_name()}")
+            logging.info(f"Email: {current_user.email}")
+            logging.info(f"Request ID: {leave_request.id}")
+            logging.info(f"Attempting to send submission confirmation email...")
+            
+            email_sent = send_email_to_employee(current_user, 'leave_employee_submission_confirmation', employee_request_data)
+            
+            if email_sent:
+                logging.info(f"✅ SUCCESS: Employee confirmation email sent successfully to {current_user.email}")
+            else:
+                logging.error(f"❌ FAILED: Employee confirmation email NOT sent to {current_user.email}")
+                logging.error(f"   Please check the logs above for detailed error information.")
+                # Don't fail the request if email fails, but log it
+        except Exception as e:
+            logging.error(f"❌ Exception while sending employee confirmation email: {str(e)}", exc_info=True)
+            # Don't fail the request if email fails
+        
+        # Send email notification to manager (or admin if no manager)
+        try:
+            from helpers import send_email_to_manager
+            from flask import url_for
+            
+            leave_type_obj = LeaveType.query.get(form.leave_type_id.data)
+            leave_type_name = leave_type_obj.name if leave_type_obj else "Leave"
+            duration = (form.end_date.data - form.start_date.data).days + 1
+            start_date_str = form.start_date.data.strftime('%B %d, %Y')
+            end_date_str = form.end_date.data.strftime('%B %d, %Y')
+            
+            # Only send to manager if employee is not a manager (managers skip manager approval)
+            if current_user.role != 'manager':
+                approval_link = url_for('leave.view', id=leave_request.id, _external=True)
+                request_data = {
+                    'request_type': 'Leave Request',
+                    'start_date': start_date_str,
+                    'end_date': end_date_str,
+                    'duration': f"{duration} day(s)",
+                    'reason': form.reason.data,
+                    'request_id': str(leave_request.id),
+                    'approval_link': approval_link
+                }
+                send_email_to_manager(current_user, 'leave_manager_notification', request_data)
+            else:
+                # If manager submits, send directly to admin
+                from helpers import send_email_to_admin
+                request_data = {
+                    'request_type': 'Leave Request',
+                    'start_date': start_date_str,
+                    'end_date': end_date_str,
+                    'duration': f"{duration} day(s)",
+                    'reason': form.reason.data,
+                    'request_id': str(leave_request.id),
+                    'approval_link': url_for('leave.view', id=leave_request.id, _external=True)
+                }
+                send_email_to_admin(current_user, 'leave_admin_notification', request_data)
+        except Exception as e:
+            logging.error(f"Failed to send email notification to manager/admin: {str(e)}", exc_info=True)
+        
+        # Show appropriate success message
+        if email_sent:
+            flash('Your leave request has been submitted and a confirmation email has been sent!', 'success')
+        else:
+            flash('Your leave request has been submitted successfully!', 'success')
+        
         return redirect(url_for('leave.index'))
     
     return render_template('leave/create.html', 
@@ -291,12 +379,90 @@ def view(id):
             leave_request.manager_comment = comment
             leave_request.manager_updated_at = datetime.utcnow()
             
-            # Admin notification removed - will be replaced with SMTP email notifications
+            # Send email notification
+            try:
+                from helpers import send_email_to_admin, send_email_to_employee
+                from flask import url_for
+                
+                leave_type_obj = LeaveType.query.get(leave_request.leave_type_id)
+                leave_type_name = leave_type_obj.name if leave_type_obj else "Leave"
+                duration = (leave_request.end_date - leave_request.start_date).days + 1
+                
+                if approval_status == 'approved':
+                    # Manager approved - notify admin
+                    request_data = {
+                        'request_type': 'Leave Request',
+                        'start_date': leave_request.start_date.strftime('%B %d, %Y'),
+                        'end_date': leave_request.end_date.strftime('%B %d, %Y'),
+                        'duration': f"{duration} day(s)",
+                        'reason': leave_request.reason,
+                        'comment': comment or 'Approved by manager',
+                        'manager_name': current_user.get_full_name(),
+                        'request_id': str(leave_request.id),
+                        'approval_link': url_for('leave.view', id=leave_request.id, _external=True)
+                    }
+                    send_email_to_admin(requester, 'leave_admin_notification', request_data)
+                else:
+                    # Manager rejected - notify employee
+                    request_data = {
+                        'request_type': 'Leave Request',
+                        'start_date': leave_request.start_date.strftime('%B %d, %Y'),
+                        'end_date': leave_request.end_date.strftime('%B %d, %Y'),
+                        'duration': f"{duration} day(s)",
+                        'reason': leave_request.reason,
+                        'comment': comment or 'Rejected by manager',
+                        'status': 'Rejected',
+                        'manager_name': current_user.get_full_name(),
+                        'request_id': str(leave_request.id)
+                    }
+                    send_email_to_employee(requester, 'leave_employee_rejection', request_data)
+            except Exception as e:
+                logging.error(f"Failed to send email notification: {str(e)}")
         
         elif user_role in ['admin', 'product_owner']:
             leave_request.admin_status = approval_status
             leave_request.admin_comment = comment
             leave_request.admin_updated_at = datetime.utcnow()
+            
+            # Send email notification
+            try:
+                from helpers import send_email_to_employee
+                
+                leave_type_obj = LeaveType.query.get(leave_request.leave_type_id)
+                leave_type_name = leave_type_obj.name if leave_type_obj else "Leave"
+                duration = (leave_request.end_date - leave_request.start_date).days + 1
+                
+                if approval_status == 'approved':
+                    # Admin approved - notify employee with confirmation
+                    request_data = {
+                        'request_type': 'Leave Request',
+                        'start_date': leave_request.start_date.strftime('%B %d, %Y'),
+                        'end_date': leave_request.end_date.strftime('%B %d, %Y'),
+                        'duration': f"{duration} day(s)",
+                        'reason': leave_request.reason,
+                        'comment': comment or 'Approved',
+                        'status': 'Approved',
+                        'admin_name': current_user.get_full_name(),
+                        'manager_name': requester.department.manager.get_full_name() if requester.department and requester.department.manager else 'Manager',
+                        'request_id': str(leave_request.id)
+                    }
+                    send_email_to_employee(requester, 'leave_employee_confirmation', request_data)
+                else:
+                    # Admin rejected - notify employee
+                    request_data = {
+                        'request_type': 'Leave Request',
+                        'start_date': leave_request.start_date.strftime('%B %d, %Y'),
+                        'end_date': leave_request.end_date.strftime('%B %d, %Y'),
+                        'duration': f"{duration} day(s)",
+                        'reason': leave_request.reason,
+                        'comment': comment or 'Rejected',
+                        'status': 'Rejected',
+                        'admin_name': current_user.get_full_name(),
+                        'request_id': str(leave_request.id)
+                    }
+                    send_email_to_employee(requester, 'leave_employee_rejection', request_data)
+            except Exception as e:
+                logging.error(f"Failed to send email notification: {str(e)}")
         
         # Update overall status
         leave_request.update_overall_status()
@@ -308,8 +474,6 @@ def view(id):
             # If rejecting an approved leave request, refund the balance
             if leave_request.manager_status == 'approved' or leave_request.admin_status == 'approved':
                 refund_leave_balance_for_leave(leave_request)
-        
-        # User notification removed - will be replaced with SMTP email notifications
         
         db.session.commit()
         flash(f'Leave request has been {approval_status}.', 'success')
@@ -325,15 +489,16 @@ def view(id):
 @leave_bp.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit(id):
-    """Edit a leave request (only if it's still pending and belongs to current user)"""
+    """Edit a leave request. Product Owner can edit any request regardless of status. Admins/Directors can edit any request. Employees can only edit their own pending requests."""
     leave_request = LeaveRequest.query.get_or_404(id)
     
     # Check if user can edit this request
-    if leave_request.user_id != current_user.id and current_user.role not in ['admin', 'director']:
+    if leave_request.user_id != current_user.id and current_user.role not in ['admin', 'product_owner', 'director']:
         flash('You can only edit your own leave requests.', 'danger')
         return redirect(url_for('leave.index'))
     
-    if leave_request.status != 'pending' and current_user.role not in ['admin', 'director']:
+    # Product Owner can edit any request regardless of status
+    if leave_request.status != 'pending' and current_user.role not in ['admin', 'product_owner', 'director']:
         flash('You can only edit pending leave requests.', 'danger')
         return redirect(url_for('leave.index'))
     
@@ -368,12 +533,15 @@ def edit(id):
 @leave_bp.route('/delete/<int:id>', methods=['POST'])
 @login_required
 def delete(id):
-    """Delete a leave request (only if it's still pending and belongs to current user or if current user is admin)"""
+    """Delete a leave request. Product Owner can delete any request regardless of status. Admins can delete pending requests. Employees can only delete their own pending requests."""
     leave_request = LeaveRequest.query.get_or_404(id)
     
     # Check if user can delete this request
-    if current_user.role in ['admin', 'product_owner']:
-        # Admins and Product Owners can delete any pending leave request
+    if current_user.role == 'product_owner':
+        # Product Owner can delete any leave request regardless of status
+        pass  # No restrictions for Product Owner
+    elif current_user.role == 'admin':
+        # Admins can delete any pending leave request
         if leave_request.status != 'pending':
             flash('Admins can only delete pending leave requests.', 'danger')
             return redirect(url_for('leave.index'))
@@ -381,7 +549,8 @@ def delete(id):
         flash('You can only delete your own leave requests.', 'danger')
         return redirect(url_for('leave.index'))
     
-    if leave_request.status != 'pending':
+    # Regular employees can only delete their own pending requests
+    if leave_request.status != 'pending' and current_user.role not in ['product_owner']:
         flash('You can only delete pending leave requests.', 'danger')
         return redirect(url_for('leave.index'))
 

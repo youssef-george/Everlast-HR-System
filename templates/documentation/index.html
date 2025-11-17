@@ -1,0 +1,148 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="content-header">
+    <h1 class="page-title">
+        <i class="fas fa-book me-2"></i>Documentation
+    </h1>
+    <div class="content-header-actions">
+        {% if current_user.role == 'product_owner' %}
+        <a href="{{ url_for('documentation.admin_panel') }}" class="btn btn-primary">
+            <i class="fas fa-cog me-1"></i> Manage Documentation
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Search and Filters -->
+<div class="row mb-4">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('documentation.index') }}" class="row g-3">
+                    <div class="col-md-4">
+                        <label for="search" class="form-label">Search</label>
+                        <input type="text" class="form-control" id="search" name="search" 
+                               value="{{ search_query }}" placeholder="Search titles, content, tags...">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="category" class="form-label">Category</label>
+                        <select class="form-select" id="category" name="category">
+                            <option value="">All Categories</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat }}" {% if category_filter == cat %}selected{% endif %}>{{ cat }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="tag" class="form-label">Tag</label>
+                        <select class="form-select" id="tag" name="tag">
+                            <option value="">All Tags</option>
+                            {% for tag in tags %}
+                            <option value="{{ tag }}" {% if tag_filter == tag %}selected{% endif %}>{{ tag }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="sort" class="form-label">Sort By</label>
+                        <select class="form-select" id="sort" name="sort">
+                            <option value="recent" {% if sort_by == 'recent' %}selected{% endif %}>Recently Added</option>
+                            <option value="popular" {% if sort_by == 'popular' %}selected{% endif %}>Most Viewed</option>
+                            <option value="alphabetical" {% if sort_by == 'alphabetical' %}selected{% endif %}>Alphabetical</option>
+                        </select>
+                    </div>
+                    <div class="col-md-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-1"></i>Search
+                        </button>
+                        <a href="{{ url_for('documentation.index') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i>Clear
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Documentation Pages Grid -->
+<div class="row">
+    {% if pages %}
+        {% for page in pages %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body d-flex flex-column">
+                    <div class="mb-2">
+                        <span class="badge bg-primary">{{ page.category }}</span>
+                        {% if page.tags %}
+                            {% for tag in page.tags[:3] %}
+                            <span class="badge bg-secondary">{{ tag }}</span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    <h5 class="card-title">
+                        <a href="{{ url_for('documentation.view', slug=page.slug) }}" class="text-decoration-none">
+                            {{ page.title }}
+                        </a>
+                    </h5>
+                    <p class="card-text text-muted flex-grow-1">
+                        {{ page.content[:150]|striptags }}...
+                    </p>
+                    <div class="mt-auto">
+                        <div class="d-flex justify-content-between align-items-center text-muted small">
+                            <span>
+                                <i class="fas fa-eye me-1"></i>{{ page.view_count or 0 }} views
+                            </span>
+                            <span>
+                                <i class="fas fa-calendar me-1"></i>{{ page.created_at|datetime('%Y-%m-%d') }}
+                            </span>
+                        </div>
+                        <a href="{{ url_for('documentation.view', slug=page.slug) }}" class="btn btn-sm btn-primary mt-2 w-100">
+                            Read More <i class="fas fa-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center p-5">
+                    <i class="fas fa-book-open fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">No documentation found</h4>
+                    <p class="text-muted">
+                        {% if search_query or category_filter or tag_filter %}
+                            Try adjusting your search filters.
+                        {% else %}
+                            No documentation pages are available at the moment.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Technical Support Footer -->
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="alert alert-info mb-0">
+                    <p class="mb-0">
+                        <strong>Technical Support:</strong> For technical support, please contact 
+                        <strong>Eng. Youssef George</strong> at 
+                        <a href="mailto:youssef.george@everlastwellness.com" class="alert-link">
+                            youssef.george@everlastwellness.com
+                        </a>
+                        <br>
+                        <small class="text-muted">Software Developer</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

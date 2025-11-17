@@ -1,0 +1,78 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="content-header">
+    <h1 class="page-title">
+        <i class="fas fa-eye me-2"></i>Preview Email Template
+    </h1>
+    <div class="content-header-actions">
+        <a href="{{ url_for('email_templates.index') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back to Templates
+        </a>
+        <a href="{{ url_for('email_templates.edit', template_id=template.id) }}" class="btn btn-primary">
+            <i class="fas fa-edit me-1"></i>Edit Template
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Email Preview</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Subject:</strong>
+                    <div class="alert alert-info mb-0">{{ subject }}</div>
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Email Body:</strong>
+                    <div class="border rounded p-3" style="background-color: #f8f9fa;">
+                        {{ html_body|safe }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Sample Data Used</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">This preview uses the following sample data:</p>
+                <table class="table table-sm">
+                    {% for key, value in sample_context.items() %}
+                    <tr>
+                        <td><code>{<strong>{{ key }}</strong>}</code></td>
+                        <td>{{ value }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Template Information</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Template Name:</strong><br>{{ template.template_name }}</p>
+                <p><strong>Template Type:</strong><br>{{ template.template_type }}</p>
+                <p><strong>Status:</strong><br>
+                    {% if template.is_active %}
+                    <span class="badge bg-success">Active</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Inactive</span>
+                    {% endif %}
+                </p>
+                <p><strong>Last Updated:</strong><br>{{ template.updated_at|safe_datetime('%Y-%m-%d %H:%M') if template.updated_at else template.created_at|safe_datetime('%Y-%m-%d %H:%M') }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
