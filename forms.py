@@ -3,7 +3,7 @@ from wtforms import StringField, PasswordField, TextAreaField, SelectField, Date
 from wtforms.validators import DataRequired, Email, EqualTo, Length, Optional, Regexp, IPAddress, NumberRange
 from wtforms.widgets import CheckboxInput, ListWidget
 from wtforms.fields import SelectMultipleField
-from datetime import datetime, date
+from datetime import datetime, date, time
 
 # Custom validator for allowed domains
 def validate_everlast_domain(form, field):

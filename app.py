@@ -1014,7 +1014,7 @@ def create_app(config_name='default'):
                     logging.info(f"Scheduled sync completed. Added {sync_stats.get('records_added', 0)} records and updated {sync_stats.get('records_updated', 0)} records.")
             except Exception as e:
                 logging.error(f'Scheduled sync failed: {str(e)}')
-
+    
     scheduler.start()  # Enable auto-sync
     
     @app.route('/')
