@@ -26,7 +26,7 @@
                                 {% endfor %}
                             </div>
                         {% endif %}
-                        <div class="form-text">Permission requests can only be for present or future dates.</div>
+                        <div class="form-text">You can select any date, including past dates.</div>
                     </div>
                     
                     <div class="row">
@@ -89,7 +89,7 @@
             </div>
             <div class="card-body">
                 <ul class="mb-0">
-                    <li>Permission requests can only be for <span class="text-primary">present</span> or <span class="text-primary">future</span> dates (past date permissions are not allowed).</li>
+                    <li>Permission requests can be for <span class="text-primary">any date</span>, including past dates.</li>
                     <li>Permission requests can only be edited or deleted while they are still in <span class="text-warning">Pending</span> status.</li>
                     <li>The approval workflow for permission requests: <b>Admin Approval Only</b></li>
                     <li>Please provide a clear and detailed reason for your permission request to help in the approval process.</li>
@@ -103,7 +103,7 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Set minimum date for the date field to today
+        // Initialize date field - allow all dates including past dates
         const startDateInput = document.getElementById('start_date');
         const startTimeInput = document.getElementById('start_time');
         const endTimeInput = document.getElementById('end_time');
@@ -113,7 +113,7 @@
             if (!startDateInput.value) {
                 startDateInput.value = today;
             }
-            startDateInput.min = today;
+            // Allow all past dates - no minimum date restriction
         }
         
         // Validate that end time is after start time

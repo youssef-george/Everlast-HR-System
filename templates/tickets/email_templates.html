@@ -1,0 +1,63 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="content-header">
+    <h1 class="page-title">Ticket Email Templates</h1>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Manage Email Templates</h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>These templates are used for sending email notifications for ticket events. Use placeholders like {ticket_id}, {ticket_title}, {requester_name}, etc.
+                </div>
+                
+                {% if templates %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Template Type</th>
+                                <th>Subject</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for template in templates %}
+                            <tr>
+                                <td><strong>{{ template.template_type.replace('_', ' ').title() }}</strong></td>
+                                <td>{{ template.subject[:50] }}{% if template.subject|length > 50 %}...{% endif %}</td>
+                                <td>
+                                    {% if template.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('tickets.edit_email_template', id=template.id) }}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>No email templates found.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

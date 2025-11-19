@@ -146,12 +146,8 @@ class PermissionRequestForm(FlaskForm):
     submit = SubmitField('Submit Permission Request')
     
     def validate_start_date(self, start_date):
-        # Allow selecting the previous day
-        from datetime import timedelta
-        today = date.today()
-        yesterday = today - timedelta(days=1)
-        if start_date.data < yesterday:
-            raise ValidationError('Permission requests can only be for yesterday, today, or future dates')
+        # Allow all dates including past dates - no date restriction
+        pass
     
     def validate_end_time(self, end_time):
         if self.start_time.data and end_time.data <= self.start_time.data:
@@ -359,5 +355,79 @@ class EmailTemplateForm(FlaskForm):
                           render_kw={'rows': 5, 'placeholder': 'Email footer text with placeholders'})
     signature = TextAreaField('Signature (Optional)', validators=[Optional()],
                              render_kw={'rows': 3, 'placeholder': 'Email signature with placeholders'})
+    is_active = BooleanField('Active', default=True)
+    submit = SubmitField('Save Template')
+
+
+# ============================================================================
+# TICKETING SYSTEM FORMS
+# ============================================================================
+
+class TicketSubmissionForm(FlaskForm):
+    """Form for employees to submit tickets"""
+    title = StringField('Ticket Title', validators=[DataRequired(), Length(min=5, max=255)],
+                      render_kw={'placeholder': 'Brief description of the issue'})
+    category_id = SelectField('Category', coerce=int, validators=[DataRequired()])
+    description = TextAreaField('Description', validators=[DataRequired(), Length(min=10, max=2000)],
+                               render_kw={'rows': 8, 'placeholder': 'Please provide detailed information about your issue...'})
+    priority = SelectField('Priority', choices=[
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('critical', 'Critical')
+    ], validators=[DataRequired()], default='medium')
+    attachment = FileField('Attachment (Optional)', validators=[Optional()])
+    submit = SubmitField('Submit Ticket')
+
+
+class TicketCommentForm(FlaskForm):
+    """Form for adding replies/comments to tickets"""
+    comment_text = TextAreaField('Comment', validators=[DataRequired(), Length(min=1, max=2000)],
+                                render_kw={'rows': 6, 'placeholder': 'Enter your reply or comment...'})
+    is_internal = BooleanField('Internal Note (not visible to requester)', default=False)
+    attachment = FileField('Attachment (Optional)', validators=[Optional()])
+    submit = SubmitField('Add Comment')
+
+
+class TicketCategoryForm(FlaskForm):
+    """Form for Product Owner to manage ticket categories"""
+    name = StringField('Category Name', validators=[DataRequired(), Length(min=2, max=100)],
+                     render_kw={'placeholder': 'e.g., Hardware Issue, Software Bug'})
+    description = TextAreaField('Description', validators=[Optional(), Length(max=500)],
+                               render_kw={'rows': 3, 'placeholder': 'Optional description of this category'})
+    departments = SelectMultipleField('Assign to Departments', coerce=int, validators=[Optional()],
+                                      widget=ListWidget(prefix_label=False),
+                                      option_widget=CheckboxInput())
+    is_active = BooleanField('Active', default=True)
+    submit = SubmitField('Save Category')
+
+
+class TicketStatusUpdateForm(FlaskForm):
+    """Form for updating ticket status"""
+    status = SelectField('Status', choices=[
+        ('open', 'Open'),
+        ('in_progress', 'In Progress'),
+        ('resolved', 'Resolved'),
+        ('closed', 'Closed')
+    ], validators=[DataRequired()])
+    comment = TextAreaField('Comment (Optional)', validators=[Optional(), Length(max=500)],
+                           render_kw={'rows': 3, 'placeholder': 'Optional comment about this status change'})
+    submit = SubmitField('Update Status')
+
+
+class TicketEmailTemplateForm(FlaskForm):
+    """Form for managing ticket email templates"""
+    template_type = SelectField('Template Type', choices=[
+        ('ticket_created_requester', 'Ticket Created - Requester Confirmation'),
+        ('ticket_created_department', 'Ticket Created - Department Alert'),
+        ('ticket_reply', 'Ticket Reply Added'),
+        ('ticket_status_update', 'Ticket Status Updated'),
+        ('ticket_resolved', 'Ticket Resolved'),
+        ('ticket_closed', 'Ticket Closed')
+    ], validators=[DataRequired()])
+    subject = StringField('Subject', validators=[DataRequired(), Length(max=255)],
+                         render_kw={'placeholder': 'Email subject with placeholders like {ticket_title}, {requester_name}'})
+    body_html = TextAreaField('Email Body (HTML)', validators=[DataRequired()],
+                             render_kw={'rows': 20, 'id': 'ticket_email_body'})
     is_active = BooleanField('Active', default=True)
     submit = SubmitField('Save Template')

@@ -240,6 +240,13 @@ def create_app(config_name='default'):
         from helpers import format_hours_minutes
         return format_hours_minutes(hours)
     
+    @app.template_filter('nl2br')
+    def nl2br_filter(value):
+        """Template filter to convert newlines to <br> tags."""
+        if value is None:
+            return ''
+        return str(value).replace('\n', '<br>')
+    
     # Add template context processor for datetime
     @app.context_processor
     def utility_processor():
@@ -389,6 +396,186 @@ def create_app(config_name='default'):
                 logging.warning(f"email_templates table check: {e}")
                 db.session.rollback()
             
+            # Create ticket tables if missing
+            try:
+                db.session.execute(text("""
+                    CREATE TABLE IF NOT EXISTS ticket_categories (
+                        id SERIAL PRIMARY KEY,
+                        name VARCHAR(100) NOT NULL UNIQUE,
+                        description TEXT,
+                        is_active BOOLEAN DEFAULT TRUE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """))
+                db.session.execute(text("""
+                    CREATE TABLE IF NOT EXISTS ticket_department_mapping (
+                        id SERIAL PRIMARY KEY,
+                        category_id INTEGER NOT NULL,
+                        department_id INTEGER NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        CONSTRAINT fk_ticket_dept_mapping_category 
+                            FOREIGN KEY (category_id) REFERENCES ticket_categories(id) ON DELETE CASCADE,
+                        CONSTRAINT fk_ticket_dept_mapping_dept 
+                            FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE,
+                        CONSTRAINT uq_category_department UNIQUE (category_id, department_id)
+                    )
+                """))
+                db.session.execute(text("""
+                    CREATE TABLE IF NOT EXISTS tickets (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER NOT NULL,
+                        category_id INTEGER,
+                        title VARCHAR(255) NOT NULL,
+                        description TEXT NOT NULL,
+                        priority VARCHAR(20) NOT NULL DEFAULT 'medium',
+                        status VARCHAR(20) NOT NULL DEFAULT 'open',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        CONSTRAINT fk_ticket_user 
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                        CONSTRAINT fk_ticket_category 
+                            FOREIGN KEY (category_id) REFERENCES ticket_categories(id) ON DELETE SET NULL
+                    )
+                """))
+                db.session.execute(text("""
+                    CREATE TABLE IF NOT EXISTS ticket_comments (
+                        id SERIAL PRIMARY KEY,
+                        ticket_id INTEGER NOT NULL,
+                        user_id INTEGER,
+                        comment_text TEXT NOT NULL,
+                        is_internal BOOLEAN DEFAULT FALSE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        CONSTRAINT fk_ticket_comment_ticket 
+                            FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+                        CONSTRAINT fk_ticket_comment_user 
+                            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+                    )
+                """))
+                db.session.execute(text("""
+                    CREATE TABLE IF NOT EXISTS ticket_attachments (
+                        id SERIAL PRIMARY KEY,
+                        ticket_id INTEGER NOT NULL,
+                        comment_id INTEGER,
+                        filename VARCHAR(255) NOT NULL,
+                        file_path VARCHAR(500) NOT NULL,
+                        file_size INTEGER,
+                        uploaded_by INTEGER,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        CONSTRAINT fk_ticket_attachment_ticket 
+                            FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+                        CONSTRAINT fk_ticket_attachment_comment 
+                            FOREIGN KEY (comment_id) REFERENCES ticket_comments(id) ON DELETE CASCADE,
+                        CONSTRAINT fk_ticket_attachment_uploader 
+                            FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
+                    )
+                """))
+                db.session.execute(text("""
+                    CREATE TABLE IF NOT EXISTS ticket_status_history (
+                        id SERIAL PRIMARY KEY,
+                        ticket_id INTEGER NOT NULL,
+                        old_status VARCHAR(20),
+                        new_status VARCHAR(20) NOT NULL,
+                        changed_by INTEGER,
+                        comment TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        CONSTRAINT fk_ticket_status_history_ticket 
+                            FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+                        CONSTRAINT fk_ticket_status_history_changer 
+                            FOREIGN KEY (changed_by) REFERENCES users(id) ON DELETE SET NULL
+                    )
+                """))
+                db.session.execute(text("""
+                    CREATE TABLE IF NOT EXISTS ticket_email_templates (
+                        id SERIAL PRIMARY KEY,
+                        template_type VARCHAR(50) NOT NULL UNIQUE,
+                        subject VARCHAR(255) NOT NULL,
+                        body_html TEXT NOT NULL,
+                        is_active BOOLEAN DEFAULT TRUE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """))
+                db.session.execute(text("""
+                    CREATE TABLE IF NOT EXISTS scheduled_reminders (
+                        id SERIAL PRIMARY KEY,
+                        subject VARCHAR(255) NOT NULL,
+                        body TEXT NOT NULL,
+                        frequency VARCHAR(20) NOT NULL,
+                        target_recipients TEXT,
+                        is_active BOOLEAN DEFAULT TRUE,
+                        next_send_date TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """))
+                # Create indexes
+                db.session.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_ticket_category_active ON ticket_categories(is_active)
+                """))
+                db.session.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_ticket_dept_mapping_category ON ticket_department_mapping(category_id)
+                """))
+                db.session.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_ticket_dept_mapping_dept ON ticket_department_mapping(department_id)
+                """))
+                db.session.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_ticket_user ON tickets(user_id)
+                """))
+                db.session.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_ticket_category ON tickets(category_id)
+                """))
+                db.session.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_ticket_status ON tickets(status)
+                """))
+                db.session.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_ticket_priority ON tickets(priority)
+                """))
+                db.session.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_ticket_created ON tickets(created_at)
+                """))
+                db.session.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_ticket_comment_ticket ON ticket_comments(ticket_id)
+                """))
+                db.session.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_ticket_comment_user ON ticket_comments(user_id)
+                """))
+                db.session.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_ticket_comment_created ON ticket_comments(created_at)
+                """))
+                db.session.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_ticket_attachment_ticket ON ticket_attachments(ticket_id)
+                """))
+                db.session.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_ticket_attachment_comment ON ticket_attachments(comment_id)
+                """))
+                db.session.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_ticket_status_history_ticket ON ticket_status_history(ticket_id)
+                """))
+                db.session.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_ticket_status_history_created ON ticket_status_history(created_at)
+                """))
+                db.session.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_ticket_email_template_type ON ticket_email_templates(template_type)
+                """))
+                db.session.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_ticket_email_template_active ON ticket_email_templates(is_active)
+                """))
+                db.session.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_scheduled_reminder_active ON scheduled_reminders(is_active)
+                """))
+                db.session.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_scheduled_reminder_next_send ON scheduled_reminders(next_send_date)
+                """))
+                db.session.commit()
+                logging.info("✅ Ticket tables checked/created")
+            except (OperationalError, SQLAlchemyOperationalError) as e:
+                db.session.rollback()
+            except Exception as e:
+                logging.warning(f"Ticket tables check: {e}")
+                db.session.rollback()
+            
             # Break tables removed
             
             # Fix Department sequence
@@ -459,6 +646,7 @@ def create_app(config_name='default'):
         from routes.final_report import final_report_bp
         from routes.documentation import documentation_bp
         from routes.email_templates import email_templates_bp
+        from routes.tickets import tickets_bp
         
         # Register blueprints
         app.register_blueprint(auth_bp)
@@ -474,6 +662,7 @@ def create_app(config_name='default'):
         app.register_blueprint(final_report_bp)
         app.register_blueprint(documentation_bp)
         app.register_blueprint(email_templates_bp)
+        app.register_blueprint(tickets_bp)
         
         # Initialize database
         # db.create_all()  # Commented out - using migrations instead

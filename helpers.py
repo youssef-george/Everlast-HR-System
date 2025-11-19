@@ -1,8 +1,8 @@
 from datetime import datetime, date, timedelta
 from functools import wraps
-from flask import flash, redirect, url_for, abort, request
+from flask import flash, redirect, url_for, abort, request, current_app
 from flask_login import current_user
-from models import LeaveRequest, PermissionRequest, User, SMTPConfiguration, EmailTemplate
+from models import LeaveRequest, PermissionRequest, User, SMTPConfiguration, EmailTemplate, Ticket, TicketCategory, TicketDepartmentMapping, TicketComment, TicketStatusHistory, TicketEmailTemplate, Department
 from extensions import db
 from zk import ZK, const
 import logging
@@ -1084,4 +1084,428 @@ def send_email_to_employee(employee, template_type, request_data):
         
     except Exception as e:
         logging.error(f"Error sending email to employee: {str(e)}", exc_info=True)
+        return False
+
+
+# ============================================================================
+# TICKETING SYSTEM HELPER FUNCTIONS
+# ============================================================================
+
+def get_tickets_for_user(user, show_own_only=False):
+    """Returns tickets based on user role
+    
+    Args:
+        user: The user object
+        show_own_only: If True, always return only the user's own tickets (for "My Tickets" page)
+                      If False, return tickets based on role (for inbox/manager views)
+    """
+    if not user or not user.is_authenticated:
+        return []
+    
+    # If show_own_only is True, always return user's own tickets
+    if show_own_only:
+        return Ticket.query.filter_by(user_id=user.id).order_by(Ticket.created_at.desc()).all()
+    
+    if user.role == 'product_owner':
+        # Product Owner sees all tickets
+        return Ticket.query.order_by(Ticket.created_at.desc()).all()
+    elif user.role in ['admin', 'director']:
+        # Admin/Director sees all tickets (same as Product Owner for now)
+        return Ticket.query.order_by(Ticket.created_at.desc()).all()
+    elif user.department_id:
+        # Check if user's department is in ticket department mappings (IT/Web)
+        department_ids = TicketDepartmentMapping.query.with_entities(
+            TicketDepartmentMapping.department_id
+        ).distinct().all()
+        department_ids = [d[0] for d in department_ids]
+        
+        if user.department_id in department_ids:
+            # IT/Web department users see all tickets assigned to their department
+            category_ids = TicketDepartmentMapping.query.filter_by(
+                department_id=user.department_id
+            ).with_entities(TicketDepartmentMapping.category_id).distinct().all()
+            category_ids = [c[0] for c in category_ids]
+            
+            if category_ids:
+                return Ticket.query.filter(
+                    Ticket.category_id.in_(category_ids)
+                ).order_by(Ticket.created_at.desc()).all()
+    
+    # Regular employees see only their own tickets
+    return Ticket.query.filter_by(user_id=user.id).order_by(Ticket.created_at.desc()).all()
+
+
+def get_department_tickets(department_id):
+    """Returns tickets for a specific department (IT/Web)"""
+    if not department_id:
+        return []
+    
+    category_ids = TicketDepartmentMapping.query.filter_by(
+        department_id=department_id
+    ).with_entities(TicketDepartmentMapping.category_id).distinct().all()
+    category_ids = [c[0] for c in category_ids]
+    
+    if not category_ids:
+        return []
+    
+    return Ticket.query.filter(
+        Ticket.category_id.in_(category_ids)
+    ).order_by(Ticket.created_at.desc()).all()
+
+
+def route_ticket_to_departments(ticket):
+    """Routes ticket based on category mapping and returns list of department users"""
+    if not ticket or not ticket.category_id:
+        return []
+    
+    # Get departments assigned to this category
+    mappings = TicketDepartmentMapping.query.filter_by(
+        category_id=ticket.category_id
+    ).all()
+    
+    if not mappings:
+        return []
+    
+    # Get all users in those departments
+    department_ids = [m.department_id for m in mappings]
+    users = User.query.filter(
+        User.department_id.in_(department_ids),
+        User.status == 'active'
+    ).all()
+    
+    return users
+
+
+def can_user_view_ticket(user, ticket):
+    """Check if user can view a specific ticket"""
+    if not user or not ticket:
+        return False
+    
+    if user.role == 'product_owner':
+        return True
+    
+    if user.role in ['admin', 'director']:
+        return True
+    
+    # Requester can always view their own ticket
+    if ticket.user_id == user.id:
+        return True
+    
+    # IT/Web department users can view tickets assigned to their department
+    if user.department_id:
+        department_ids = TicketDepartmentMapping.query.filter_by(
+            category_id=ticket.category_id
+        ).with_entities(TicketDepartmentMapping.department_id).all()
+        department_ids = [d[0] for d in department_ids]
+        
+        if user.department_id in department_ids:
+            return True
+    
+    return False
+
+
+def can_user_reply_to_ticket(user, ticket):
+    """Check if user can reply to a ticket"""
+    if not can_user_view_ticket(user, ticket):
+        return False
+    
+    # Product Owner, Admin, Director can always reply
+    if user.role in ['product_owner', 'admin', 'director']:
+        return True
+    
+    # IT/Web department users can reply
+    if user.department_id:
+        department_ids = TicketDepartmentMapping.query.filter_by(
+            category_id=ticket.category_id
+        ).with_entities(TicketDepartmentMapping.department_id).all()
+        department_ids = [d[0] for d in department_ids]
+        
+        if user.department_id in department_ids:
+            return True
+    
+    # Requester can reply to their own ticket
+    if ticket.user_id == user.id:
+        return True
+    
+    return False
+
+
+def get_ticket_email_template(template_type):
+    """Get active ticket email template by type"""
+    try:
+        template = TicketEmailTemplate.query.filter_by(
+            template_type=template_type,
+            is_active=True
+        ).first()
+        if not template:
+            logging.warning(f"Ticket email template '{template_type}' not found or not active")
+        return template
+    except Exception as e:
+        logging.error(f"Error retrieving ticket email template {template_type}: {str(e)}")
+        return None
+
+
+def render_ticket_email_template(template, context_dict):
+    """Render ticket email template by replacing placeholders"""
+    if not template:
+        return None, None
+    
+    try:
+        subject = template.subject
+        for key, value in context_dict.items():
+            placeholder = f"{{{key}}}"
+            subject = subject.replace(placeholder, str(value) if value is not None else "")
+        
+        body = template.body_html
+        for key, value in context_dict.items():
+            placeholder = f"{{{key}}}"
+            body = body.replace(placeholder, str(value) if value is not None else "")
+        
+        return subject, body
+    except Exception as e:
+        logging.error(f"Error rendering ticket email template: {str(e)}", exc_info=True)
+        return None, None
+
+
+def send_ticket_created_notification(ticket):
+    """Send email notification when ticket is created - different emails for requester and department teams"""
+    try:
+        # Get assigned departments
+        dept_users = route_ticket_to_departments(ticket)
+        
+        # Generate full URL for ticket
+        try:
+            with current_app.app_context():
+                ticket_url = url_for('tickets.detail', id=ticket.id, _external=True)
+        except:
+            # Fallback if not in app context
+            ticket_url = f"/tickets/{ticket.id}"
+        
+        success_count = 0
+        
+        # Send confirmation email to requester
+        requester_template = get_ticket_email_template('ticket_created_requester')
+        if requester_template:
+            requester_context = {
+                'ticket_id': ticket.id,
+                'ticket_title': ticket.title,
+                'requester_name': ticket.user.get_full_name(),
+                'category_name': ticket.category.name if ticket.category else 'Uncategorized',
+                'priority': ticket.priority.title(),
+                'status': 'Open',
+                'created_at': ticket.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'ticket_url': ticket_url
+            }
+            
+            subject, html_body = render_ticket_email_template(requester_template, requester_context)
+            if subject and html_body:
+                if send_email_to_user(ticket.user, subject, html_body):
+                    success_count += 1
+                    logging.info(f"Sent ticket confirmation email to requester: {ticket.user.email}")
+        else:
+            logging.warning("Ticket created requester email template not found")
+        
+        # Group users by department and send department-specific emails
+        if not ticket.category_id:
+            return success_count > 0
+        
+        # Get department mappings for this ticket's category
+        mappings = TicketDepartmentMapping.query.filter_by(
+            category_id=ticket.category_id
+        ).all()
+        
+        if not mappings:
+            return success_count > 0
+        
+        # Group users by department
+        from collections import defaultdict
+        dept_users_dict = defaultdict(list)
+        for user in dept_users:
+            if user.email and user.id != ticket.user_id:  # Don't send duplicate to requester
+                dept_users_dict[user.department_id].append(user)
+        
+        # Send email to each department team
+        dept_template = get_ticket_email_template('ticket_created_department')
+        if dept_template:
+            for mapping in mappings:
+                department_id = mapping.department_id
+                department = Department.query.get(department_id)
+                
+                if not department:
+                    continue
+                
+                # Get all users in this department
+                users_in_dept = dept_users_dict.get(department_id, [])
+                if not users_in_dept:
+                    continue
+                
+                # Prepare context with all ticket details
+                dept_context = {
+                    'department_name': department.department_name,  # Department name (e.g., "IT", "Web")
+                    'requester_name': ticket.user.get_full_name(),  # Employee who submitted ticket
+                    'ticket_id': ticket.id,
+                    'ticket_title': ticket.title,
+                    'description': ticket.description,
+                    'category_name': ticket.category.name if ticket.category else 'Uncategorized',
+                    'priority': ticket.priority.title(),
+                    'status': 'Open',
+                    'created_at': ticket.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                    'ticket_url': ticket_url
+                }
+                
+                # Render template once per department
+                subject, html_body = render_ticket_email_template(dept_template, dept_context)
+                if subject and html_body:
+                    # Send to all users in this department
+                    for user in users_in_dept:
+                        if send_email_to_user(user, subject, html_body):
+                            success_count += 1
+                            logging.info(f"Sent ticket alert email to {department.department_name} team member: {user.email}")
+        else:
+            logging.warning("Ticket created department email template not found")
+        
+        return success_count > 0
+    except Exception as e:
+        logging.error(f"Error sending ticket created notification: {str(e)}", exc_info=True)
+        return False
+
+
+def send_ticket_reply_notification(ticket, comment):
+    """Send email notification when a reply is added"""
+    try:
+        template = get_ticket_email_template('ticket_reply')
+        if not template:
+            logging.warning("Ticket reply email template not found")
+            return False
+        
+        # Get assigned departments
+        dept_users = route_ticket_to_departments(ticket)
+        
+        # Generate full URL for ticket
+        try:
+            with current_app.app_context():
+                ticket_url = url_for('tickets.detail', id=ticket.id, _external=True)
+        except:
+            ticket_url = f"/tickets/{ticket.id}"
+        
+        # Prepare context
+        context = {
+            'ticket_id': ticket.id,
+            'ticket_title': ticket.title,
+            'requester_name': ticket.user.get_full_name(),
+            'commenter_name': comment.user.get_full_name() if comment.user else 'System',
+            'comment_text': comment.comment_text,
+            'is_internal': 'Yes' if comment.is_internal else 'No',
+            'created_at': comment.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'ticket_url': ticket_url
+        }
+        
+        subject, html_body = render_ticket_email_template(template, context)
+        if not subject or not html_body:
+            return False
+        
+        success_count = 0
+        
+        # Send to requester (if not internal comment)
+        if not comment.is_internal:
+            if send_email_to_user(ticket.user, subject, html_body):
+                success_count += 1
+        
+        # Send to department users
+        for user in dept_users:
+            if user.email and user.id != comment.user_id:  # Don't send to commenter
+                if send_email_to_user(user, subject, html_body):
+                    success_count += 1
+        
+        return success_count > 0
+    except Exception as e:
+        logging.error(f"Error sending ticket reply notification: {str(e)}", exc_info=True)
+        return False
+
+
+def send_ticket_status_update_notification(ticket, old_status, new_status):
+    """Send email notification when ticket status is updated"""
+    try:
+        template = get_ticket_email_template('ticket_status_update')
+        if not template:
+            logging.warning("Ticket status update email template not found")
+            return False
+        
+        # Get assigned departments
+        dept_users = route_ticket_to_departments(ticket)
+        
+        # Generate full URL for ticket
+        try:
+            with current_app.app_context():
+                ticket_url = url_for('tickets.detail', id=ticket.id, _external=True)
+        except:
+            ticket_url = f"/tickets/{ticket.id}"
+        
+        # Prepare context
+        context = {
+            'ticket_id': ticket.id,
+            'ticket_title': ticket.title,
+            'requester_name': ticket.user.get_full_name(),
+            'old_status': old_status.title().replace('_', ' ') if old_status else 'N/A',
+            'new_status': new_status.title().replace('_', ' '),
+            'updated_at': ticket.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'ticket_url': ticket_url
+        }
+        
+        subject, html_body = render_ticket_email_template(template, context)
+        if not subject or not html_body:
+            return False
+        
+        success_count = 0
+        
+        # Send to requester
+        if send_email_to_user(ticket.user, subject, html_body):
+            success_count += 1
+        
+        # Send to department users
+        for user in dept_users:
+            if user.email and user.id != ticket.user_id:
+                if send_email_to_user(user, subject, html_body):
+                    success_count += 1
+        
+        return success_count > 0
+    except Exception as e:
+        logging.error(f"Error sending ticket status update notification: {str(e)}", exc_info=True)
+        return False
+
+
+def send_ticket_resolved_notification(ticket):
+    """Send final confirmation email when ticket is resolved or closed"""
+    try:
+        template_type = 'ticket_resolved' if ticket.status == 'resolved' else 'ticket_closed'
+        template = get_ticket_email_template(template_type)
+        if not template:
+            logging.warning(f"Ticket {template_type} email template not found")
+            return False
+        
+        # Generate full URL for ticket
+        try:
+            with current_app.app_context():
+                ticket_url = url_for('tickets.detail', id=ticket.id, _external=True)
+        except:
+            ticket_url = f"/tickets/{ticket.id}"
+        
+        # Prepare context
+        context = {
+            'ticket_id': ticket.id,
+            'ticket_title': ticket.title,
+            'requester_name': ticket.user.get_full_name(),
+            'status': ticket.status.title().replace('_', ' '),
+            'resolved_at': ticket.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'ticket_url': ticket_url
+        }
+        
+        subject, html_body = render_ticket_email_template(template, context)
+        if not subject or not html_body:
+            return False
+        
+        # Send to requester only
+        return send_email_to_user(ticket.user, subject, html_body)
+    except Exception as e:
+        logging.error(f"Error sending ticket resolved notification: {str(e)}", exc_info=True)
         return False

@@ -493,9 +493,9 @@ def ensure_attendance_logs_processed(start_date, end_date):
 
 @final_report_bp.route('/final-report')
 @login_required
-@role_required(['admin', 'product_owner'])
+@role_required(['admin', 'product_owner', 'manager'])
 def final_report():
-    """Final Report - Admin only attendance report with auto-fetch and duplicate removal"""
+    """Final Report - Admin, Product Owner, and Manager attendance report with auto-fetch and duplicate removal"""
     
     try:
         # Clean up orphaned paid holiday records before processing
@@ -523,14 +523,25 @@ def final_report():
     else:
         logging.info('Skipping sync on final report page load - another sync is already running')
     
-    # Get all active users (admin only) - needed for both empty and populated states
-    users = User.query.filter(
-        User.status == 'active',
-        ~User.first_name.like('User%'),  # Exclude generic test users
-        ~User.first_name.like('NN-%'),   # Exclude numbered test users
-        User.first_name != '',           # Exclude empty names
-        User.last_name != ''             # Exclude users without last names
-    ).all()
+    # Get users based on role
+    if current_user.role == 'manager':
+        # Managers see only their employees
+        from helpers import get_employees_for_manager
+        users = get_employees_for_manager(current_user.id)
+        # Filter to active users only
+        users = [u for u in users if u.status == 'active' and 
+                 not u.first_name.startswith('User') and 
+                 not u.first_name.startswith('NN-') and
+                 u.first_name != '' and u.last_name != '']
+    else:
+        # Admin and Product Owner see all active users
+        users = User.query.filter(
+            User.status == 'active',
+            ~User.first_name.like('User%'),  # Exclude generic test users
+            ~User.first_name.like('NN-%'),   # Exclude numbered test users
+            User.first_name != '',           # Exclude empty names
+            User.last_name != ''             # Exclude users without last names
+        ).all()
     
     # Get date range from query parameters (no default - user must choose)
     start_date_str = request.args.get('start_date')
@@ -561,6 +572,10 @@ def final_report():
     
     # Filter users if specific users are selected
     if user_ids:
+        # For managers, ensure they can only view their own employees
+        if current_user.role == 'manager':
+            manager_employee_ids = [u.id for u in users]
+            user_ids = [uid for uid in user_ids if uid in manager_employee_ids]
         users = [user for user in users if user.id in user_ids]
     
     # Sorting is not needed for summary view
@@ -671,7 +686,7 @@ def final_report():
 
 @final_report_bp.route('/final-report/export')
 @login_required
-@role_required(['admin', 'product_owner'])
+@role_required(['admin', 'product_owner', 'manager'])
 def export_final_report():
     """Export final report to Excel"""
     
@@ -689,17 +704,32 @@ def export_final_report():
     except ValueError:
         return jsonify({'error': 'Invalid date format'}), 400
     
-    # Get users for export (admin only)
-    users = User.query.filter(
-        User.status == 'active',
-        ~User.first_name.like('User%'),  # Exclude generic test users
-        ~User.first_name.like('NN-%'),   # Exclude numbered test users
-        User.first_name != '',           # Exclude empty names
-        User.last_name != ''             # Exclude users without last names
-    ).all()
+    # Get users for export based on role
+    if current_user.role == 'manager':
+        # Managers can only export their employees
+        from helpers import get_employees_for_manager
+        users = get_employees_for_manager(current_user.id)
+        # Filter to active users only
+        users = [u for u in users if u.status == 'active' and 
+                 not u.first_name.startswith('User') and 
+                 not u.first_name.startswith('NN-') and
+                 u.first_name != '' and u.last_name != '']
+    else:
+        # Admin and Product Owner can export all users
+        users = User.query.filter(
+            User.status == 'active',
+            ~User.first_name.like('User%'),  # Exclude generic test users
+            ~User.first_name.like('NN-%'),   # Exclude numbered test users
+            User.first_name != '',           # Exclude empty names
+            User.last_name != ''             # Exclude users without last names
+        ).all()
     
     # Filter users if specific users are selected
     if user_ids:
+        # For managers, ensure they can only export their own employees
+        if current_user.role == 'manager':
+            manager_employee_ids = [u.id for u in users]
+            user_ids = [uid for uid in user_ids if uid in manager_employee_ids]
         users = [user for user in users if user.id in user_ids]
     
     # Generate report data using the EXACT SAME logic as the main route

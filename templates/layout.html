@@ -416,6 +416,52 @@
                 {% endif %}
                 
                 <li class="nav-item">
+                    <div class="nav-section-header">
+                        <i class="fas fa-headset nav-icon"></i>
+                        <span class="nav-section-title">Support / Tickets</span>
+                    </div>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('tickets.index') }}" class="nav-link {{ 'active' if request.path.startswith('/tickets') and not request.path.startswith('/tickets/inbox') and not request.path.startswith('/tickets/manager') and not request.path.startswith('/tickets/categories') and not request.path.startswith('/tickets/email-templates') }}">
+                        <i class="fas fa-ticket-alt nav-icon"></i>
+                        <span class="nav-text">My Tickets</span>
+                    </a>
+                </li>
+                {% if current_user.department_id %}
+                <li class="nav-item">
+                    <a href="{{ url_for('tickets.inbox') }}" class="nav-link {{ 'active' if request.path == '/tickets/inbox' }}">
+                        <i class="fas fa-inbox nav-icon"></i>
+                        <span class="nav-text">Ticket Inbox</span>
+                    </a>
+                </li>
+                {% endif %}
+                {% if current_user.role in ['product_owner', 'admin'] %}
+                <li class="nav-item dropdown">
+                    <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" role="button">
+                        <i class="fas fa-cog nav-icon"></i>
+                        <span class="nav-text">Ticketing Manager</span>
+                    </a>
+                    <ul class="dropdown-menu sidebar-dropdown">
+                        <li><a class="dropdown-item" href="{{ url_for('tickets.manager') }}">
+                            <i class="fas fa-list nav-icon"></i>
+                            <span class="nav-text">All Tickets</span>
+                        </a></li>
+                        {% if current_user.role == 'product_owner' %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ url_for('tickets.categories') }}">
+                            <i class="fas fa-tags nav-icon"></i>
+                            <span class="nav-text">Categories</span>
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('tickets.email_templates') }}">
+                            <i class="fas fa-envelope nav-icon"></i>
+                            <span class="nav-text">Email Templates</span>
+                        </a></li>
+                        {% endif %}
+                    </ul>
+                </li>
+                {% endif %}
+                
+                <li class="nav-item">
                     <a href="{{ url_for('dashboard.members') }}" class="nav-link {{ 'active' if request.path == '/dashboard/members' }}">
                         <i class="fas fa-users nav-icon"></i>
                         <span class="nav-text">Company Members</span>
@@ -443,7 +489,7 @@
             </a>
         </li>
         {% endif %}
-        {% if current_user.role in ['admin', 'product_owner'] %}
+        {% if current_user.role in ['admin', 'product_owner', 'manager'] %}
         <li class="nav-item">
             <a href="{{ url_for('final_report.final_report') }}" class="nav-link {{ 'active' if request.path.startswith('/final-report') }}">
                 <i class="fas fa-chart-bar nav-icon"></i>

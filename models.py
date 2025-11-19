@@ -765,3 +765,218 @@ class EmailTemplate(db.Model):
     
     def __repr__(self):
         return f'<EmailTemplate {self.template_name} - {self.template_type}>'
+
+
+# ============================================================================
+# TICKETING SYSTEM MODELS
+# ============================================================================
+
+class TicketCategory(db.Model):
+    """Model for ticket categories managed by Product Owner"""
+    __tablename__ = 'ticket_categories'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    description = db.Column(db.Text, nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    tickets = db.relationship('Ticket', backref='category', lazy=True)
+    department_mappings = db.relationship('TicketDepartmentMapping', backref='category', lazy=True, cascade='all, delete-orphan')
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_ticket_category_active', 'is_active'),
+    )
+    
+    def __repr__(self):
+        return f'<TicketCategory {self.name}>'
+
+
+class TicketDepartmentMapping(db.Model):
+    """Maps ticket categories to departments (IT/Web)"""
+    __tablename__ = 'ticket_department_mapping'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    category_id = db.Column(db.Integer, db.ForeignKey('ticket_categories.id', ondelete='CASCADE'), nullable=False)
+    department_id = db.Column(db.Integer, db.ForeignKey('departments.id', ondelete='CASCADE'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    department = db.relationship('Department', backref='ticket_mappings')
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_ticket_dept_mapping_category', 'category_id'),
+        Index('idx_ticket_dept_mapping_dept', 'department_id'),
+        db.UniqueConstraint('category_id', 'department_id', name='uq_category_department'),
+    )
+    
+    def __repr__(self):
+        return f'<TicketDepartmentMapping Category {self.category_id} -> Department {self.department_id}>'
+
+
+class Ticket(db.Model):
+    """Main ticket table"""
+    __tablename__ = 'tickets'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey('ticket_categories.id', ondelete='SET NULL'), nullable=True)
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    priority = db.Column(db.String(20), nullable=False, default='medium')  # low, medium, high, critical
+    status = db.Column(db.String(20), nullable=False, default='open')  # open, in_progress, resolved, closed
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship('User', foreign_keys=[user_id], backref='tickets')
+    comments = db.relationship('TicketComment', backref='ticket', lazy=True, cascade='all, delete-orphan', order_by='TicketComment.created_at')
+    attachments = db.relationship('TicketAttachment', backref='ticket', lazy=True, cascade='all, delete-orphan')
+    status_history = db.relationship('TicketStatusHistory', backref='ticket', lazy=True, cascade='all, delete-orphan', order_by='TicketStatusHistory.created_at')
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_ticket_user', 'user_id'),
+        Index('idx_ticket_category', 'category_id'),
+        Index('idx_ticket_status', 'status'),
+        Index('idx_ticket_priority', 'priority'),
+        Index('idx_ticket_created', 'created_at'),
+    )
+    
+    def __repr__(self):
+        return f'<Ticket {self.id} - {self.title}>'
+    
+    def get_assigned_departments(self):
+        """Get list of departments assigned to this ticket's category"""
+        if not self.category_id:
+            return []
+        mappings = TicketDepartmentMapping.query.filter_by(category_id=self.category_id).all()
+        return [mapping.department for mapping in mappings]
+
+
+class TicketComment(db.Model):
+    """Replies/comments on tickets"""
+    __tablename__ = 'ticket_comments'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    ticket_id = db.Column(db.Integer, db.ForeignKey('tickets.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    comment_text = db.Column(db.Text, nullable=False)
+    is_internal = db.Column(db.Boolean, default=False)  # Internal notes not visible to requester
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship('User', foreign_keys=[user_id], backref='ticket_comments')
+    attachments = db.relationship('TicketAttachment', backref='comment', lazy=True, cascade='all, delete-orphan')
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_ticket_comment_ticket', 'ticket_id'),
+        Index('idx_ticket_comment_user', 'user_id'),
+        Index('idx_ticket_comment_created', 'created_at'),
+    )
+    
+    def __repr__(self):
+        return f'<TicketComment {self.id} - Ticket {self.ticket_id}>'
+
+
+class TicketAttachment(db.Model):
+    """File attachments for tickets and comments"""
+    __tablename__ = 'ticket_attachments'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    ticket_id = db.Column(db.Integer, db.ForeignKey('tickets.id', ondelete='CASCADE'), nullable=False)
+    comment_id = db.Column(db.Integer, db.ForeignKey('ticket_comments.id', ondelete='CASCADE'), nullable=True)
+    filename = db.Column(db.String(255), nullable=False)
+    file_path = db.Column(db.String(500), nullable=False)
+    file_size = db.Column(db.Integer, nullable=True)  # Size in bytes
+    uploaded_by = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    uploader = db.relationship('User', foreign_keys=[uploaded_by], backref='ticket_attachments')
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_ticket_attachment_ticket', 'ticket_id'),
+        Index('idx_ticket_attachment_comment', 'comment_id'),
+    )
+    
+    def __repr__(self):
+        return f'<TicketAttachment {self.id} - {self.filename}>'
+
+
+class TicketStatusHistory(db.Model):
+    """Audit trail of ticket status changes"""
+    __tablename__ = 'ticket_status_history'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    ticket_id = db.Column(db.Integer, db.ForeignKey('tickets.id', ondelete='CASCADE'), nullable=False)
+    old_status = db.Column(db.String(20), nullable=True)
+    new_status = db.Column(db.String(20), nullable=False)
+    changed_by = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    comment = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    changer = db.relationship('User', foreign_keys=[changed_by], backref='ticket_status_changes')
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_ticket_status_history_ticket', 'ticket_id'),
+        Index('idx_ticket_status_history_created', 'created_at'),
+    )
+    
+    def __repr__(self):
+        return f'<TicketStatusHistory {self.id} - Ticket {self.ticket_id} {self.old_status} -> {self.new_status}>'
+
+
+class TicketEmailTemplate(db.Model):
+    """Email templates for ticketing system"""
+    __tablename__ = 'ticket_email_templates'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    template_type = db.Column(db.String(50), nullable=False, unique=True)  # ticket_created, ticket_reply, ticket_status_update, ticket_resolved, ticket_closed
+    subject = db.Column(db.String(255), nullable=False)
+    body_html = db.Column(db.Text, nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_ticket_email_template_type', 'template_type'),
+        Index('idx_ticket_email_template_active', 'is_active'),
+    )
+    
+    def __repr__(self):
+        return f'<TicketEmailTemplate {self.template_type}>'
+
+
+class ScheduledReminder(db.Model):
+    """Optional: Scheduled reminders for ticketing system"""
+    __tablename__ = 'scheduled_reminders'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    subject = db.Column(db.String(255), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    frequency = db.Column(db.String(20), nullable=False)  # daily, weekly, monthly
+    target_recipients = db.Column(db.Text, nullable=True)  # Comma-separated emails or role names
+    is_active = db.Column(db.Boolean, default=True)
+    next_send_date = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_scheduled_reminder_active', 'is_active'),
+        Index('idx_scheduled_reminder_next_send', 'next_send_date'),
+    )
+    
+    def __repr__(self):
+        return f'<ScheduledReminder {self.id} - {self.subject}>'

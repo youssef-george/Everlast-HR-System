@@ -1,0 +1,70 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="content-header">
+    <h1 class="page-title">Edit Email Template</h1>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">{{ template.template_type.replace('_', ' ').title() }}</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('tickets.edit_email_template', id=template.id) }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.template_type.id }}" class="form-label">Template Type</label>
+                        {{ form.template_type(class="form-select", disabled=True) }}
+                        <div class="form-text">Template type cannot be changed.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.subject.id }}" class="form-label">Subject</label>
+                        {{ form.subject(class="form-control") }}
+                        {% if form.subject.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.subject.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Available placeholders: {ticket_id}, {ticket_title}, {requester_name}, {category_name}, {priority}, {status}, {department_name}, {description}, etc.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.body_html.id }}" class="form-label">Email Body (HTML)</label>
+                        {{ form.body_html(class="form-control", rows="15") }}
+                        {% if form.body_html.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.body_html.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Use HTML formatting. Available placeholders: {ticket_id}, {ticket_title}, {requester_name}, {description}, {ticket_url}, etc.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.is_active(class="form-check-input") }}
+                            <label class="form-check-label" for="{{ form.is_active.id }}">
+                                {{ form.is_active.label.text }}
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('tickets.email_templates') }}" class="btn btn-secondary">Cancel</a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
