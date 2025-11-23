@@ -716,7 +716,15 @@ table thead th * {
                         </h6>
                         <div class="mb-3">
                             <label class="form-label fw-bold">Full Name:</label>
-                            <p class="mb-0">{{ user.first_name }} {{ user.last_name }}</p>
+                            <p class="mb-0">{{ user.full_name if user.full_name else (user.first_name + ' ' + user.last_name) }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Employee Code:</label>
+                            <p class="mb-0">{{ user.employee_code if user.employee_code else '-' }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Insurance Number:</label>
+                            <p class="mb-0">{{ user.insurance_number if user.insurance_number else '-' }}</p>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold">Email:</label>

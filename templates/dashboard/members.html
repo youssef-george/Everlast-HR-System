@@ -767,6 +767,9 @@ table thead th * {
                                     </td>
                                     <td>
                                         <div class="member-actions">
+                                            <button type="button" class="member-action-btn" onclick="viewMemberDetails({{ user.id }})" title="View Details" style="background-color: #667eea; color: white; padding: 8px 12px; border-radius: 8px; border: none; cursor: pointer;">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
                                             <a href="mailto:{{ user.email }}" class="member-action-btn member-action-email" title="Send Email" style="background-color: #667eea; color: white; padding: 8px 12px; border-radius: 8px;">
                                                 <i class="fas fa-envelope"></i>
                                             </a>
@@ -789,6 +792,29 @@ table thead th * {
                             {% endif %}
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Employee Details Modal -->
+<div class="modal fade" id="memberDetailsModal" tabindex="-1" aria-labelledby="memberDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color: #667eea; color: white;">
+                <h5 class="modal-title" id="memberDetailsModalLabel">
+                    <i class="fas fa-user me-2"></i>Employee Details
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="memberDetailsContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -982,5 +1008,137 @@ table thead th * {
         // Handle window resize to update indicators
         window.addEventListener('resize', updateScrollIndicators);
     });
+
+    // View member details in popup
+    function viewMemberDetails(userId) {
+        const modal = new bootstrap.Modal(document.getElementById('memberDetailsModal'));
+        const content = document.getElementById('memberDetailsContent');
+        
+        // Show loading state
+        content.innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        `;
+        
+        modal.show();
+        
+        // Fetch member details
+        fetch(`/dashboard/members/${userId}/details`, {
+            credentials: 'include'
+        })
+        .then(response => response.json())
+        .then(data => {
+            const canEdit = {% if current_user.role in ['admin', 'product_owner'] %}true{% else %}false{% endif %};
+            
+            content.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-muted">Full Name</label>
+                        ${canEdit ? `
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="editFullName" value="${data.full_name || ''}" placeholder="Enter full name">
+                                <button class="btn btn-primary" onclick="updateFullName(${data.id})" type="button">
+                                    <i class="fas fa-save"></i> Save
+                                </button>
+                            </div>
+                        ` : `
+                            <div class="form-control-plaintext">${data.full_name || 'N/A'}</div>
+                        `}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-muted">Employee Code</label>
+                        <div class="form-control-plaintext">${data.employee_code}</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-muted">Insurance Number</label>
+                        <div class="form-control-plaintext">${data.insurance_number}</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-muted">Email</label>
+                        <div class="form-control-plaintext">
+                            <a href="mailto:${data.email}">${data.email}</a>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-muted">Avaya Number</label>
+                        <div class="form-control-plaintext">${data.avaya_number}</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-muted">Fingerprint Number</label>
+                        <div class="form-control-plaintext">${data.fingerprint_number}</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-muted">Department</label>
+                        <div class="form-control-plaintext">${data.department}</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-muted">Role</label>
+                        <div class="form-control-plaintext">
+                            <span class="badge bg-primary">${data.role.charAt(0).toUpperCase() + data.role.slice(1)}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-muted">Joining Date</label>
+                        <div class="form-control-plaintext">${data.joining_date}</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-muted">Phone Number</label>
+                        <div class="form-control-plaintext">${data.phone_number}</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-muted">Position</label>
+                        <div class="form-control-plaintext">${data.position}</div>
+                    </div>
+                </div>
+            `;
+        })
+        .catch(error => {
+            content.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error loading employee details: ${error.message}
+                </div>
+            `;
+        });
+    }
+
+    // Update full name
+    function updateFullName(userId) {
+        const fullNameInput = document.getElementById('editFullName');
+        const fullName = fullNameInput.value.trim();
+        
+        fetch(`/dashboard/members/${userId}/update-fullname`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({ full_name: fullName })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success message
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-success alert-dismissible fade show';
+                alert.innerHTML = `
+                    <i class="fas fa-check-circle me-2"></i>${data.message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.getElementById('memberDetailsContent').insertBefore(alert, document.getElementById('memberDetailsContent').firstChild);
+                
+                // Update the input value
+                fullNameInput.value = fullName;
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error updating full name: ' + error.message);
+        });
+    }
 </script>
 {% endblock %}

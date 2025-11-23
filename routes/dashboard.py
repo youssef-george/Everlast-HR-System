@@ -767,6 +767,9 @@ def edit_user(user_id):
             original_status = user.status # Store original status
             user.status = form.status.data
             user.joining_date = form.joining_date.data
+            user.full_name = form.full_name.data or None
+            user.employee_code = form.employee_code.data or None
+            user.insurance_number = form.insurance_number.data or None
 
             # Check if user status changed to 'active' and initialize leave balances
             if original_status != 'active' and user.status == 'active':
@@ -900,6 +903,48 @@ def members_search():
         'users': users_data,
         'total': len(users_data)
     })
+
+@dashboard_bp.route('/members/<int:user_id>/details')
+@login_required
+def member_details(user_id):
+    """Get employee details for popup view"""
+    user = User.query.get_or_404(user_id)
+    
+    return jsonify({
+        'id': user.id,
+        'full_name': user.full_name or f"{user.first_name} {user.last_name}",
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'email': user.email,
+        'employee_code': user.employee_code or 'N/A',
+        'insurance_number': user.insurance_number or 'N/A',
+        'avaya_number': user.avaya_number or 'N/A',
+        'fingerprint_number': user.fingerprint_number or 'N/A',
+        'department': user.department.department_name if user.department else 'No Department',
+        'role': user.role,
+        'joining_date': user.joining_date.strftime('%Y-%m-%d') if user.joining_date else 'N/A',
+        'phone_number': user.phone_number or 'N/A',
+        'position': user.position or 'N/A'
+    })
+
+@dashboard_bp.route('/members/<int:user_id>/update-fullname', methods=['POST'])
+@login_required
+@role_required(['admin', 'product_owner'])
+def update_member_fullname(user_id):
+    """Update full name from popup"""
+    user = User.query.get_or_404(user_id)
+    data = request.get_json()
+    
+    if not data or 'full_name' not in data:
+        return jsonify({'success': False, 'message': 'Full name is required'}), 400
+    
+    try:
+        user.full_name = data['full_name'].strip() if data['full_name'].strip() else None
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Full name updated successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Error updating full name: {str(e)}'}), 500
 
 @dashboard_bp.route('/members')
 def members():

@@ -21,6 +21,9 @@ class User(UserMixin, db.Model):
     joining_date = db.Column(db.Date, nullable=True)
     
     # Additional data fields (admin only)
+    full_name = db.Column(db.String(200), nullable=True)  # Full name field
+    employee_code = db.Column(db.String(50), nullable=True, unique=True)  # Employee code
+    insurance_number = db.Column(db.String(50), nullable=True)  # Insurance number
     date_of_birth = db.Column(db.Date, nullable=True)
     phone_number = db.Column(db.String(20), nullable=True)
     alternate_phone_number = db.Column(db.String(20), nullable=True)

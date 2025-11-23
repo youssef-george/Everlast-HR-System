@@ -83,6 +83,9 @@ class UserEditForm(FlaskForm):
         ('inactive', 'Inactive')
     ], validators=[DataRequired()])
     joining_date = DateField('Joining Date', validators=[Optional()], format='%Y-%m-%d')
+    full_name = StringField('Full Name', validators=[Optional(), Length(max=200)])
+    employee_code = StringField('Employee Code', validators=[Optional(), Length(max=50)])
+    insurance_number = StringField('Insurance Number', validators=[Optional(), Length(max=50)])
     
     # Additional data fields (admin only)
     date_of_birth = DateField('Date of Birth', validators=[Optional()], format='%Y-%m-%d')

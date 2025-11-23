@@ -46,6 +46,21 @@
                 <form method="POST" action="{{ url_for('dashboard.edit_user', user_id=user.id) }}" id="edit-user-form">
                     {{ form.hidden_tag() }}
                     
+                    <!-- 1. Full Name -->
+                    <div class="mb-3">
+                        {{ form.full_name.label(class="form-label") }}
+                        {{ form.full_name(class="form-control", placeholder="Enter full name (optional)") }}
+                        {% if form.full_name.errors %}
+                            <div class="text-danger">
+                                {% for error in form.full_name.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Full name as it should appear in the system</small>
+                    </div>
+                    
+                    <!-- 2. First Name -->
                     <div class="mb-3">
                         {{ form.first_name.label(class="form-label") }}
                         {{ form.first_name(class="form-control") }}
@@ -58,6 +73,7 @@
                         {% endif %}
                     </div>
                     
+                    <!-- 2. Last Name -->
                     <div class="mb-3">
                         {{ form.last_name.label(class="form-label") }}
                         {{ form.last_name(class="form-control") }}
@@ -70,6 +86,7 @@
                         {% endif %}
                     </div>
                     
+                    <!-- 3. Email -->
                     <div class="mb-3">
                         {{ form.email.label(class="form-label") }}
                         {{ form.email(class="form-control") }}
@@ -82,6 +99,21 @@
                         {% endif %}
                     </div>
                     
+                    <!-- 4. Employee Code -->
+                    <div class="mb-3">
+                        {{ form.employee_code.label(class="form-label") }}
+                        {{ form.employee_code(class="form-control", placeholder="Enter employee code (optional)") }}
+                        {% if form.employee_code.errors %}
+                            <div class="text-danger">
+                                {% for error in form.employee_code.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Unique employee identification code</small>
+                    </div>
+                    
+                    <!-- 5. Fingerprint Number -->
                     {% if current_user.role in ['admin', 'product_owner'] %}
                     <div class="mb-3">
                         {{ form.fingerprint_number.label(class="form-label") }}
@@ -96,18 +128,7 @@
                     </div>
                     {% endif %}
                     
-                    <div class="mb-3">
-                        {{ form.avaya_number.label(class="form-label") }}
-                        {{ form.avaya_number(class="form-control", placeholder="Enter Avaya number (optional)") }}
-                        {% if form.avaya_number.errors %}
-                            <div class="text-danger">
-                                {% for error in form.avaya_number.errors %}
-                                    <small>{{ error }}</small>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
-                    
+                    <!-- 6. Department -->
                     <div class="mb-3">
                         {{ form.department_id.label(class="form-label") }}
                         {{ form.department_id(class="form-select") }}
@@ -120,6 +141,7 @@
                         {% endif %}
                     </div>
                     
+                    <!-- 7. Position -->
                     <div class="mb-3">
                         {{ form.position.label(class="form-label") }}
                         {{ form.position(class="form-control", placeholder="e.g., Software Developer, Manager, etc.") }}
@@ -132,27 +154,74 @@
                         {% endif %}
                     </div>
                     
+                    <!-- 8. Joining Date -->
                     <div class="mb-3">
-                        {{ form.salary.label(class="form-label") }}
-                        <div class="input-group">
-                            {{ form.currency(class="form-select", style="max-width: 120px;") }}
-                            {{ form.salary(class="form-control", placeholder="0.00", step="0.01") }}
-                        </div>
-                        {% if form.salary.errors %}
+                        {{ form.joining_date.label(class="form-label") }}
+                        {{ form.joining_date(class="form-control") }}
+                        {% if form.joining_date.errors %}
                             <div class="text-danger">
-                                {% for error in form.salary.errors %}
-                                    <small>{{ error }}</small>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                        {% if form.currency.errors %}
-                            <div class="text-danger">
-                                {% for error in form.currency.errors %}
+                                {% for error in form.joining_date.errors %}
                                     <small>{{ error }}</small>
                                 {% endfor %}
                             </div>
                         {% endif %}
                     </div>
+                    
+                    <!-- 9. Date of Birth -->
+                    <div class="mb-3">
+                        {{ form.date_of_birth.label(class="form-label") }}
+                        {{ form.date_of_birth(class="form-control") }}
+                        {% if form.date_of_birth.errors %}
+                            <div class="text-danger">
+                                {% for error in form.date_of_birth.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- 10. Insurance Number -->
+                    <div class="mb-3">
+                        {{ form.insurance_number.label(class="form-label") }}
+                        {{ form.insurance_number(class="form-control", placeholder="Enter insurance number (optional)") }}
+                        {% if form.insurance_number.errors %}
+                            <div class="text-danger">
+                                {% for error in form.insurance_number.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Employee insurance number</small>
+                    </div>
+                    
+                    <!-- 11. Phone Numbers -->
+                    <div class="mb-3">
+                        {{ form.phone_number.label(class="form-label") }}
+                        {{ form.phone_number(class="form-control", placeholder="e.g., +1-555-123-4567") }}
+                        {% if form.phone_number.errors %}
+                            <div class="text-danger">
+                                {% for error in form.phone_number.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.alternate_phone_number.label(class="form-label") }}
+                        {{ form.alternate_phone_number(class="form-control", placeholder="e.g., +1-555-987-6543") }}
+                        {% if form.alternate_phone_number.errors %}
+                            <div class="text-danger">
+                                {% for error in form.alternate_phone_number.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Additional fields (Role, Status, Avaya, Salary) -->
+                    <div class="separator my-4"></div>
+                    <h4 class="mb-3">Administrative Information</h4>
                     
                     <div class="mb-3">
                         {{ form.role.label(class="form-label") }}
@@ -185,30 +254,13 @@
                             </div>
                         {% endif %}
                     </div>
-
-                    <div class="mb-3">
-                        {{ form.joining_date.label(class="form-label") }}
-                        {{ form.joining_date(class="form-control") }}
-                        {% if form.joining_date.errors %}
-                            <div class="text-danger">
-                                {% for error in form.joining_date.errors %}
-                                    <small>{{ error }}</small>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="separator my-4"></div>
-                    
-                    <h4 class="mb-3">Additional Information</h4>
-                    <p class="text-muted mb-3">This information is only visible to administrators.</p>
                     
                     <div class="mb-3">
-                        {{ form.date_of_birth.label(class="form-label") }}
-                        {{ form.date_of_birth(class="form-control") }}
-                        {% if form.date_of_birth.errors %}
+                        {{ form.avaya_number.label(class="form-label") }}
+                        {{ form.avaya_number(class="form-control", placeholder="Enter Avaya number (optional)") }}
+                        {% if form.avaya_number.errors %}
                             <div class="text-danger">
-                                {% for error in form.date_of_birth.errors %}
+                                {% for error in form.avaya_number.errors %}
                                     <small>{{ error }}</small>
                                 {% endfor %}
                             </div>
@@ -216,30 +268,29 @@
                     </div>
                     
                     <div class="mb-3">
-                        {{ form.phone_number.label(class="form-label") }}
-                        {{ form.phone_number(class="form-control", placeholder="e.g., +1-555-123-4567") }}
-                        {% if form.phone_number.errors %}
+                        {{ form.salary.label(class="form-label") }}
+                        <div class="input-group">
+                            {{ form.currency(class="form-select", style="max-width: 120px;") }}
+                            {{ form.salary(class="form-control", placeholder="0.00", step="0.01") }}
+                        </div>
+                        {% if form.salary.errors %}
                             <div class="text-danger">
-                                {% for error in form.phone_number.errors %}
+                                {% for error in form.salary.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        {% if form.currency.errors %}
+                            <div class="text-danger">
+                                {% for error in form.currency.errors %}
                                     <small>{{ error }}</small>
                                 {% endfor %}
                             </div>
                         {% endif %}
                     </div>
                     
-                    <div class="mb-3">
-                        {{ form.alternate_phone_number.label(class="form-label") }}
-                        {{ form.alternate_phone_number(class="form-control", placeholder="e.g., +1-555-987-6543") }}
-                        {% if form.alternate_phone_number.errors %}
-                            <div class="text-danger">
-                                {% for error in form.alternate_phone_number.errors %}
-                                    <small>{{ error }}</small>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
                     
-                    
+                    <!-- 12. Password -->
                     <div class="separator my-4"></div>
                     
                     {% set is_protected = (user.email.lower() == 'youssef.george0458@gmail.com' or user.email.lower() == 'erp@everlastwellness.com') %}
@@ -284,6 +335,7 @@
                     </div>
                     {% endif %}
                     
+                    <!-- 13. Attachments -->
                     <div class="separator my-4"></div>
                     
                     <h4 class="mb-3">Employee Attachments</h4>
