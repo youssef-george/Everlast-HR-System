@@ -2,7 +2,7 @@ from datetime import datetime, date, timedelta
 from functools import wraps
 from flask import flash, redirect, url_for, abort, request, current_app
 from flask_login import current_user
-from models import LeaveRequest, PermissionRequest, User, SMTPConfiguration, EmailTemplate, Ticket, TicketCategory, TicketDepartmentMapping, TicketComment, TicketStatusHistory, TicketEmailTemplate, Department
+from models import LeaveRequest, PermissionRequest, User, SMTPConfiguration, EmailTemplate, Ticket, TicketCategory, TicketDepartmentMapping, TicketComment, TicketStatusHistory, TicketEmailTemplate, Department, ActivityLog
 from extensions import db
 from zk import ZK, const
 import logging
@@ -908,6 +908,81 @@ def send_email_to_user(user, subject, html_body):
         return False
 
 
+def send_email_to_address(email_address, subject, html_body, recipient_name=None):
+    """Send email to a specific email address"""
+    if not email_address:
+        logging.warning(f"Cannot send email: email address is None or empty")
+        return False
+    
+    try:
+        smtp_config = SMTPConfiguration.query.filter_by(is_active=True).first()
+        if not smtp_config:
+            logging.warning("No active SMTP configuration found. Email not sent.")
+            return False
+        
+        logging.info(f"=== EMAIL SENDING PROCESS ===")
+        logging.info(f"Recipient: {recipient_name or email_address} ({email_address})")
+        logging.info(f"Subject: {subject[:100]}")
+        logging.info(f"SMTP Server: {smtp_config.smtp_server}:{smtp_config.smtp_port}")
+        logging.info(f"SMTP Username: {smtp_config.smtp_username}")
+        logging.info(f"Use SSL: {smtp_config.use_ssl}, Use TLS: {smtp_config.use_tls}")
+        logging.info(f"Attempting to send email...")
+        
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        
+        # Connect to SMTP server with timeout
+        try:
+            if smtp_config.use_ssl:
+                server = smtplib.SMTP_SSL(smtp_config.smtp_server, smtp_config.smtp_port, timeout=30)
+            else:
+                server = smtplib.SMTP(smtp_config.smtp_server, smtp_config.smtp_port, timeout=30)
+                if smtp_config.use_tls:
+                    server.starttls()
+        except Exception as conn_error:
+            logging.error(f"SMTP connection failed to {smtp_config.smtp_server}:{smtp_config.smtp_port}: {str(conn_error)}", exc_info=True)
+            return False
+        
+        try:
+            logging.info(f"Attempting SMTP login with username: {smtp_config.smtp_username}")
+            server.login(smtp_config.smtp_username, smtp_config.smtp_password)
+            logging.info(f"✅ SMTP login successful for {smtp_config.smtp_username}")
+        except Exception as login_error:
+            logging.error(f"❌ SMTP login FAILED for {smtp_config.smtp_username}")
+            logging.error(f"   Error: {str(login_error)}")
+            logging.error(f"   This usually means the SMTP password is incorrect or has expired.")
+            logging.error(f"   Please update the SMTP password in Settings > SMTP Configuration")
+            try:
+                server.quit()
+            except:
+                pass
+            return False
+        
+        try:
+            msg = MIMEMultipart()
+            msg['From'] = f"{smtp_config.sender_name} <{smtp_config.sender_email}>"
+            msg['To'] = email_address
+            msg['Subject'] = subject
+            
+            msg.attach(MIMEText(html_body, 'html'))
+            server.send_message(msg)
+            logging.info(f"Email sent successfully to {email_address}: {subject}")
+            return True
+        except Exception as send_error:
+            logging.error(f"Failed to send email to {email_address}: {str(send_error)}", exc_info=True)
+            return False
+        finally:
+            try:
+                server.quit()
+            except Exception as quit_error:
+                logging.warning(f"Error closing SMTP connection: {str(quit_error)}")
+        
+    except Exception as e:
+        logging.error(f"Failed to send email to {email_address}: {str(e)}", exc_info=True)
+        return False
+
+
 def send_email_to_manager(employee, template_type, request_data):
     """Send email to employee's direct manager"""
     try:
@@ -1324,7 +1399,7 @@ def send_ticket_created_notification(ticket):
             if user.email and user.id != ticket.user_id:  # Don't send duplicate to requester
                 dept_users_dict[user.department_id].append(user)
         
-        # Send email to each department team
+        # Send email to each department's email address
         dept_template = get_ticket_email_template('ticket_created_department')
         if dept_template:
             for mapping in mappings:
@@ -1334,9 +1409,9 @@ def send_ticket_created_notification(ticket):
                 if not department:
                     continue
                 
-                # Get all users in this department
-                users_in_dept = dept_users_dict.get(department_id, [])
-                if not users_in_dept:
+                # Check if department has an email address
+                if not department.email:
+                    logging.warning(f"Department {department.department_name} does not have an email address configured. Skipping email notification.")
                     continue
                 
                 # Prepare context with all ticket details
@@ -1356,11 +1431,10 @@ def send_ticket_created_notification(ticket):
                 # Render template once per department
                 subject, html_body = render_ticket_email_template(dept_template, dept_context)
                 if subject and html_body:
-                    # Send to all users in this department
-                    for user in users_in_dept:
-                        if send_email_to_user(user, subject, html_body):
-                            success_count += 1
-                            logging.info(f"Sent ticket alert email to {department.department_name} team member: {user.email}")
+                    # Send to department email address
+                    if send_email_to_address(department.email, subject, html_body, recipient_name=department.department_name):
+                        success_count += 1
+                        logging.info(f"Sent ticket alert email to {department.department_name} department email: {department.email}")
         else:
             logging.warning("Ticket created department email template not found")
         
@@ -1411,11 +1485,18 @@ def send_ticket_reply_notification(ticket, comment):
             if send_email_to_user(ticket.user, subject, html_body):
                 success_count += 1
         
-        # Send to department users
-        for user in dept_users:
-            if user.email and user.id != comment.user_id:  # Don't send to commenter
-                if send_email_to_user(user, subject, html_body):
-                    success_count += 1
+        # Send to department emails instead of individual users
+        if ticket.category_id:
+            mappings = TicketDepartmentMapping.query.filter_by(
+                category_id=ticket.category_id
+            ).all()
+            
+            for mapping in mappings:
+                department = Department.query.get(mapping.department_id)
+                if department and department.email:
+                    if send_email_to_address(department.email, subject, html_body, recipient_name=department.department_name):
+                        success_count += 1
+                        logging.info(f"Sent ticket reply notification to {department.department_name} department email: {department.email}")
         
         return success_count > 0
     except Exception as e:
@@ -1462,11 +1543,18 @@ def send_ticket_status_update_notification(ticket, old_status, new_status):
         if send_email_to_user(ticket.user, subject, html_body):
             success_count += 1
         
-        # Send to department users
-        for user in dept_users:
-            if user.email and user.id != ticket.user_id:
-                if send_email_to_user(user, subject, html_body):
-                    success_count += 1
+        # Send to department emails instead of individual users
+        if ticket.category_id:
+            mappings = TicketDepartmentMapping.query.filter_by(
+                category_id=ticket.category_id
+            ).all()
+            
+            for mapping in mappings:
+                department = Department.query.get(mapping.department_id)
+                if department and department.email:
+                    if send_email_to_address(department.email, subject, html_body, recipient_name=department.department_name):
+                        success_count += 1
+                        logging.info(f"Sent ticket status update notification to {department.department_name} department email: {department.email}")
         
         return success_count > 0
     except Exception as e:
@@ -1509,3 +1597,59 @@ def send_ticket_resolved_notification(ticket):
     except Exception as e:
         logging.error(f"Error sending ticket resolved notification: {str(e)}", exc_info=True)
         return False
+
+
+def log_activity(user, action, entity_type=None, entity_id=None, before_values=None, after_values=None, ip_address=None, description=None):
+    """
+    Log user activity to the activity log table.
+    
+    Args:
+        user: User object or user_id (int) - the user performing the action
+        action: str - action type (e.g., 'login', 'logout', 'edit_user', 'delete_user')
+        entity_type: str - type of entity being acted upon (e.g., 'user', 'department')
+        entity_id: int - ID of the entity being acted upon
+        before_values: dict - dictionary of values before the change
+        after_values: dict - dictionary of values after the change
+        ip_address: str - IP address of the user
+        description: str - optional description of the action
+    
+    Returns:
+        ActivityLog object if successful, None if error
+    """
+    try:
+        import json
+        from flask import request
+        
+        # Get user_id if user object is passed
+        user_id = user.id if hasattr(user, 'id') else (user if isinstance(user, int) else None)
+        
+        # Get IP address from request if not provided
+        if ip_address is None:
+            ip_address = request.remote_addr if request else None
+        
+        # Serialize before_values and after_values to JSON strings
+        before_json = json.dumps(before_values) if before_values else None
+        after_json = json.dumps(after_values) if after_values else None
+        
+        # Create activity log entry
+        activity_log = ActivityLog(
+            user_id=user_id,
+            action=action,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            before_values=before_json,
+            after_values=after_json,
+            ip_address=ip_address,
+            description=description,
+            created_at=datetime.utcnow()
+        )
+        
+        db.session.add(activity_log)
+        db.session.commit()
+        
+        return activity_log
+    except Exception as e:
+        # Log error but don't break the main application flow
+        logging.error(f"Error logging activity: {str(e)}", exc_info=True)
+        db.session.rollback()
+        return None

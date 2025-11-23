@@ -61,6 +61,21 @@ table thead th * {
         <div class="card">
             <div class="card-header">
                 <h3 class="card-title">Employee Leave Balances</h3>
+                <!-- Year Tabs -->
+                <ul class="nav nav-tabs card-header-tabs mt-3" role="tablist">
+                    {% for year in available_years %}
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link {% if selected_year == year %}active{% endif %}" 
+                                type="button" 
+                                onclick="window.location.href='{{ url_for('dashboard.leave_balances', year=year) }}'">
+                            {{ year }}
+                            {% if year == 2026 %}
+                            <small class="text-muted d-block">(21 days)</small>
+                            {% endif %}
+                        </button>
+                    </li>
+                    {% endfor %}
+                </ul>
             </div>
             <div class="card-body">
                 {% if balances %}
@@ -115,19 +130,34 @@ table thead th * {
                                     {% endif %}
                                     {% if balance.manual_remaining_days is not none %}
                                         <small class="text-muted d-block">(Manual)</small>
+                                    {% elif selected_year == 2026 and balance.id is none %}
+                                        <small class="text-info d-block">(Default: 21 days)</small>
                                     {% endif %}
                                 </td>
-                                {% if current_user.role in ['admin', 'product_owner'] %}
+                                {% if current_user.role in ['admin', 'product_owner', 'director', 'manager'] %}
                                 <td>
                                     <div class="btn-group" role="group">
-                                        <button type="button" class="btn btn-sm btn-outline-primary" 
-                                                onclick="editBalance({{ balance.id }}, '{{ balance.user.first_name }} {{ balance.user.last_name }}', '{{ balance.leave_type.name }}', {{ balance.total_days }}, {{ balance.used_days }}, {{ balance.remaining_days }}, {{ balance.manual_remaining_days if balance.manual_remaining_days is not none else 'null' }}, {{ balance.year }})">
+                                        <button type="button" class="btn btn-sm btn-outline-primary edit-balance-btn" 
+                                                data-balance-id="{% if balance.id is not none %}{{ balance.id }}{% else %}null{% endif %}"
+                                                data-user-id="{{ balance.user_id }}"
+                                                data-leave-type-id="{{ balance.leave_type_id }}"
+                                                data-employee="{{ balance.user.first_name }} {{ balance.user.last_name }}"
+                                                data-leave-type="{{ balance.leave_type.name }}"
+                                                data-total-days="{{ balance.total_days }}"
+                                                data-used-days="{{ balance.used_days }}"
+                                                data-remaining-days="{{ balance.remaining_days }}"
+                                                data-manual-remaining="{% if balance.manual_remaining_days is not none %}{{ balance.manual_remaining_days }}{% else %}null{% endif %}"
+                                                data-year="{{ balance.year }}">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <button type="button" class="btn btn-sm btn-outline-danger" 
-                                                onclick="deleteBalance({{ balance.id }}, '{{ balance.user.first_name }} {{ balance.user.last_name }}', '{{ balance.leave_type.name }}')">
+                                        {% if balance.id is not none %}
+                                        <button type="button" class="btn btn-sm btn-outline-danger delete-balance-btn" 
+                                                data-balance-id="{{ balance.id }}"
+                                                data-employee="{{ balance.user.first_name }} {{ balance.user.last_name }}"
+                                                data-leave-type="{{ balance.leave_type.name }}">
                                             <i class="fas fa-trash"></i>
                                         </button>
+                                        {% endif %}
                                     </div>
                                 </td>
                                 {% elif current_user.role == 'director' %}
@@ -316,13 +346,74 @@ table thead th * {
 </div>
 
 <script>
-function editBalance(id, employee, leaveType, totalDays, usedDays, remainingDays, manualRemainingDays, year) {
-    document.getElementById('editBalanceForm').action = `/dashboard/leave-balances/${id}/edit`;
+// Event delegation for edit balance buttons
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.edit-balance-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const id = this.getAttribute('data-balance-id');
+            const userId = this.getAttribute('data-user-id');
+            const leaveTypeId = this.getAttribute('data-leave-type-id');
+            const employee = this.getAttribute('data-employee');
+            const leaveType = this.getAttribute('data-leave-type');
+            const totalDays = this.getAttribute('data-total-days');
+            const usedDays = this.getAttribute('data-used-days');
+            const remainingDays = this.getAttribute('data-remaining-days');
+            const manualRemainingDays = this.getAttribute('data-manual-remaining');
+            const year = this.getAttribute('data-year');
+            
+            editBalance(id, userId, leaveTypeId, employee, leaveType, totalDays, usedDays, remainingDays, manualRemainingDays, year);
+        });
+    });
+    
+    document.querySelectorAll('.delete-balance-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const id = this.getAttribute('data-balance-id');
+            const employee = this.getAttribute('data-employee');
+            const leaveType = this.getAttribute('data-leave-type');
+            deleteBalance(id, employee, leaveType);
+        });
+    });
+});
+
+function editBalance(id, userId, leaveTypeId, employee, leaveType, totalDays, usedDays, remainingDays, manualRemainingDays, year) {
+    // Handle virtual balances (id is null) - create new record
+    if (id === null || id === 'null') {
+        document.getElementById('editBalanceForm').action = `/dashboard/leave-balances/create-virtual`;
+        // Add hidden fields for user_id and leave_type_id
+        let form = document.getElementById('editBalanceForm');
+        // Remove existing hidden fields if any
+        let existingUserId = form.querySelector('input[name="user_id"]');
+        let existingLeaveTypeId = form.querySelector('input[name="leave_type_id"]');
+        if (existingUserId) existingUserId.remove();
+        if (existingLeaveTypeId) existingLeaveTypeId.remove();
+        
+        // Add new hidden fields
+        let userIdInput = document.createElement('input');
+        userIdInput.type = 'hidden';
+        userIdInput.name = 'user_id';
+        userIdInput.value = userId;
+        form.appendChild(userIdInput);
+        
+        let leaveTypeIdInput = document.createElement('input');
+        leaveTypeIdInput.type = 'hidden';
+        leaveTypeIdInput.name = 'leave_type_id';
+        leaveTypeIdInput.value = leaveTypeId;
+        form.appendChild(leaveTypeIdInput);
+    } else {
+        document.getElementById('editBalanceForm').action = `/dashboard/leave-balances/${id}/edit`;
+        // Remove hidden fields if they exist
+        let form = document.getElementById('editBalanceForm');
+        let existingUserId = form.querySelector('input[name="user_id"]');
+        let existingLeaveTypeId = form.querySelector('input[name="leave_type_id"]');
+        if (existingUserId) existingUserId.remove();
+        if (existingLeaveTypeId) existingLeaveTypeId.remove();
+    }
+    
     document.getElementById('edit_employee').value = employee;
     document.getElementById('edit_leave_type').value = leaveType;
     document.getElementById('edit_total_days').value = totalDays;
     document.getElementById('edit_used_days').value = usedDays || 0;
-    document.getElementById('edit_manual_remaining_days').value = manualRemainingDays || '';
+    document.getElementById('edit_manual_remaining_days').value = manualRemainingDays === 'null' ? '' : manualRemainingDays;
     document.getElementById('edit_year').value = year;
     
     new bootstrap.Modal(document.getElementById('editBalanceModal')).show();

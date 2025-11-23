@@ -7,7 +7,7 @@ from sqlalchemy import cast
 from sqlalchemy.dialects.postgresql import DATE as PostgresDate, TIMESTAMP as PostgresTimestamp, BOOLEAN as PostgresBoolean
 from app import db
 from models import User, LeaveRequest, PermissionRequest, DailyAttendance, Department, SMTPConfiguration, LeaveBalance, PaidHoliday, LeaveType
-from helpers import role_required, get_dashboard_stats
+from helpers import role_required, get_dashboard_stats, log_activity
 from forms import UserEditForm, EmployeeAttachmentForm, SMTPConfigurationForm # Assuming UserEditForm is defined in forms.py
 
 # Helper function to cast date columns for PostgreSQL compatibility
@@ -650,6 +650,19 @@ def delete_member(user_id):
     # Store user info for the flash message
     user_name = f"{user.first_name} {user.last_name}"
     
+    # Capture user data before deletion for activity log
+    before_values = {
+        'id': user.id,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'email': user.email,
+        'role': user.role,
+        'status': user.status,
+        'department_id': user.department_id,
+        'employee_code': user.employee_code,
+        'position': user.position
+    }
+    
     try:
         # First, delete all related records for this user
         from models import AttendanceLog, DailyAttendance, LeaveRequest, PaidHoliday, PermissionRequest, EmployeeAttachment, LeaveBalance
@@ -689,6 +702,17 @@ def delete_member(user_id):
         # Now delete the user
         db.session.delete(user)
         db.session.commit()
+        
+        # Log the deletion activity
+        log_activity(
+            user=current_user,
+            action='delete_user',
+            entity_type='user',
+            entity_id=user_id,
+            before_values=before_values,
+            after_values=None,
+            description=f'User {current_user.get_full_name()} deleted user {user_name} (ID: {user_id})'
+        )
         
         if total_records > 0:
             flash(f'User {user_name} and {total_records} related records have been deleted successfully.', 'success')
@@ -738,6 +762,28 @@ def edit_user(user_id):
 
     if form.validate_on_submit():
         try:
+            # Capture before values for activity log
+            before_values = {
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'email': user.email,
+                'avaya_number': user.avaya_number,
+                'fingerprint_number': user.fingerprint_number,
+                'role': user.role,
+                'status': user.status,
+                'joining_date': str(user.joining_date) if user.joining_date else None,
+                'full_name': user.full_name,
+                'employee_code': user.employee_code,
+                'insurance_number': user.insurance_number,
+                'date_of_birth': str(user.date_of_birth) if user.date_of_birth else None,
+                'phone_number': user.phone_number,
+                'alternate_phone_number': user.alternate_phone_number,
+                'position': user.position,
+                'salary': user.salary,
+                'currency': user.currency,
+                'department_id': user.department_id
+            }
+            
             # Basic fields
             user.first_name = form.first_name.data
             user.last_name = form.last_name.data
@@ -824,6 +870,39 @@ def edit_user(user_id):
 
             user.updated_at = datetime.utcnow()
             db.session.commit()
+            
+            # Capture after values for activity log
+            after_values = {
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'email': user.email,
+                'avaya_number': user.avaya_number,
+                'fingerprint_number': user.fingerprint_number,
+                'role': user.role,
+                'status': user.status,
+                'joining_date': str(user.joining_date) if user.joining_date else None,
+                'full_name': user.full_name,
+                'employee_code': user.employee_code,
+                'insurance_number': user.insurance_number,
+                'date_of_birth': str(user.date_of_birth) if user.date_of_birth else None,
+                'phone_number': user.phone_number,
+                'alternate_phone_number': user.alternate_phone_number,
+                'position': user.position,
+                'salary': user.salary,
+                'currency': user.currency,
+                'department_id': user.department_id
+            }
+            
+            # Log the activity
+            log_activity(
+                user=current_user,
+                action='edit_user',
+                entity_type='user',
+                entity_id=user.id,
+                before_values=before_values,
+                after_values=after_values,
+                description=f'User {current_user.get_full_name()} edited user {user.get_full_name()} (ID: {user.id})'
+            )
 
             flash(f'User {user.first_name} {user.last_name} has been updated successfully.', 'success')
             return redirect(url_for('dashboard.users'))
@@ -1925,46 +2004,120 @@ def leave_balances():
     from models import LeaveBalance, LeaveType, User
     from forms import LeaveBalanceForm
     
+    # Get selected year from query parameter, default to current year
+    selected_year = request.args.get('year', type=int)
+    if not selected_year:
+        selected_year = datetime.now().year
+    
     # Filter balances based on user role
+    # IMPORTANT: Only show employees with fingerprint_number and only annual leave type
     if current_user.role in ['admin', 'product_owner', 'director']:
         # Admins, Product Owners and directors can see all balances
-        balances = LeaveBalance.query.join(LeaveType).join(User).all()
-        users = User.query.filter_by(status='active').all()
+        # Filter to only users with fingerprint_number
+        users = User.query.filter(
+            User.status == 'active',
+            User.fingerprint_number.isnot(None),
+            User.fingerprint_number != ''
+        ).all()
+        user_ids = [u.id for u in users]
     elif current_user.role == 'manager':
         # Managers can see their team's balances (employees in their department)
         if current_user.department_id:
-            # Manager has a department - show team members
-            team_members = User.query.filter_by(status='active', department_id=current_user.department_id).all()
-            user_ids = [user.id for user in team_members]
-            balances = LeaveBalance.query.join(LeaveType).join(User).filter(
-                LeaveBalance.user_id.in_(user_ids)
+            # Manager has a department - show team members with fingerprint_number
+            team_members = User.query.filter(
+                User.status == 'active',
+                User.department_id == current_user.department_id,
+                User.fingerprint_number.isnot(None),
+                User.fingerprint_number != ''
             ).all()
+            user_ids = [user.id for user in team_members]
             users = team_members
         else:
-            # Manager has no department - show only themselves
-            balances = LeaveBalance.query.join(LeaveType).join(User).filter(
-                LeaveBalance.user_id == current_user.id
-            ).all()
-            users = [current_user]
+            # Manager has no department - show only themselves if they have fingerprint_number
+            if current_user.fingerprint_number:
+                user_ids = [current_user.id]
+                users = [current_user]
+            else:
+                user_ids = []
+                users = []
     else:
-        # Regular employees can only see their own balances
+        # Regular employees can only see their own balances if they have fingerprint_number
+        if current_user.fingerprint_number:
+            user_ids = [current_user.id]
+            users = [current_user]
+        else:
+            user_ids = []
+            users = []
+    
+    # Get annual leave type
+    annual_leave_type = LeaveType.query.filter(
+        db.func.lower(LeaveType.name) == 'annual'
+    ).first()
+    
+    if not annual_leave_type:
+        # Try alternative names
+        annual_leave_type = LeaveType.query.filter(
+            db.func.lower(LeaveType.name).like('%annual%')
+        ).first()
+    
+    # Get balances for selected year - only annual leave type
+    if annual_leave_type and user_ids:
         balances = LeaveBalance.query.join(LeaveType).join(User).filter(
-            LeaveBalance.user_id == current_user.id
+            LeaveBalance.user_id.in_(user_ids),
+            LeaveBalance.year == selected_year,
+            LeaveBalance.leave_type_id == annual_leave_type.id
         ).all()
-        users = [current_user]
+    else:
+        balances = []
+    
+    # For 2026, set all balances to 21 total days and 0 used if they don't exist
+    # Only for annual leave type and users with fingerprint_number
+    if selected_year == 2026 and annual_leave_type:
+        # Create a set of existing balance keys (user_id, leave_type_id)
+        existing_balances = {(b.user_id, b.leave_type_id) for b in balances}
+        
+        # For each user that doesn't have a 2026 annual balance
+        for user in users:
+            if (user.id, annual_leave_type.id) not in existing_balances:
+                # Create virtual balance object for 2026
+                # Total days = 21, Used days = 0, Remaining = 21
+                virtual_balance = type('VirtualBalance', (), {
+                    'id': None,
+                    'user_id': user.id,
+                    'leave_type_id': annual_leave_type.id,
+                    'year': 2026,
+                    'total_days': 21,
+                    'used_days': 0,
+                    'remaining_days': 21,
+                    'manual_remaining_days': None,
+                    'user': user,
+                    'leave_type': annual_leave_type,
+                    'created_at': datetime(2026, 1, 1),
+                    'updated_at': datetime.utcnow(),
+                    'is_virtual': True  # Flag to indicate this is calculated, not stored
+                })()
+                balances.append(virtual_balance)
     
     form = LeaveBalanceForm()
     
     # Set form choices
-    # Query active leave types (PostgreSQL boolean comparison)
-    leave_types = LeaveType.query.filter(LeaveType.is_active == True).all()
+    # Only show users with fingerprint_number
     form.user_id.choices = [(u.id, f"{u.first_name} {u.last_name}") for u in users]
-    form.leave_type_id.choices = [(lt.id, lt.name) for lt in leave_types]
+    # Only show annual leave type
+    if annual_leave_type:
+        form.leave_type_id.choices = [(annual_leave_type.id, annual_leave_type.name)]
+    else:
+        form.leave_type_id.choices = []
+    
+    # Available years for tabs
+    available_years = [2025, 2026]
     
     return render_template('dashboard/leave_balances.html',
                          title='Leave Balances Management',
                          balances=balances,
-                         form=form)
+                         form=form,
+                         selected_year=selected_year,
+                         available_years=available_years)
 
 @dashboard_bp.route('/leave-balances/create', methods=['POST'])
 @login_required
@@ -1977,22 +2130,72 @@ def create_leave_balance():
     form = LeaveBalanceForm()
     
     # Set form choices based on user role
+    # IMPORTANT: Only show employees with fingerprint_number and only annual leave type
     from models import User, LeaveType
     if current_user.role in ['admin', 'product_owner', 'director']:
-        users = User.query.filter_by(status='active').all()
+        # Filter to only users with fingerprint_number
+        users = User.query.filter(
+            User.status == 'active',
+            User.fingerprint_number.isnot(None),
+            User.fingerprint_number != ''
+        ).all()
     elif current_user.role == 'manager':
         if current_user.department_id:
-            users = User.query.filter_by(status='active', department_id=current_user.department_id).all()
+            users = User.query.filter(
+                User.status == 'active',
+                User.department_id == current_user.department_id,
+                User.fingerprint_number.isnot(None),
+                User.fingerprint_number != ''
+            ).all()
         else:
-            users = [current_user]
+            if current_user.fingerprint_number:
+                users = [current_user]
+            else:
+                users = []
     else:
-        users = [current_user]
+        if current_user.fingerprint_number:
+            users = [current_user]
+        else:
+            users = []
     
-    leave_types = LeaveType.query.filter_by(is_active=True).all()
+    # Get annual leave type only
+    annual_leave_type = LeaveType.query.filter(
+        db.func.lower(LeaveType.name) == 'annual'
+    ).first()
+    
+    if not annual_leave_type:
+        # Try alternative names
+        annual_leave_type = LeaveType.query.filter(
+            db.func.lower(LeaveType.name).like('%annual%')
+        ).first()
+    
     form.user_id.choices = [(u.id, f"{u.first_name} {u.last_name}") for u in users]
-    form.leave_type_id.choices = [(lt.id, lt.name) for lt in leave_types]
+    if annual_leave_type:
+        form.leave_type_id.choices = [(annual_leave_type.id, annual_leave_type.name)]
+    else:
+        form.leave_type_id.choices = []
     
     if form.validate_on_submit():
+        # Validate: Only allow annual leave type
+        annual_leave_type = LeaveType.query.filter(
+            db.func.lower(LeaveType.name) == 'annual'
+        ).first()
+        
+        if not annual_leave_type:
+            annual_leave_type = LeaveType.query.filter(
+                db.func.lower(LeaveType.name).like('%annual%')
+            ).first()
+        
+        if not annual_leave_type or form.leave_type_id.data != annual_leave_type.id:
+            flash('Only annual leave type is allowed for leave balances.', 'danger')
+            return redirect(url_for('dashboard.leave_balances'))
+        
+        # Validate: Only allow users with fingerprint_number
+        selected_user = User.query.get(form.user_id.data)
+        if not selected_user or not selected_user.fingerprint_number:
+            flash('Leave balances can only be set for employees with fingerprint numbers.', 'danger')
+            return redirect(url_for('dashboard.leave_balances'))
+        
         # Security check: Managers can only create balances for their team members
         if current_user.role == 'manager':
             if current_user.department_id:
@@ -2042,9 +2245,94 @@ def create_leave_balance():
     
     return redirect(url_for('dashboard.leave_balances'))
 
+@dashboard_bp.route('/leave-balances/create-virtual', methods=['POST'])
+@login_required
+@role_required(['admin', 'product_owner', 'director', 'manager'])
+def create_virtual_leave_balance():
+    """Create a leave balance from a virtual balance (for 2026)"""
+    from models import LeaveBalance, User, LeaveType
+    
+    try:
+        user_id = request.form.get('user_id', type=int)
+        leave_type_id = request.form.get('leave_type_id', type=int)
+        total_days = request.form.get('total_days', type=int)
+        used_days = request.form.get('used_days', type=int) or 0
+        manual_remaining_days = request.form.get('manual_remaining_days', type=int)
+        year = request.form.get('year', type=int)
+        
+        if not user_id or not leave_type_id or not total_days or not year:
+            flash('Missing required fields.', 'danger')
+            return redirect(url_for('dashboard.leave_balances', year=year))
+        
+        # Security check: Managers can only create balances for their team members
+        if current_user.role == 'manager':
+            if current_user.department_id:
+                team_member_ids = [u.id for u in User.query.filter_by(status='active', department_id=current_user.department_id).all()]
+                if user_id not in team_member_ids:
+                    flash('You can only manage leave balances for your team members.', 'danger')
+                    return redirect(url_for('dashboard.leave_balances', year=year))
+            else:
+                if user_id != current_user.id:
+                    flash('You can only manage your own leave balances.', 'danger')
+                    return redirect(url_for('dashboard.leave_balances', year=year))
+        
+        # Validate: Only allow annual leave type
+        annual_leave_type = LeaveType.query.filter(
+            db.func.lower(LeaveType.name) == 'annual'
+        ).first()
+        
+        if not annual_leave_type:
+            annual_leave_type = LeaveType.query.filter(
+                db.func.lower(LeaveType.name).like('%annual%')
+            ).first()
+        
+        if not annual_leave_type or leave_type_id != annual_leave_type.id:
+            flash('Only annual leave type is allowed for leave balances.', 'danger')
+            return redirect(url_for('dashboard.leave_balances', year=year))
+        
+        # Validate: Only allow users with fingerprint_number
+        selected_user = User.query.get(user_id)
+        if not selected_user or not selected_user.fingerprint_number:
+            flash('Leave balances can only be set for employees with fingerprint numbers.', 'danger')
+            return redirect(url_for('dashboard.leave_balances', year=year))
+        
+        # Check if balance already exists
+        existing_balance = LeaveBalance.query.filter_by(
+            user_id=user_id,
+            leave_type_id=leave_type_id,
+            year=year
+        ).first()
+        
+        if existing_balance:
+            # Update existing balance
+            existing_balance.total_days = total_days
+            existing_balance.used_days = used_days
+            existing_balance.manual_remaining_days = manual_remaining_days if manual_remaining_days else None
+            existing_balance.calculate_remaining()
+        else:
+            # Create new balance
+            balance = LeaveBalance(
+                user_id=user_id,
+                leave_type_id=leave_type_id,
+                total_days=total_days,
+                used_days=used_days,
+                manual_remaining_days=manual_remaining_days if manual_remaining_days else None,
+                year=year
+            )
+            balance.calculate_remaining()
+            db.session.add(balance)
+        
+        db.session.commit()
+        flash('Leave balance created successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error creating leave balance: {str(e)}', 'danger')
+    
+    return redirect(url_for('dashboard.leave_balances', year=year))
+
 @dashboard_bp.route('/leave-balances/<int:balance_id>/edit', methods=['POST'])
 @login_required
-@role_required(['admin', 'manager'])
+@role_required(['admin', 'product_owner', 'director', 'manager'])
 def edit_leave_balance(balance_id):
     """Edit a leave balance"""
     from models import LeaveBalance
@@ -2096,6 +2384,10 @@ def edit_leave_balance(balance_id):
         db.session.rollback()
         flash(f'Error updating leave balance: {str(e)}', 'danger')
     
+    # Redirect back to the same year tab
+    year = request.form.get('year', type=int)
+    if year:
+        return redirect(url_for('dashboard.leave_balances', year=year))
     return redirect(url_for('dashboard.leave_balances'))
 
 @dashboard_bp.route('/leave-balances/<int:balance_id>/delete', methods=['POST'])
@@ -2571,3 +2863,215 @@ def allocate_default_leave():
         flash('No leave balances needed default allocation.', 'info')
         
     return redirect(url_for('dashboard.leave_balances_management'))
+
+
+@dashboard_bp.route('/activity-log')
+@login_required
+@role_required(['product_owner'])
+def activity_log():
+    """Display activity log - only accessible to product owners"""
+    from models import ActivityLog
+    
+    # Get filter parameters
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+    
+    # Filter parameters
+    user_filter = request.args.get('user', type=int)
+    action_filter = request.args.get('action', '')
+    entity_type_filter = request.args.get('entity_type', '')
+    start_date = request.args.get('start_date', '')
+    end_date = request.args.get('end_date', '')
+    
+    # Build query - show actions for ALL users
+    query = ActivityLog.query.order_by(ActivityLog.created_at.desc())
+    
+    # Apply filters
+    if user_filter:
+        query = query.filter(ActivityLog.user_id == user_filter)
+    
+    if action_filter:
+        # Support comma-separated actions (e.g., "login,logout")
+        if ',' in action_filter:
+            actions = [a.strip() for a in action_filter.split(',')]
+            from sqlalchemy import or_
+            action_conditions = [ActivityLog.action == action for action in actions]
+            query = query.filter(or_(*action_conditions))
+        else:
+            query = query.filter(ActivityLog.action.ilike(f'%{action_filter}%'))
+    
+    if entity_type_filter:
+        query = query.filter(ActivityLog.entity_type == entity_type_filter)
+    
+    if start_date:
+        try:
+            start_datetime = datetime.strptime(start_date, '%Y-%m-%d')
+            query = query.filter(ActivityLog.created_at >= start_datetime)
+        except ValueError:
+            pass
+    
+    if end_date:
+        try:
+            end_datetime = datetime.strptime(end_date, '%Y-%m-%d')
+            # Add one day to include the entire end date
+            end_datetime = end_datetime + timedelta(days=1)
+            query = query.filter(ActivityLog.created_at < end_datetime)
+        except ValueError:
+            pass
+    
+    # Paginate results
+    logs = query.paginate(page=page, per_page=per_page, error_out=False)
+    
+    # Parse JSON values for template
+    import json
+    for log in logs.items:
+        try:
+            if log.before_values:
+                log.before_values_parsed = json.loads(log.before_values)
+            else:
+                log.before_values_parsed = None
+            if log.after_values:
+                log.after_values_parsed = json.loads(log.after_values)
+            else:
+                log.after_values_parsed = None
+        except:
+            log.before_values_parsed = None
+            log.after_values_parsed = None
+    
+    # Get all users for filter dropdown
+    users = User.query.order_by(User.first_name, User.last_name).all()
+    
+    # Get unique action types for filter
+    action_types = db.session.query(ActivityLog.action).distinct().order_by(ActivityLog.action).all()
+    action_types = [a[0] for a in action_types]
+    
+    # Get unique entity types for filter
+    entity_types = db.session.query(ActivityLog.entity_type).distinct().filter(ActivityLog.entity_type.isnot(None)).order_by(ActivityLog.entity_type).all()
+    entity_types = [e[0] for e in entity_types]
+    
+    return render_template('dashboard/activity_log.html',
+                          title='Activity Log',
+                          logs=logs,
+                          users=users,
+                          action_types=action_types,
+                          entity_types=entity_types,
+                          user_filter=user_filter,
+                          action_filter=action_filter,
+                          entity_type_filter=entity_type_filter,
+                          start_date=start_date,
+                          end_date=end_date)
+
+
+@dashboard_bp.route('/activity-log/search')
+@login_required
+@role_required(['product_owner'])
+def activity_log_search():
+    """AJAX endpoint for searching activity logs"""
+    from models import ActivityLog
+    import json
+    
+    # Get search parameters
+    search_query = request.args.get('q', '').strip()
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+    
+    # Filter parameters
+    user_filter = request.args.get('user', type=int)
+    action_filter = request.args.get('action', '')
+    entity_type_filter = request.args.get('entity_type', '')
+    start_date = request.args.get('start_date', '')
+    end_date = request.args.get('end_date', '')
+    
+    # Build query - show actions for ALL users
+    # Join with User table for searching user names (left outer join to include logs without users)
+    from sqlalchemy import or_
+    query = ActivityLog.query.join(User, ActivityLog.user_id == User.id, isouter=True).order_by(ActivityLog.created_at.desc())
+    
+    # Apply search query (case-insensitive search across multiple fields)
+    if search_query:
+        # Search in user names, actions, entity types, descriptions, before/after values
+        search_filter = or_(
+            ActivityLog.action.ilike(f'%{search_query}%'),
+            ActivityLog.entity_type.ilike(f'%{search_query}%'),
+            ActivityLog.description.ilike(f'%{search_query}%'),
+            ActivityLog.before_values.ilike(f'%{search_query}%'),
+            ActivityLog.after_values.ilike(f'%{search_query}%'),
+            User.first_name.ilike(f'%{search_query}%'),
+            User.last_name.ilike(f'%{search_query}%'),
+            User.email.ilike(f'%{search_query}%')
+        )
+        query = query.filter(search_filter)
+    
+    # Apply filters
+    if user_filter:
+        query = query.filter(ActivityLog.user_id == user_filter)
+    
+    if action_filter:
+        # Support comma-separated actions (e.g., "login,logout")
+        if ',' in action_filter:
+            actions = [a.strip() for a in action_filter.split(',')]
+            from sqlalchemy import or_
+            action_conditions = [ActivityLog.action == action for action in actions]
+            query = query.filter(or_(*action_conditions))
+        else:
+            query = query.filter(ActivityLog.action.ilike(f'%{action_filter}%'))
+    
+    if entity_type_filter:
+        query = query.filter(ActivityLog.entity_type == entity_type_filter)
+    
+    if start_date:
+        try:
+            start_datetime = datetime.strptime(start_date, '%Y-%m-%d')
+            query = query.filter(ActivityLog.created_at >= start_datetime)
+        except ValueError:
+            pass
+    
+    if end_date:
+        try:
+            end_datetime = datetime.strptime(end_date, '%Y-%m-%d')
+            end_datetime = end_datetime + timedelta(days=1)
+            query = query.filter(ActivityLog.created_at < end_datetime)
+        except ValueError:
+            pass
+    
+    # Get total count before pagination
+    total = query.count()
+    
+    # Paginate results
+    logs = query.paginate(page=page, per_page=per_page, error_out=False)
+    
+    # Format logs for JSON response
+    logs_data = []
+    for log in logs.items:
+        # Parse JSON values
+        before_vals = None
+        after_vals = None
+        try:
+            if log.before_values:
+                before_vals = json.loads(log.before_values)
+            if log.after_values:
+                after_vals = json.loads(log.after_values)
+        except:
+            pass
+        
+        logs_data.append({
+            'id': log.id,
+            'user_name': log.user.get_full_name() if log.user else 'System',
+            'user_email': log.user.email if log.user else None,
+            'action': log.action,
+            'entity_type': log.entity_type,
+            'entity_id': log.entity_id,
+            'before_values': before_vals,
+            'after_values': after_vals,
+            'ip_address': log.ip_address,
+            'description': log.description,
+            'created_at': log.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        })
+    
+    return jsonify({
+        'logs': logs_data,
+        'total': total,
+        'page': page,
+        'pages': logs.pages,
+        'per_page': per_page
+    })

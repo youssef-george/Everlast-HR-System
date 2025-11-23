@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from datetime import datetime, date, time
 from forms import PermissionRequestForm, ApprovalForm, AdminPermissionRequestForm
 from models import db, PermissionRequest, User
-from helpers import role_required, get_user_managers, get_employees_for_manager, send_admin_email_notification
+from helpers import role_required, get_user_managers, get_employees_for_manager, send_admin_email_notification, log_activity
 import logging
 
 permission_bp = Blueprint('permission', __name__, url_prefix='/permission')
@@ -96,6 +96,29 @@ def create():
         
         db.session.add(permission_request)
         db.session.commit()
+        
+        # Log permission request creation
+        start_date_str = form.start_date.data.strftime('%Y-%m-%d')
+        start_time_str = form.start_time.data.strftime('%H:%M')
+        end_time_str = form.end_time.data.strftime('%H:%M')
+        duration_hours = (permission_request.end_time - permission_request.start_time).total_seconds() / 3600
+        
+        log_activity(
+            user=current_user,
+            action='create_permission_request',
+            entity_type='permission_request',
+            entity_id=permission_request.id,
+            before_values=None,
+            after_values={
+                'start_date': start_date_str,
+                'start_time': start_time_str,
+                'end_time': end_time_str,
+                'duration_hours': round(duration_hours, 2),
+                'reason': form.reason.data[:100] if len(form.reason.data) > 100 else form.reason.data,
+                'status': 'pending'
+            },
+            description=f'User {current_user.get_full_name()} created a permission request for {duration_hours:.1f} hour(s) on {start_date_str}'
+        )
         
         # Send confirmation email to employee first
         try:
@@ -219,10 +242,43 @@ def view(id):
             comment = approval_form.comment.data
             
             if user_role == 'manager':
+                # Capture before status for logging
+                before_status = {
+                    'admin_status': permission_request.admin_status,
+                    'overall_status': permission_request.status
+                }
+                
                 # Manager approval - set a flag or comment, then notify admin
                 # Since PermissionRequest model doesn't have manager_status, we'll use admin_status
                 # but mark it as manager-approved in the comment
                 permission_request.admin_comment = f"Manager approved: {comment}" if comment else "Manager approved"
+                
+                # Log manager approval/rejection
+                start_date_str = permission_request.start_time.strftime('%Y-%m-%d')
+                start_time_str = permission_request.start_time.strftime('%H:%M')
+                end_time_str = permission_request.end_time.strftime('%H:%M')
+                duration_hours = (permission_request.end_time - permission_request.start_time).total_seconds() / 3600
+                
+                if approval_status == 'rejected':
+                    permission_request.admin_status = 'rejected'
+                    permission_request.update_overall_status()
+                
+                db.session.refresh(permission_request)
+                
+                after_status = {
+                    'admin_status': permission_request.admin_status,
+                    'overall_status': permission_request.status
+                }
+                
+                log_activity(
+                    user=current_user,
+                    action='manager_approve_permission_request' if approval_status == 'approved' else 'manager_reject_permission_request',
+                    entity_type='permission_request',
+                    entity_id=permission_request.id,
+                    before_values=before_status,
+                    after_values=after_status,
+                    description=f'Manager {current_user.get_full_name()} {approval_status} permission request #{permission_request.id} ({duration_hours:.1f} hour(s) on {start_date_str}) by {requester.get_full_name()}'
+                )
                 
                 # Send email notification
                 try:
@@ -269,6 +325,12 @@ def view(id):
                     logging.error(f"Failed to send email notification: {str(e)}")
         
             elif user_role in ['admin', 'product_owner']:
+                # Capture before status for logging
+                before_status = {
+                    'admin_status': permission_request.admin_status,
+                    'overall_status': permission_request.status
+                }
+                
                 permission_request.admin_status = approval_status
                 permission_request.admin_comment = comment
                 permission_request.admin_updated_at = datetime.utcnow()
@@ -279,6 +341,30 @@ def view(id):
                 except Exception as status_error:
                     logging.error(f"Error updating overall status: {str(status_error)}", exc_info=True)
                     # Continue even if status update fails
+                
+                # Log permission request approval/rejection
+                start_date_str = permission_request.start_time.strftime('%Y-%m-%d')
+                start_time_str = permission_request.start_time.strftime('%H:%M')
+                end_time_str = permission_request.end_time.strftime('%H:%M')
+                duration_hours = (permission_request.end_time - permission_request.start_time).total_seconds() / 3600
+                
+                # Get the status after update
+                db.session.refresh(permission_request)
+                
+                after_status = {
+                    'admin_status': permission_request.admin_status,
+                    'overall_status': permission_request.status
+                }
+                
+                log_activity(
+                    user=current_user,
+                    action='admin_approve_permission_request' if approval_status == 'approved' else 'admin_reject_permission_request',
+                    entity_type='permission_request',
+                    entity_id=permission_request.id,
+                    before_values=before_status,
+                    after_values=after_status,
+                    description=f'Admin/Product Owner {current_user.get_full_name()} {approval_status} permission request #{permission_request.id} ({duration_hours:.1f} hour(s) on {start_date_str}) by {requester.get_full_name()}'
+                )
                 
                 # Send email notification
                 try:

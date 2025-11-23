@@ -5,6 +5,7 @@ from flask_wtf.csrf import CSRFError
 from forms import LoginForm, RegistrationForm
 from models import db, User, Department
 from datetime import datetime
+from helpers import log_activity
 import logging
 import os
 
@@ -74,6 +75,15 @@ def login():
                             return redirect(url_for('auth.login'))
                         
                         login_user(user, remember=form.remember.data)
+                        
+                        # Log successful login
+                        log_activity(
+                            user=user,
+                            action='login',
+                            ip_address=request.remote_addr,
+                            description=f'User {user.get_full_name()} logged in successfully'
+                        )
+                        
                         next_page = request.args.get('next')
                         
                         # Redirect to dashboard based on role
@@ -103,6 +113,15 @@ def login():
 @auth_bp.route('/logout')
 @login_required
 def logout():
+    # Log logout before logging out the user
+    user = current_user
+    log_activity(
+        user=user,
+        action='logout',
+        ip_address=request.remote_addr,
+        description=f'User {user.get_full_name()} logged out'
+    )
+    
     logout_user()
     flash('You have been logged out.', 'success')
     return redirect(url_for('auth.login'))

@@ -1,0 +1,643 @@
+{% extends "layout.html" %}
+
+{% block extra_css %}
+<style>
+    .activity-log-table {
+        font-size: 0.9rem;
+    }
+    .activity-log-table th {
+        background: #1e40af;
+        color: #ffffff;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 1rem 0.75rem;
+    }
+    .before-after-container {
+        display: flex;
+        gap: 1rem;
+        margin-top: 0.5rem;
+    }
+    .before-values, .after-values {
+        flex: 1;
+        padding: 0.5rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+    }
+    .before-values {
+        background-color: #fee2e2;
+        border-left: 3px solid #dc2626;
+    }
+    .after-values {
+        background-color: #d1fae5;
+        border-left: 3px solid #10b981;
+    }
+    .value-item {
+        margin-bottom: 0.25rem;
+    }
+    .value-label {
+        font-weight: 600;
+        color: #374151;
+    }
+    .value-content {
+        color: #6b7280;
+    }
+    .loading-spinner {
+        display: none;
+        text-align: center;
+        padding: 2rem;
+    }
+    .loading-spinner.active {
+        display: block;
+    }
+    .no-results {
+        text-align: center;
+        padding: 3rem;
+        color: #6b7280;
+    }
+    .search-container {
+        margin-bottom: 1.5rem;
+    }
+    .filter-container {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+    .filter-group {
+        flex: 1;
+        min-width: 200px;
+    }
+    .btn-group .btn.active {
+        background-color: #0d6efd;
+        color: #ffffff;
+        border-color: #0d6efd;
+    }
+    .btn-group .btn.active:hover {
+        background-color: #0b5ed7;
+        border-color: #0a58ca;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <h1 class="page-title">Activity Log</h1>
+    <div class="content-header-actions">
+        <span class="text-muted">All user actions are logged here</span>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">System Activity Log</h3>
+            </div>
+            <div class="card-body">
+                <!-- Search and Filters -->
+                <div class="search-container">
+                    <div class="input-group mb-3">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" id="searchInput" placeholder="Search by user name, action, entity type, or description...">
+                        <button class="btn btn-secondary" type="button" id="clearSearchBtn">
+                            <i class="fas fa-times"></i> Clear
+                        </button>
+                    </div>
+                    
+                    <!-- Quick Action Filters -->
+                    <div class="mb-3">
+                        <label class="form-label">Quick Filters:</label>
+                        <div class="btn-group flex-wrap" role="group" style="gap: 0.25rem;">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="showAllBtn" data-action="">
+                                <i class="fas fa-list"></i> All Actions
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-success" id="showLoginBtn" data-action="login">
+                                <i class="fas fa-sign-in-alt"></i> Logins
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-warning" id="showLogoutBtn" data-action="logout">
+                                <i class="fas fa-sign-out-alt"></i> Logouts
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-info" id="showLoginLogoutBtn">
+                                <i class="fas fa-exchange-alt"></i> Login/Logout
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="showLeaveRequestsBtn" data-action="create_leave_request,manager_approve_leave_request,admin_approve_leave_request,manager_reject_leave_request,admin_reject_leave_request">
+                                <i class="fas fa-calendar-times"></i> Leave Requests
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-success" id="showPermissionRequestsBtn" data-action="create_permission_request,manager_approve_permission_request,admin_approve_permission_request,manager_reject_permission_request,admin_reject_permission_request">
+                                <i class="fas fa-clock"></i> Permission Requests
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-warning" id="showAllRequestsBtn" data-action="create_leave_request,create_permission_request,manager_approve_leave_request,admin_approve_leave_request,manager_approve_permission_request,admin_approve_permission_request,manager_reject_leave_request,admin_reject_leave_request,manager_reject_permission_request,admin_reject_permission_request">
+                                <i class="fas fa-list-alt"></i> All Requests
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-container">
+                        <div class="filter-group">
+                            <label for="userFilter" class="form-label">User</label>
+                            <select class="form-select form-select-sm" id="userFilter">
+                                <option value="">All Users</option>
+                                {% for user in users %}
+                                <option value="{{ user.id }}" {% if user_filter == user.id %}selected{% endif %}>{{ user.get_full_name() }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="actionFilter" class="form-label">Action</label>
+                            <select class="form-select form-select-sm" id="actionFilter">
+                                <option value="">All Actions</option>
+                                {% for action in action_types %}
+                                <option value="{{ action }}" {% if action_filter == action %}selected{% endif %}>{{ action }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="entityTypeFilter" class="form-label">Entity Type</label>
+                            <select class="form-select form-select-sm" id="entityTypeFilter">
+                                <option value="">All Types</option>
+                                {% for entity_type in entity_types %}
+                                <option value="{{ entity_type }}" {% if entity_type_filter == entity_type %}selected{% endif %}>{{ entity_type }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="startDateFilter" class="form-label">Start Date</label>
+                            <input type="date" class="form-control form-control-sm" id="startDateFilter" value="{{ start_date }}">
+                        </div>
+                        <div class="filter-group">
+                            <label for="endDateFilter" class="form-label">End Date</label>
+                            <input type="date" class="form-control form-control-sm" id="endDateFilter" value="{{ end_date }}">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Loading Spinner -->
+                <div class="loading-spinner" id="loadingSpinner">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading activity logs...</p>
+                </div>
+                
+                <!-- Activity Log Table -->
+                <div class="table-responsive" id="activityLogTableContainer">
+                    <table class="table table-hover activity-log-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>User</th>
+                                <th>Action</th>
+                                <th>Entity</th>
+                                <th>Description</th>
+                                <th>IP Address</th>
+                                <th>Changes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activityLogTableBody">
+                            {% if logs.items %}
+                                {% for log in logs.items %}
+                                <tr>
+                                    <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                    <td>
+                                        {% if log.user %}
+                                            {{ log.user.get_full_name() }}
+                                            <br><small class="text-muted">{{ log.user.email }}</small>
+                                        {% else %}
+                                            <span class="text-muted">System</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><span class="badge bg-primary">{{ log.action }}</span></td>
+                                    <td>
+                                        {% if log.entity_type %}
+                                            <span class="badge bg-info">{{ log.entity_type }}</span>
+                                            {% if log.entity_id %}
+                                                <br><small class="text-muted">ID: {{ log.entity_id }}</small>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ log.description or '-' }}</td>
+                                    <td><small class="text-muted">{{ log.ip_address or '-' }}</small></td>
+                                    <td>
+                                        {% if log.before_values or log.after_values %}
+                                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#changes-{{ log.id }}" aria-expanded="false">
+                                                <i class="fas fa-eye"></i> View Changes
+                                            </button>
+                                            <div class="collapse mt-2" id="changes-{{ log.id }}">
+                                                <div class="before-after-container">
+                                                    {% if log.before_values_parsed %}
+                                                    <div class="before-values">
+                                                        <strong>Before:</strong>
+                                                        {% for key, value in log.before_values_parsed.items() %}
+                                                        <div class="value-item">
+                                                            <span class="value-label">{{ key }}:</span>
+                                                            <span class="value-content">{{ value or '-' }}</span>
+                                                        </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                    {% if log.after_values_parsed %}
+                                                    <div class="after-values">
+                                                        <strong>After:</strong>
+                                                        {% for key, value in log.after_values_parsed.items() %}
+                                                        <div class="value-item">
+                                                            <span class="value-label">{{ key }}:</span>
+                                                            <span class="value-content">{{ value or '-' }}</span>
+                                                        </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="7" class="no-results">
+                                        <i class="fas fa-inbox fa-3x mb-3"></i>
+                                        <p>No activity logs found.</p>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                {% if logs.pages > 1 %}
+                <nav aria-label="Activity log pagination">
+                    <ul class="pagination justify-content-center" id="paginationContainer">
+                        {% if logs.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="#" data-page="{{ logs.prev_num }}" id="prevPageLink">Previous</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Previous</span>
+                        </li>
+                        {% endif %}
+                        
+                        {% for page_num in logs.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                            {% if page_num %}
+                                {% if page_num == logs.page %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page_num }}</span>
+                                </li>
+                                {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="#" data-page="{{ page_num }}">{{ page_num }}</a>
+                                </li>
+                                {% endif %}
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">…</span>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if logs.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="#" data-page="{{ logs.next_num }}" id="nextPageLink">Next</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Next</span>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    let searchTimeout;
+    let currentPage = {{ logs.page if logs else 1 }};
+    
+    // Debounce function
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+    
+    // Load activity logs via AJAX
+    function loadActivityLogs(page = 1) {
+        const searchQuery = document.getElementById('searchInput').value.trim();
+        const userFilter = document.getElementById('userFilter').value;
+        const actionFilter = document.getElementById('actionFilter').value;
+        const entityTypeFilter = document.getElementById('entityTypeFilter').value;
+        const startDate = document.getElementById('startDateFilter').value;
+        const endDate = document.getElementById('endDateFilter').value;
+        
+        // Show loading spinner
+        document.getElementById('loadingSpinner').classList.add('active');
+        document.getElementById('activityLogTableContainer').style.opacity = '0.5';
+        
+        // Build query string
+        const params = new URLSearchParams({
+            page: page,
+            q: searchQuery,
+            user: userFilter || '',
+            action: actionFilter || '',
+            entity_type: entityTypeFilter || '',
+            start_date: startDate || '',
+            end_date: endDate || ''
+        });
+        
+        // Make AJAX request
+        fetch(`{{ url_for('dashboard.activity_log_search') }}?${params.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                // Hide loading spinner
+                document.getElementById('loadingSpinner').classList.remove('active');
+                document.getElementById('activityLogTableContainer').style.opacity = '1';
+                
+                // Update table body
+                updateTableBody(data.logs);
+                
+                // Update pagination
+                updatePagination(data.page, data.pages);
+                
+                currentPage = data.page;
+            })
+            .catch(error => {
+                console.error('Error loading activity logs:', error);
+                document.getElementById('loadingSpinner').classList.remove('active');
+                document.getElementById('activityLogTableContainer').style.opacity = '1';
+                alert('Error loading activity logs. Please try again.');
+            });
+    }
+    
+    // Update table body with new data
+    function updateTableBody(logs) {
+        const tbody = document.getElementById('activityLogTableBody');
+        
+        if (logs.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="no-results">
+                        <i class="fas fa-inbox fa-3x mb-3"></i>
+                        <p>No activity logs found.</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        let html = '';
+        logs.forEach(log => {
+            const timestamp = new Date(log.created_at).toLocaleString();
+            const userDisplay = log.user_name ? 
+                `${log.user_name}<br><small class="text-muted">${log.user_email || ''}</small>` : 
+                '<span class="text-muted">System</span>';
+            
+            const entityDisplay = log.entity_type ? 
+                `<span class="badge bg-info">${log.entity_type}</span>${log.entity_id ? `<br><small class="text-muted">ID: ${log.entity_id}</small>` : ''}` : 
+                '<span class="text-muted">-</span>';
+            
+            let changesHtml = '<span class="text-muted">-</span>';
+            if (log.before_values || log.after_values) {
+                const changesId = `changes-${log.id}`;
+                let beforeHtml = '';
+                let afterHtml = '';
+                
+                if (log.before_values) {
+                    beforeHtml = '<div class="before-values"><strong>Before:</strong>';
+                    for (const [key, value] of Object.entries(log.before_values)) {
+                        beforeHtml += `<div class="value-item"><span class="value-label">${key}:</span> <span class="value-content">${value || '-'}</span></div>`;
+                    }
+                    beforeHtml += '</div>';
+                }
+                
+                if (log.after_values) {
+                    afterHtml = '<div class="after-values"><strong>After:</strong>';
+                    for (const [key, value] of Object.entries(log.after_values)) {
+                        afterHtml += `<div class="value-item"><span class="value-label">${key}:</span> <span class="value-content">${value || '-'}</span></div>`;
+                    }
+                    afterHtml += '</div>';
+                }
+                
+                changesHtml = `
+                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#${changesId}" aria-expanded="false">
+                        <i class="fas fa-eye"></i> View Changes
+                    </button>
+                    <div class="collapse mt-2" id="${changesId}">
+                        <div class="before-after-container">
+                            ${beforeHtml}
+                            ${afterHtml}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += `
+                <tr>
+                    <td>${timestamp}</td>
+                    <td>${userDisplay}</td>
+                    <td><span class="badge bg-primary">${log.action}</span></td>
+                    <td>${entityDisplay}</td>
+                    <td>${log.description || '-'}</td>
+                    <td><small class="text-muted">${log.ip_address || '-'}</small></td>
+                    <td>${changesHtml}</td>
+                </tr>
+            `;
+        });
+        
+        tbody.innerHTML = html;
+    }
+    
+    // Update pagination
+    function updatePagination(currentPage, totalPages) {
+        const paginationContainer = document.getElementById('paginationContainer');
+        if (!paginationContainer || totalPages <= 1) {
+            if (paginationContainer) {
+                paginationContainer.innerHTML = '';
+            }
+            return;
+        }
+        
+        let html = '';
+        
+        // Previous button
+        if (currentPage > 1) {
+            html += `<li class="page-item"><a class="page-link" href="#" data-page="${currentPage - 1}">Previous</a></li>`;
+        } else {
+            html += `<li class="page-item disabled"><span class="page-link">Previous</span></li>`;
+        }
+        
+        // Page numbers
+        const leftEdge = 1;
+        const rightEdge = totalPages;
+        const leftCurrent = Math.max(1, currentPage - 2);
+        const rightCurrent = Math.min(totalPages, currentPage + 2);
+        
+        if (leftCurrent > leftEdge + 1) {
+            html += `<li class="page-item"><a class="page-link" href="#" data-page="1">1</a></li>`;
+            if (leftCurrent > leftEdge + 2) {
+                html += `<li class="page-item disabled"><span class="page-link">…</span></li>`;
+            }
+        }
+        
+        for (let i = leftCurrent; i <= rightCurrent; i++) {
+            if (i === currentPage) {
+                html += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
+            } else {
+                html += `<li class="page-item"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`;
+            }
+        }
+        
+        if (rightCurrent < rightEdge - 1) {
+            if (rightCurrent < rightEdge - 2) {
+                html += `<li class="page-item disabled"><span class="page-link">…</span></li>`;
+            }
+            html += `<li class="page-item"><a class="page-link" href="#" data-page="${totalPages}">${totalPages}</a></li>`;
+        }
+        
+        // Next button
+        if (currentPage < totalPages) {
+            html += `<li class="page-item"><a class="page-link" href="#" data-page="${currentPage + 1}">Next</a></li>`;
+        } else {
+            html += `<li class="page-item disabled"><span class="page-link">Next</span></li>`;
+        }
+        
+        paginationContainer.innerHTML = html;
+        
+        // Attach click handlers to pagination links
+        paginationContainer.querySelectorAll('a.page-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const page = parseInt(this.getAttribute('data-page'));
+                loadActivityLogs(page);
+            });
+        });
+    }
+    
+    // Search input with debounce
+    const searchInput = document.getElementById('searchInput');
+    const debouncedSearch = debounce(() => {
+        loadActivityLogs(1);
+    }, 300);
+    
+    searchInput.addEventListener('input', () => {
+        debouncedSearch();
+    });
+    
+    // Clear search button
+    document.getElementById('clearSearchBtn').addEventListener('click', () => {
+        searchInput.value = '';
+        document.getElementById('userFilter').value = '';
+        document.getElementById('actionFilter').value = '';
+        document.getElementById('entityTypeFilter').value = '';
+        document.getElementById('startDateFilter').value = '';
+        document.getElementById('endDateFilter').value = '';
+        updateQuickFilterButtons();
+        loadActivityLogs(1);
+    });
+    
+    // Filter change handlers
+    document.getElementById('userFilter').addEventListener('change', () => loadActivityLogs(1));
+    document.getElementById('actionFilter').addEventListener('change', () => {
+        updateQuickFilterButtons();
+        loadActivityLogs(1);
+    });
+    document.getElementById('entityTypeFilter').addEventListener('change', () => loadActivityLogs(1));
+    document.getElementById('startDateFilter').addEventListener('change', () => loadActivityLogs(1));
+    document.getElementById('endDateFilter').addEventListener('change', () => loadActivityLogs(1));
+    
+    // Quick filter button handlers
+    function updateQuickFilterButtons() {
+        const actionFilter = document.getElementById('actionFilter').value;
+        // Reset all buttons
+        const allButtons = ['showAllBtn', 'showLoginBtn', 'showLogoutBtn', 'showLoginLogoutBtn', 
+                           'showLeaveRequestsBtn', 'showPermissionRequestsBtn', 'showAllRequestsBtn'];
+        allButtons.forEach(btnId => {
+            const btn = document.getElementById(btnId);
+            if (btn) {
+                btn.classList.remove('active');
+            }
+        });
+        
+        // Determine which button should be active based on current filter
+        if (actionFilter === '') {
+            document.getElementById('showAllBtn')?.classList.add('active');
+        } else if (actionFilter === 'login') {
+            document.getElementById('showLoginBtn')?.classList.add('active');
+        } else if (actionFilter === 'logout') {
+            document.getElementById('showLogoutBtn')?.classList.add('active');
+        } else if (actionFilter === 'login,logout') {
+            document.getElementById('showLoginLogoutBtn')?.classList.add('active');
+        } else {
+            // Check for request-related filters
+            const hasLeaveRequest = actionFilter.includes('leave_request');
+            const hasPermissionRequest = actionFilter.includes('permission_request');
+            
+            if (hasLeaveRequest && hasPermissionRequest) {
+                document.getElementById('showAllRequestsBtn')?.classList.add('active');
+            } else if (hasLeaveRequest) {
+                document.getElementById('showLeaveRequestsBtn')?.classList.add('active');
+            } else if (hasPermissionRequest) {
+                document.getElementById('showPermissionRequestsBtn')?.classList.add('active');
+            }
+        }
+    }
+    
+    function setActionFilter(action) {
+        const actionFilter = document.getElementById('actionFilter');
+        actionFilter.value = action;
+        document.getElementById('searchInput').value = '';
+        updateQuickFilterButtons();
+        loadActivityLogs(1);
+    }
+    
+    document.getElementById('showAllBtn')?.addEventListener('click', () => {
+        document.getElementById('actionFilter').value = '';
+        document.getElementById('searchInput').value = '';
+        updateQuickFilterButtons();
+        loadActivityLogs(1);
+    });
+    
+    document.getElementById('showLoginBtn')?.addEventListener('click', () => setActionFilter('login'));
+    document.getElementById('showLogoutBtn')?.addEventListener('click', () => setActionFilter('logout'));
+    document.getElementById('showLoginLogoutBtn')?.addEventListener('click', () => {
+        setActionFilter('login,logout');
+    });
+    document.getElementById('showLeaveRequestsBtn')?.addEventListener('click', () => {
+        setActionFilter('create_leave_request,manager_approve_leave_request,admin_approve_leave_request,manager_reject_leave_request,admin_reject_leave_request');
+    });
+    document.getElementById('showPermissionRequestsBtn')?.addEventListener('click', () => {
+        setActionFilter('create_permission_request,manager_approve_permission_request,admin_approve_permission_request,manager_reject_permission_request,admin_reject_permission_request');
+    });
+    document.getElementById('showAllRequestsBtn')?.addEventListener('click', () => {
+        setActionFilter('create_leave_request,create_permission_request,manager_approve_leave_request,admin_approve_leave_request,manager_approve_permission_request,admin_approve_permission_request,manager_reject_leave_request,admin_reject_leave_request,manager_reject_permission_request,admin_reject_permission_request');
+    });
+    
+    // Initialize quick filter buttons state
+    updateQuickFilterButtons();
+    
+    // Initial load only if there's a search query or filters
+    {% if logs.items|length == 0 or request.args.get('q') or request.args.get('user') or request.args.get('action') or request.args.get('entity_type') or request.args.get('start_date') or request.args.get('end_date') %}
+    // Load via AJAX if there are filters
+    loadActivityLogs({{ logs.page if logs else 1 }});
+    {% endif %}
+})();
+</script>
+{% endblock %}
+

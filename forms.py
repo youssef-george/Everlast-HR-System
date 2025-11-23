@@ -126,6 +126,7 @@ class ProfileEditForm(FlaskForm):
 
 class DepartmentForm(FlaskForm):
     department_name = StringField('Department Name', validators=[DataRequired(), Length(min=2, max=100)])
+    email = EmailField('Department Email', validators=[Optional(), Email(), Length(max=255)])
     manager_id = SelectField('Department Manager', coerce=int, validators=[Optional()])
     submit = SubmitField('Save Department')
 

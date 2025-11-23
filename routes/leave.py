@@ -6,7 +6,7 @@ from forms import LeaveRequestForm, ApprovalForm, AdminLeaveRequestForm, UpdateL
 from models import db, LeaveRequest, User, LeaveType, LeaveBalance, PaidHoliday
 from sqlalchemy import or_, and_
 from sqlalchemy.exc import OperationalError
-from helpers import role_required, get_user_managers, get_employees_for_manager, send_admin_email_notification
+from helpers import role_required, get_user_managers, get_employees_for_manager, send_admin_email_notification, log_activity
 import logging
 import time
 
@@ -228,6 +228,29 @@ def create():
         db.session.add(leave_request)
         db.session.commit()
         
+        # Log leave request creation
+        leave_type_obj = LeaveType.query.get(form.leave_type_id.data)
+        leave_type_name = leave_type_obj.name if leave_type_obj else "Leave"
+        duration = (form.end_date.data - form.start_date.data).days + 1
+        
+        log_activity(
+            user=current_user,
+            action='create_leave_request',
+            entity_type='leave_request',
+            entity_id=leave_request.id,
+            before_values=None,
+            after_values={
+                'leave_type': leave_type_name,
+                'start_date': str(form.start_date.data),
+                'end_date': str(form.end_date.data),
+                'duration_days': duration,
+                'reason': form.reason.data[:100] if len(form.reason.data) > 100 else form.reason.data,
+                'status': 'pending',
+                'manager_status': 'approved' if current_user.role == 'manager' else 'pending'
+            },
+            description=f'User {current_user.get_full_name()} created a {leave_type_name} request for {duration} day(s)'
+        )
+        
         # Track if email was sent successfully
         email_sent = False
         
@@ -376,6 +399,13 @@ def view(id):
             comment = approval_form.comment.data
             
             if user_role == 'manager':
+                # Capture before status for logging
+                before_status = {
+                    'manager_status': leave_request.manager_status,
+                    'admin_status': leave_request.admin_status,
+                    'overall_status': leave_request.status
+                }
+                
                 leave_request.manager_status = approval_status
                 leave_request.manager_comment = comment
                 leave_request.manager_updated_at = datetime.utcnow()
@@ -421,6 +451,13 @@ def view(id):
                     logging.error(f"Failed to send email notification: {str(e)}")
             
             elif user_role in ['admin', 'product_owner']:
+                # Capture before status for logging
+                before_status = {
+                    'manager_status': leave_request.manager_status,
+                    'admin_status': leave_request.admin_status,
+                    'overall_status': leave_request.status
+                }
+                
                 leave_request.admin_status = approval_status
                 leave_request.admin_comment = comment
                 leave_request.admin_updated_at = datetime.utcnow()
@@ -471,6 +508,32 @@ def view(id):
             except Exception as status_error:
                 logging.error(f"Error updating overall status: {str(status_error)}", exc_info=True)
                 # Continue even if status update fails
+            
+            # Log leave request approval/rejection (after status update)
+            leave_type_obj = LeaveType.query.get(leave_request.leave_type_id)
+            leave_type_name = leave_type_obj.name if leave_type_obj else "Leave"
+            duration = (leave_request.end_date - leave_request.start_date).days + 1
+            
+            # Get the status after update (need to refresh)
+            db.session.refresh(leave_request)
+            
+            after_status = {
+                'manager_status': leave_request.manager_status,
+                'admin_status': leave_request.admin_status,
+                'overall_status': leave_request.status
+            }
+            
+            approver_role = 'Manager' if user_role == 'manager' else 'Admin/Product Owner'
+            action_name = f'{user_role}_approve_leave_request' if approval_status == 'approved' else f'{user_role}_reject_leave_request'
+            log_activity(
+                user=current_user,
+                action=action_name,
+                entity_type='leave_request',
+                entity_id=leave_request.id,
+                before_values=before_status,
+                after_values=after_status,
+                description=f'{approver_role} {current_user.get_full_name()} {approval_status} leave request #{leave_request.id} ({leave_type_name}, {duration} day(s)) by {requester.get_full_name()}'
+            )
             
             # Update daily attendance records if approved
             try:
@@ -1171,18 +1234,79 @@ def my_balance():
         flash('Access denied. This page is only available for employees.', 'error')
         return redirect(url_for('dashboard.index'))
     
-    # Get all leave balances for the current user
-    leave_balances = LeaveBalance.query.filter_by(user_id=current_user.id).all()
+    # Get selected year from query parameter, default to current year
+    selected_year = request.args.get('year', type=int)
+    if not selected_year:
+        selected_year = datetime.now().year
+    
+    # IMPORTANT: Only show leave balances if employee has fingerprint_number and only annual leave type
+    if not current_user.fingerprint_number:
+        # Employee doesn't have fingerprint_number, show empty balances
+        leave_balances = []
+    else:
+        # Get annual leave type
+        from models import LeaveType
+        from app import db
+        
+        annual_leave_type = LeaveType.query.filter(
+            db.func.lower(LeaveType.name) == 'annual'
+        ).first()
+        
+        if not annual_leave_type:
+            # Try alternative names
+            annual_leave_type = LeaveType.query.filter(
+                db.func.lower(LeaveType.name).like('%annual%')
+            ).first()
+        
+        # Get leave balances for selected year - only annual leave type
+        if annual_leave_type:
+            leave_balances = LeaveBalance.query.filter_by(
+                user_id=current_user.id,
+                year=selected_year,
+                leave_type_id=annual_leave_type.id
+            ).all()
+        else:
+            leave_balances = []
+        
+        # For 2026, set all balances to 21 total days and 0 used if they don't exist
+        # Only for annual leave type
+        if selected_year == 2026 and annual_leave_type:
+            # Create a set of existing balance keys (leave_type_id)
+            existing_balances = {b.leave_type_id for b in leave_balances}
+            
+            # If annual leave type doesn't have a 2026 balance
+            if annual_leave_type.id not in existing_balances:
+                # Create virtual balance object for 2026
+                # Total days = 21, Used days = 0, Remaining = 21
+                virtual_balance = type('VirtualBalance', (), {
+                    'id': None,
+                    'user_id': current_user.id,
+                    'leave_type_id': annual_leave_type.id,
+                    'year': 2026,
+                    'total_days': 21,
+                    'used_days': 0,
+                    'remaining_days': 21,
+                    'manual_remaining_days': None,
+                    'user': current_user,
+                    'leave_type': annual_leave_type,
+                    'created_at': datetime(2026, 1, 1),
+                    'updated_at': datetime.utcnow(),
+                    'is_virtual': True  # Flag to indicate this is calculated, not stored
+                })()
+                leave_balances.append(virtual_balance)
     
     # Get recent leave requests for context
     recent_requests = LeaveRequest.query.filter_by(
         user_id=current_user.id
     ).order_by(LeaveRequest.created_at.desc()).limit(5).all()
     
-    # Calculate summary statistics
+    # Calculate summary statistics for selected year
     total_leave_days = sum(balance.total_days for balance in leave_balances)
     total_remaining_days = sum(balance.remaining_days for balance in leave_balances)
-    total_used_days = total_leave_days - total_remaining_days
+    total_used_days = sum(balance.used_days for balance in leave_balances)
+    
+    # Available years for tabs
+    available_years = [2025, 2026]
     
     return render_template('leave/my_balance.html', 
                          title='My Leave Balance',
@@ -1190,4 +1314,6 @@ def my_balance():
                          recent_requests=recent_requests,
                          total_leave_days=total_leave_days,
                          total_remaining_days=total_remaining_days,
-                         total_used_days=total_used_days)
+                         total_used_days=total_used_days,
+                         selected_year=selected_year,
+                         available_years=available_years)

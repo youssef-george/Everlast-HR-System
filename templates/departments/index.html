@@ -24,6 +24,7 @@
                         <thead>
                             <tr>
                                 <th>Department Name</th>
+                                <th>Email</th>
                                 <th>Manager</th>
                                 <th>Employee Count</th>
                                 <th>Actions</th>
@@ -42,6 +43,15 @@
                                             </div>
                                             <div>{{ dept.department_name }}</div>
                                         </div>
+                                    </td>
+                                    <td>
+                                        {% if dept.email %}
+                                            <a href="mailto:{{ dept.email }}" class="text-primary">
+                                                <i class="fas fa-envelope me-1"></i>{{ dept.email }}
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
                                     </td>
                                     <td>{% if dept.manager %}{{ dept.manager.get_full_name() }}{% else %}None{% endif %}</td>
                                     <td>{{ dept.employees|length }}</td>
@@ -64,7 +74,7 @@
                                 {% endfor %}
                             {% else %}
                                 <tr>
-                                    <td colspan="4" class="text-center p-4">No departments found.{% if current_user.role != 'director' %} <a href="{{ url_for('departments.create') }}">Create one</a>.{% endif %}</td>
+                                    <td colspan="5" class="text-center p-4">No departments found.{% if current_user.role != 'director' %} <a href="{{ url_for('departments.create') }}">Create one</a>.{% endif %}</td>
                                 </tr>
                             {% endif %}
                         </tbody>

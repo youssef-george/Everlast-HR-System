@@ -28,6 +28,20 @@
                         {% endif %}
                     </div>
                     
+                    <!-- Email Field -->
+                    <div class="mb-3">
+                        <label for="{{ form.email.id }}" class="form-label">Department Email</label>
+                        {{ form.email(class="form-control", placeholder="Enter department email (optional)") }}
+                        {% if form.email.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.email.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Email address for this department (optional)</div>
+                    </div>
+                    
                     <!-- Manager Field -->
                     <div class="mb-3">
                         <label for="{{ form.manager_id.id }}" class="form-label">Department Manager</label>

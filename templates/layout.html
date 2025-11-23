@@ -461,6 +461,15 @@
                 </li>
                 {% endif %}
                 
+                {% if current_user.role == 'product_owner' %}
+                <li class="nav-item">
+                    <a href="{{ url_for('dashboard.activity_log') }}" class="nav-link {{ 'active' if request.path == '/dashboard/activity-log' }}">
+                        <i class="fas fa-history nav-icon"></i>
+                        <span class="nav-text">Activity Log</span>
+                    </a>
+                </li>
+                {% endif %}
+                
                 <li class="nav-item">
                     <a href="{{ url_for('dashboard.members') }}" class="nav-link {{ 'active' if request.path == '/dashboard/members' }}">
                         <i class="fas fa-users nav-icon"></i>

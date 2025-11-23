@@ -176,6 +176,7 @@ class Department(db.Model):
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     department_name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(255), nullable=True)
     manager_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -983,3 +984,33 @@ class ScheduledReminder(db.Model):
     
     def __repr__(self):
         return f'<ScheduledReminder {self.id} - {self.subject}>'
+
+
+class ActivityLog(db.Model):
+    """Activity log for tracking all user actions with before/after values"""
+    __tablename__ = 'activity_logs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    action = db.Column(db.String(50), nullable=False)  # login, logout, edit_user, delete_user, etc.
+    entity_type = db.Column(db.String(50), nullable=True)  # user, department, leave_request, etc.
+    entity_id = db.Column(db.Integer, nullable=True)
+    before_values = db.Column(db.Text, nullable=True)  # JSON string for old values
+    after_values = db.Column(db.Text, nullable=True)  # JSON string for new values
+    ip_address = db.Column(db.String(45), nullable=True)  # IPv6 can be up to 45 chars
+    description = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    user = db.relationship('User', foreign_keys=[user_id], backref='activity_logs')
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_activity_log_user', 'user_id'),
+        Index('idx_activity_log_created', 'created_at'),
+        Index('idx_activity_log_action', 'action'),
+        Index('idx_activity_log_entity', 'entity_type', 'entity_id'),
+    )
+    
+    def __repr__(self):
+        return f'<ActivityLog {self.id} - {self.action} by User {self.user_id}>'

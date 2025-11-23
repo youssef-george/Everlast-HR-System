@@ -31,6 +31,7 @@ def create():
     if form.validate_on_submit():
         department = Department(
             department_name=form.department_name.data,
+            email=form.email.data if form.email.data else None,
             manager_id=form.manager_id.data if form.manager_id.data != 0 else None
         )
         
@@ -94,6 +95,7 @@ def edit(id):
     
     if form.validate_on_submit():
         department.department_name = form.department_name.data
+        department.email = form.email.data if form.email.data else None
         department.manager_id = form.manager_id.data if form.manager_id.data != 0 else None
         
         db.session.commit()
