@@ -58,25 +58,6 @@
     .search-container {
         margin-bottom: 1.5rem;
     }
-    .filter-container {
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
-        margin-bottom: 1rem;
-    }
-    .filter-group {
-        flex: 1;
-        min-width: 200px;
-    }
-    .btn-group .btn.active {
-        background-color: #0d6efd;
-        color: #ffffff;
-        border-color: #0d6efd;
-    }
-    .btn-group .btn.active:hover {
-        background-color: #0b5ed7;
-        border-color: #0a58ca;
-    }
 </style>
 {% endblock %}
 
@@ -104,72 +85,6 @@
                             <i class="fas fa-times"></i> Clear
                         </button>
                     </div>
-                    
-                    <!-- Quick Action Filters -->
-                    <div class="mb-3">
-                        <label class="form-label">Quick Filters:</label>
-                        <div class="btn-group flex-wrap" role="group" style="gap: 0.25rem;">
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="showAllBtn" data-action="">
-                                <i class="fas fa-list"></i> All Actions
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-success" id="showLoginBtn" data-action="login">
-                                <i class="fas fa-sign-in-alt"></i> Logins
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-warning" id="showLogoutBtn" data-action="logout">
-                                <i class="fas fa-sign-out-alt"></i> Logouts
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-info" id="showLoginLogoutBtn">
-                                <i class="fas fa-exchange-alt"></i> Login/Logout
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="showLeaveRequestsBtn" data-action="create_leave_request,manager_approve_leave_request,admin_approve_leave_request,manager_reject_leave_request,admin_reject_leave_request">
-                                <i class="fas fa-calendar-times"></i> Leave Requests
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-success" id="showPermissionRequestsBtn" data-action="create_permission_request,manager_approve_permission_request,admin_approve_permission_request,manager_reject_permission_request,admin_reject_permission_request">
-                                <i class="fas fa-clock"></i> Permission Requests
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-warning" id="showAllRequestsBtn" data-action="create_leave_request,create_permission_request,manager_approve_leave_request,admin_approve_leave_request,manager_approve_permission_request,admin_approve_permission_request,manager_reject_leave_request,admin_reject_leave_request,manager_reject_permission_request,admin_reject_permission_request">
-                                <i class="fas fa-list-alt"></i> All Requests
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="filter-container">
-                        <div class="filter-group">
-                            <label for="userFilter" class="form-label">User</label>
-                            <select class="form-select form-select-sm" id="userFilter">
-                                <option value="">All Users</option>
-                                {% for user in users %}
-                                <option value="{{ user.id }}" {% if user_filter == user.id %}selected{% endif %}>{{ user.get_full_name() }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="filter-group">
-                            <label for="actionFilter" class="form-label">Action</label>
-                            <select class="form-select form-select-sm" id="actionFilter">
-                                <option value="">All Actions</option>
-                                {% for action in action_types %}
-                                <option value="{{ action }}" {% if action_filter == action %}selected{% endif %}>{{ action }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="filter-group">
-                            <label for="entityTypeFilter" class="form-label">Entity Type</label>
-                            <select class="form-select form-select-sm" id="entityTypeFilter">
-                                <option value="">All Types</option>
-                                {% for entity_type in entity_types %}
-                                <option value="{{ entity_type }}" {% if entity_type_filter == entity_type %}selected{% endif %}>{{ entity_type }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="filter-group">
-                            <label for="startDateFilter" class="form-label">Start Date</label>
-                            <input type="date" class="form-control form-control-sm" id="startDateFilter" value="{{ start_date }}">
-                        </div>
-                        <div class="filter-group">
-                            <label for="endDateFilter" class="form-label">End Date</label>
-                            <input type="date" class="form-control form-control-sm" id="endDateFilter" value="{{ end_date }}">
-                        </div>
-                    </div>
                 </div>
                 
                 <!-- Loading Spinner -->
@@ -191,6 +106,7 @@
                                 <th>Entity</th>
                                 <th>Description</th>
                                 <th>IP Address</th>
+                                <th>Page Link</th>
                                 <th>Changes</th>
                             </tr>
                         </thead>
@@ -220,6 +136,27 @@
                                     </td>
                                     <td>{{ log.description or '-' }}</td>
                                     <td><small class="text-muted">{{ log.ip_address or '-' }}</small></td>
+                                    <td>
+                                        {% if log.entity_type and log.entity_id %}
+                                            {% if log.entity_type == 'permission_request' %}
+                                                <a href="{{ url_for('permission.view', id=log.entity_id) }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                                    <i class="fas fa-external-link-alt"></i> View
+                                                </a>
+                                            {% elif log.entity_type == 'leave_request' %}
+                                                <a href="{{ url_for('leave.view', id=log.entity_id) }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                                    <i class="fas fa-external-link-alt"></i> View
+                                                </a>
+                                            {% elif log.entity_type == 'user' %}
+                                                <a href="{{ url_for('dashboard.edit_user', user_id=log.entity_id) }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                                    <i class="fas fa-external-link-alt"></i> View
+                                                </a>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
                                     <td>
                                         {% if log.before_values or log.after_values %}
                                             <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#changes-{{ log.id }}" aria-expanded="false">
@@ -259,7 +196,7 @@
                                 {% endfor %}
                             {% else %}
                                 <tr>
-                                    <td colspan="7" class="no-results">
+                                    <td colspan="8" class="no-results">
                                         <i class="fas fa-inbox fa-3x mb-3"></i>
                                         <p>No activity logs found.</p>
                                     </td>
@@ -341,25 +278,15 @@
     // Load activity logs via AJAX
     function loadActivityLogs(page = 1) {
         const searchQuery = document.getElementById('searchInput').value.trim();
-        const userFilter = document.getElementById('userFilter').value;
-        const actionFilter = document.getElementById('actionFilter').value;
-        const entityTypeFilter = document.getElementById('entityTypeFilter').value;
-        const startDate = document.getElementById('startDateFilter').value;
-        const endDate = document.getElementById('endDateFilter').value;
         
         // Show loading spinner
         document.getElementById('loadingSpinner').classList.add('active');
         document.getElementById('activityLogTableContainer').style.opacity = '0.5';
         
-        // Build query string
+        // Build query string - only search query
         const params = new URLSearchParams({
             page: page,
-            q: searchQuery,
-            user: userFilter || '',
-            action: actionFilter || '',
-            entity_type: entityTypeFilter || '',
-            start_date: startDate || '',
-            end_date: endDate || ''
+            q: searchQuery
         });
         
         // Make AJAX request
@@ -393,7 +320,7 @@
         if (logs.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="7" class="no-results">
+                    <td colspan="8" class="no-results">
                         <i class="fas fa-inbox fa-3x mb-3"></i>
                         <p>No activity logs found.</p>
                     </td>
@@ -448,6 +375,14 @@
                 `;
             }
             
+            // Generate page link HTML
+            let pageLinkHtml = '<span class="text-muted">-</span>';
+            if (log.page_link) {
+                pageLinkHtml = `<a href="${log.page_link}" class="btn btn-sm btn-outline-primary" target="_blank">
+                    <i class="fas fa-external-link-alt"></i> View
+                </a>`;
+            }
+            
             html += `
                 <tr>
                     <td>${timestamp}</td>
@@ -456,6 +391,7 @@
                     <td>${entityDisplay}</td>
                     <td>${log.description || '-'}</td>
                     <td><small class="text-muted">${log.ip_address || '-'}</small></td>
+                    <td>${pageLinkHtml}</td>
                     <td>${changesHtml}</td>
                 </tr>
             `;
@@ -543,98 +479,12 @@
     // Clear search button
     document.getElementById('clearSearchBtn').addEventListener('click', () => {
         searchInput.value = '';
-        document.getElementById('userFilter').value = '';
-        document.getElementById('actionFilter').value = '';
-        document.getElementById('entityTypeFilter').value = '';
-        document.getElementById('startDateFilter').value = '';
-        document.getElementById('endDateFilter').value = '';
-        updateQuickFilterButtons();
         loadActivityLogs(1);
     });
     
-    // Filter change handlers
-    document.getElementById('userFilter').addEventListener('change', () => loadActivityLogs(1));
-    document.getElementById('actionFilter').addEventListener('change', () => {
-        updateQuickFilterButtons();
-        loadActivityLogs(1);
-    });
-    document.getElementById('entityTypeFilter').addEventListener('change', () => loadActivityLogs(1));
-    document.getElementById('startDateFilter').addEventListener('change', () => loadActivityLogs(1));
-    document.getElementById('endDateFilter').addEventListener('change', () => loadActivityLogs(1));
-    
-    // Quick filter button handlers
-    function updateQuickFilterButtons() {
-        const actionFilter = document.getElementById('actionFilter').value;
-        // Reset all buttons
-        const allButtons = ['showAllBtn', 'showLoginBtn', 'showLogoutBtn', 'showLoginLogoutBtn', 
-                           'showLeaveRequestsBtn', 'showPermissionRequestsBtn', 'showAllRequestsBtn'];
-        allButtons.forEach(btnId => {
-            const btn = document.getElementById(btnId);
-            if (btn) {
-                btn.classList.remove('active');
-            }
-        });
-        
-        // Determine which button should be active based on current filter
-        if (actionFilter === '') {
-            document.getElementById('showAllBtn')?.classList.add('active');
-        } else if (actionFilter === 'login') {
-            document.getElementById('showLoginBtn')?.classList.add('active');
-        } else if (actionFilter === 'logout') {
-            document.getElementById('showLogoutBtn')?.classList.add('active');
-        } else if (actionFilter === 'login,logout') {
-            document.getElementById('showLoginLogoutBtn')?.classList.add('active');
-        } else {
-            // Check for request-related filters
-            const hasLeaveRequest = actionFilter.includes('leave_request');
-            const hasPermissionRequest = actionFilter.includes('permission_request');
-            
-            if (hasLeaveRequest && hasPermissionRequest) {
-                document.getElementById('showAllRequestsBtn')?.classList.add('active');
-            } else if (hasLeaveRequest) {
-                document.getElementById('showLeaveRequestsBtn')?.classList.add('active');
-            } else if (hasPermissionRequest) {
-                document.getElementById('showPermissionRequestsBtn')?.classList.add('active');
-            }
-        }
-    }
-    
-    function setActionFilter(action) {
-        const actionFilter = document.getElementById('actionFilter');
-        actionFilter.value = action;
-        document.getElementById('searchInput').value = '';
-        updateQuickFilterButtons();
-        loadActivityLogs(1);
-    }
-    
-    document.getElementById('showAllBtn')?.addEventListener('click', () => {
-        document.getElementById('actionFilter').value = '';
-        document.getElementById('searchInput').value = '';
-        updateQuickFilterButtons();
-        loadActivityLogs(1);
-    });
-    
-    document.getElementById('showLoginBtn')?.addEventListener('click', () => setActionFilter('login'));
-    document.getElementById('showLogoutBtn')?.addEventListener('click', () => setActionFilter('logout'));
-    document.getElementById('showLoginLogoutBtn')?.addEventListener('click', () => {
-        setActionFilter('login,logout');
-    });
-    document.getElementById('showLeaveRequestsBtn')?.addEventListener('click', () => {
-        setActionFilter('create_leave_request,manager_approve_leave_request,admin_approve_leave_request,manager_reject_leave_request,admin_reject_leave_request');
-    });
-    document.getElementById('showPermissionRequestsBtn')?.addEventListener('click', () => {
-        setActionFilter('create_permission_request,manager_approve_permission_request,admin_approve_permission_request,manager_reject_permission_request,admin_reject_permission_request');
-    });
-    document.getElementById('showAllRequestsBtn')?.addEventListener('click', () => {
-        setActionFilter('create_leave_request,create_permission_request,manager_approve_leave_request,admin_approve_leave_request,manager_approve_permission_request,admin_approve_permission_request,manager_reject_leave_request,admin_reject_leave_request,manager_reject_permission_request,admin_reject_permission_request');
-    });
-    
-    // Initialize quick filter buttons state
-    updateQuickFilterButtons();
-    
-    // Initial load only if there's a search query or filters
-    {% if logs.items|length == 0 or request.args.get('q') or request.args.get('user') or request.args.get('action') or request.args.get('entity_type') or request.args.get('start_date') or request.args.get('end_date') %}
-    // Load via AJAX if there are filters
+    // Initial load only if there's a search query
+    {% if logs.items|length == 0 or request.args.get('q') %}
+    // Load via AJAX if there's a search query
     loadActivityLogs({{ logs.page if logs else 1 }});
     {% endif %}
 })();

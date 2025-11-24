@@ -123,7 +123,6 @@ def create():
         # Send confirmation email to employee first
         try:
             from helpers import send_email_to_employee
-            from flask import url_for
             
             start_date_str = form.start_date.data.strftime('%B %d, %Y')
             start_time_str = form.start_time.data.strftime('%I:%M %p')
@@ -155,41 +154,27 @@ def create():
         except Exception as e:
             logging.error(f"Exception while sending employee confirmation email: {str(e)}", exc_info=True)
         
-        # Send email notification to manager (or admin if no manager)
+        # Send email notification to admin only (not to manager)
         try:
-            from helpers import send_email_to_manager, send_email_to_admin
-            from flask import url_for
+            from helpers import send_email_to_admin
             
             start_date_str = form.start_date.data.strftime('%B %d, %Y')
             start_time_str = form.start_time.data.strftime('%I:%M %p')
             end_time_str = form.end_time.data.strftime('%I:%M %p')
             duration_hours = (permission_request.end_time - permission_request.start_time).total_seconds() / 3600
             
-            # Only send to manager if employee is not a manager
-            if current_user.role != 'manager':
-                approval_link = url_for('permission.view', id=permission_request.id, _external=True)
-                request_data = {
-                    'request_type': 'Permission Request',
-                    'start_date': f"{start_date_str}",
-                    'end_date': f"{start_time_str} - {end_time_str}",
-                    'duration': f"{duration_hours:.1f} hour(s)",
-                    'reason': form.reason.data,
-                    'request_id': str(permission_request.id),
-                    'approval_link': approval_link
-                }
-                send_email_to_manager(current_user, 'permission_manager_notification', request_data)
-            else:
-                # If manager submits, send directly to admin
-                request_data = {
-                    'request_type': 'Permission Request',
-                    'start_date': f"{start_date_str}",
-                    'end_date': f"{start_time_str} - {end_time_str}",
-                    'duration': f"{duration_hours:.1f} hour(s)",
-                    'reason': form.reason.data,
-                    'request_id': str(permission_request.id),
-                    'approval_link': url_for('permission.view', id=permission_request.id, _external=True)
-                }
-                send_email_to_admin(current_user, 'permission_admin_notification', request_data)
+            # Always send to admin, regardless of user role
+            approval_link = url_for('permission.view', id=permission_request.id, _external=True)
+            request_data = {
+                'request_type': 'Permission Request',
+                'start_date': f"{start_date_str}",
+                'end_date': f"{start_time_str} - {end_time_str}",
+                'duration': f"{duration_hours:.1f} hour(s)",
+                'reason': form.reason.data,
+                'request_id': str(permission_request.id),
+                'approval_link': approval_link
+            }
+            send_email_to_admin(current_user, 'permission_admin_notification', request_data)
         except Exception as e:
             logging.error(f"Failed to send email notification: {str(e)}")
         
@@ -283,7 +268,6 @@ def view(id):
                 # Send email notification
                 try:
                     from helpers import send_email_to_admin, send_email_to_employee
-                    from flask import url_for
                     
                     start_date_str = permission_request.start_time.strftime('%B %d, %Y')
                     start_time_str = permission_request.start_time.strftime('%I:%M %p')
@@ -342,6 +326,14 @@ def view(id):
                     logging.error(f"Error updating overall status: {str(status_error)}", exc_info=True)
                     # Continue even if status update fails
                 
+                # Commit the status change FIRST before sending emails
+                try:
+                    db.session.commit()
+                except Exception as commit_error:
+                    db.session.rollback()
+                    logging.error(f"Error committing permission request status: {str(commit_error)}", exc_info=True)
+                    raise commit_error
+                
                 # Log permission request approval/rejection
                 start_date_str = permission_request.start_time.strftime('%Y-%m-%d')
                 start_time_str = permission_request.start_time.strftime('%H:%M')
@@ -366,7 +358,7 @@ def view(id):
                     description=f'Admin/Product Owner {current_user.get_full_name()} {approval_status} permission request #{permission_request.id} ({duration_hours:.1f} hour(s) on {start_date_str}) by {requester.get_full_name()}'
                 )
                 
-                # Send email notification
+                # Send email notification (after commit to ensure data is saved)
                 try:
                     from helpers import send_email_to_employee
                     
@@ -414,16 +406,23 @@ def view(id):
                         send_email_to_employee(requester, 'permission_employee_rejection', request_data)
                 except Exception as e:
                     logging.error(f"Failed to send email notification: {str(e)}")
+                    # Don't fail the whole operation if email fails - status is already saved
                 
-                db.session.commit()
                 flash(f'Permission request has been {approval_status}.', 'success')
                 return redirect(url_for('permission.index'))
         
         except Exception as e:
             db.session.rollback()
             logging.error(f"Error processing permission request approval: {str(e)}", exc_info=True)
-            flash(f'An error occurred while processing the approval: {str(e)}. Please try again.', 'danger')
-            return redirect(url_for('permission.view', id=permission_request.id))
+            error_msg = str(e) if str(e) else "Unknown error occurred"
+            flash(f'An error occurred while processing the approval: {error_msg}. Please try again.', 'danger')
+            # Ensure url_for is available - it's imported at the top of the file
+            try:
+                return redirect(url_for('permission.view', id=permission_request.id))
+            except Exception as redirect_error:
+                logging.error(f"Error redirecting after approval error: {str(redirect_error)}", exc_info=True)
+                # Fallback redirect
+                return redirect('/permission/')
     
     return render_template('permission/view.html',
                            title='View Permission Request',

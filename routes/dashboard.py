@@ -3040,6 +3040,22 @@ def activity_log_search():
     # Paginate results
     logs = query.paginate(page=page, per_page=per_page, error_out=False)
     
+    # Helper function to generate page link based on entity type
+    def get_page_link(entity_type, entity_id):
+        if not entity_type or not entity_id:
+            return None
+        try:
+            if entity_type == 'permission_request':
+                return url_for('permission.view', id=entity_id, _external=False)
+            elif entity_type == 'leave_request':
+                return url_for('leave.view', id=entity_id, _external=False)
+            elif entity_type == 'user':
+                return url_for('dashboard.edit_user', user_id=entity_id, _external=False)
+            else:
+                return None
+        except:
+            return None
+    
     # Format logs for JSON response
     logs_data = []
     for log in logs.items:
@@ -3054,6 +3070,9 @@ def activity_log_search():
         except:
             pass
         
+        # Generate page link
+        page_link = get_page_link(log.entity_type, log.entity_id)
+        
         logs_data.append({
             'id': log.id,
             'user_name': log.user.get_full_name() if log.user else 'System',
@@ -3065,7 +3084,8 @@ def activity_log_search():
             'after_values': after_vals,
             'ip_address': log.ip_address,
             'description': log.description,
-            'created_at': log.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            'created_at': log.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'page_link': page_link
         })
     
     return jsonify({
