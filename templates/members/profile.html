@@ -1,0 +1,566 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<style>
+/* Member Profile Page Styles */
+.member-profile-container {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    min-height: 100vh;
+    padding: 2rem 0;
+}
+
+.profile-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 16px;
+    margin-bottom: 2rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.profile-header-content {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.profile-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: white;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    flex-shrink: 0;
+}
+
+.profile-info h1 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.profile-info .role-badge {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+.profile-card {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e9ecef;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.profile-card:hover {
+    box-shadow: 0 8px 30px rgba(102, 126, 234, 0.12);
+    transform: translateY(-2px);
+}
+
+.profile-card h3 {
+    color: #667eea;
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.info-row {
+    display: flex;
+    padding: 1rem;
+    border-bottom: 1px solid #f3f4f6;
+    border-radius: 8px;
+    margin: 0.25rem 0;
+    transition: all 0.2s ease;
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    font-weight: 600;
+    color: #6b7280;
+    min-width: 180px;
+    flex-shrink: 0;
+}
+
+.info-value {
+    color: #1f2937;
+    flex: 1;
+}
+
+.info-value a {
+    color: #667eea;
+    text-decoration: none;
+}
+
+.info-value a:hover {
+    text-decoration: underline;
+}
+
+.back-button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    margin-bottom: 2rem;
+}
+
+.back-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    color: white;
+}
+
+.badge-custom {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.badge-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.badge-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.badge-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+}
+
+/* Desktop Enhancements */
+@media (min-width: 992px) {
+    .member-profile-container {
+        padding: 3rem 0;
+    }
+    
+    .profile-header {
+        padding: 3rem;
+    }
+    
+    .profile-header-content {
+        gap: 3rem;
+    }
+    
+    .profile-avatar {
+        width: 140px;
+        height: 140px;
+        font-size: 3.5rem;
+        border-width: 5px;
+    }
+    
+    .profile-info h1 {
+        font-size: 2.5rem;
+    }
+    
+    .profile-card {
+        padding: 2.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .profile-card:hover {
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        transform: translateY(-2px);
+    }
+    
+    .info-row {
+        transition: background-color 0.2s ease;
+    }
+    
+    .info-row:hover {
+        background-color: #f8f9ff;
+        transform: translateX(4px);
+    }
+    
+    .back-button {
+        padding: 1rem 2rem;
+        font-size: 1rem;
+    }
+}
+
+/* Tablet Styles */
+@media (max-width: 991.98px) and (min-width: 768px) {
+    .member-profile-container {
+        padding: 2rem 0;
+    }
+    
+    .profile-header {
+        padding: 2rem;
+    }
+    
+    .profile-card {
+        padding: 2rem;
+    }
+}
+
+/* Mobile Responsive */
+@media (max-width: 991.98px) {
+    .member-profile-container {
+        padding: 1rem 0;
+        background: #f8f9fa;
+    }
+    
+    .profile-header {
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .profile-header-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 1.5rem;
+    }
+    
+    .profile-avatar {
+        width: 100px;
+        height: 100px;
+        font-size: 2.5rem;
+        background: rgba(255, 255, 255, 0.25);
+        border: 3px solid rgba(255, 255, 255, 0.4);
+    }
+    
+    .profile-info h1 {
+        font-size: 1.5rem;
+        color: #ffffff;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    
+    .profile-info .role-badge {
+        background: rgba(255, 255, 255, 0.25);
+        color: #ffffff;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+    
+    .profile-info div {
+        color: rgba(255, 255, 255, 0.95);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+    
+    .profile-card {
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border-radius: 12px;
+        background: #ffffff;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e9ecef;
+    }
+    
+    .profile-card h3 {
+        font-size: 1.25rem;
+        color: #667eea;
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 0.75rem;
+        margin-bottom: 1.25rem;
+    }
+    
+    .info-row {
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 0.75rem;
+        border-bottom: 1px solid #f3f4f6;
+        background: #ffffff;
+    }
+    
+    .info-label {
+        min-width: auto;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #667eea;
+    }
+    
+    .info-value {
+        font-size: 0.95rem;
+        padding-left: 0;
+        color: #1f2937;
+    }
+    
+    .info-value a {
+        color: #667eea;
+        font-weight: 500;
+    }
+    
+    .badge-custom {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.8rem;
+        font-weight: 600;
+    }
+    
+    .back-button {
+        width: 100%;
+        justify-content: center;
+        padding: 0.875rem 1.5rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+        border: none !important;
+        font-weight: 600 !important;
+        text-decoration: none !important;
+        display: flex !important;
+        align-items: center !important;
+    }
+    
+    .back-button:hover,
+    .back-button:active,
+    .back-button:focus {
+        background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
+        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4) !important;
+        color: #ffffff !important;
+        transform: translateY(-2px) !important;
+    }
+    
+    .back-button i {
+        color: #ffffff !important;
+    }
+    
+    .profile-card .d-flex {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .profile-card .btn {
+        width: 100%;
+        padding: 0.875rem 1.5rem;
+        font-weight: 600;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .profile-card .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: #ffffff;
+    }
+    
+    .profile-card .btn-warning {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        border: none;
+        color: #ffffff;
+    }
+    
+    .profile-card .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+}
+
+@media (max-width: 576px) {
+    .profile-header {
+        padding: 1rem;
+    }
+    
+    .profile-avatar {
+        width: 80px;
+        height: 80px;
+        font-size: 2rem;
+    }
+    
+    .profile-info h1 {
+        font-size: 1.25rem;
+    }
+    
+    .profile-card {
+        padding: 1rem;
+    }
+    
+    .profile-card h3 {
+        font-size: 1.1rem;
+    }
+    
+    .info-label {
+        font-size: 0.85rem;
+    }
+    
+    .info-value {
+        font-size: 0.9rem;
+    }
+}
+</style>
+
+<div class="member-profile-container">
+    <div class="container-fluid">
+        <!-- Back Button -->
+        <a href="{{ url_for('members.index') }}" class="back-button">
+            <i class="fas fa-arrow-left"></i>
+            Back to Company Members
+        </a>
+        
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <div class="profile-header-content">
+                <div class="profile-avatar">
+                    {% if user.profile_picture %}
+                        <img src="{{ url_for('static', filename='uploads/profile_pictures/' + user.profile_picture) }}" alt="{{ user.get_full_name() }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                    {% else %}
+                        <i class="fas fa-user"></i>
+                    {% endif %}
+                </div>
+                <div class="profile-info">
+                    <h1>{{ user.get_full_name() }}</h1>
+                    <span class="role-badge">{{ user.role|title }}</span>
+                    {% if user.department %}
+                    <div style="margin-top: 0.5rem; opacity: 0.9;">
+                        <i class="fas fa-building me-1"></i>{{ user.department.department_name }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Basic Information Card -->
+        <div class="profile-card">
+            <h3>
+                <i class="fas fa-user-circle me-2"></i>
+                Basic Information
+            </h3>
+            
+            <div class="info-row">
+                <div class="info-label">First Name</div>
+                <div class="info-value">{{ user.first_name }}</div>
+            </div>
+            
+            <div class="info-row">
+                <div class="info-label">Last Name</div>
+                <div class="info-value">{{ user.last_name }}</div>
+            </div>
+            
+            <div class="info-row">
+                <div class="info-label">Email</div>
+                <div class="info-value">
+                    <a href="mailto:{{ user.email }}">{{ user.email }}</a>
+                </div>
+            </div>
+            
+            <div class="info-row">
+                <div class="info-label">Avaya Number</div>
+                <div class="info-value">{{ user.avaya_number or 'N/A' }}</div>
+            </div>
+            
+            <div class="info-row">
+                <div class="info-label">Position</div>
+                <div class="info-value">{{ user.position or 'N/A' }}</div>
+            </div>
+            
+            <div class="info-row">
+                <div class="info-label">Department</div>
+                <div class="info-value">
+                    {% if user.department %}
+                        <span class="badge-custom badge-primary">{{ user.department.department_name }}</span>
+                    {% else %}
+                        <span class="text-muted">No Department</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="info-row">
+                <div class="info-label">Role</div>
+                <div class="info-value">
+                    <span class="badge-custom badge-success">{{ user.role|title }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Administrative Data Card (Admin/Product Owner Only) -->
+        {% if is_admin_or_owner %}
+        <div class="profile-card">
+            <h3>
+                <i class="fas fa-shield-alt me-2"></i>
+                Administrative Data
+            </h3>
+            
+            <div class="info-row">
+                <div class="info-label">Status</div>
+                <div class="info-value">
+                    {% if user.status == 'active' %}
+                        <span class="badge-custom badge-success">Active</span>
+                    {% else %}
+                        <span class="badge-custom badge-warning">Inactive</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="info-row">
+                <div class="info-label">Full Name</div>
+                <div class="info-value">{{ user.full_name or 'N/A' }}</div>
+            </div>
+            
+            <div class="info-row">
+                <div class="info-label">Employee Code</div>
+                <div class="info-value">{{ user.employee_code or 'N/A' }}</div>
+            </div>
+            
+            <div class="info-row">
+                <div class="info-label">Insurance Number</div>
+                <div class="info-value">{{ user.insurance_number or 'N/A' }}</div>
+            </div>
+            
+            <div class="info-row">
+                <div class="info-label">Fingerprint Number</div>
+                <div class="info-value">{{ user.fingerprint_number or 'N/A' }}</div>
+            </div>
+            
+            <div class="info-row">
+                <div class="info-label">Phone Number</div>
+                <div class="info-value">{{ user.phone_number or 'N/A' }}</div>
+            </div>
+            
+            <div class="info-row">
+                <div class="info-label">Joining Date</div>
+                <div class="info-value">{{ user.joining_date.strftime('%Y-%m-%d') if user.joining_date else 'N/A' }}</div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Action Buttons -->
+        <div class="profile-card">
+            <h3>
+                <i class="fas fa-cog me-2"></i>
+                Actions
+            </h3>
+            
+            <div class="d-flex flex-wrap gap-2">
+                <a href="mailto:{{ user.email }}" class="btn btn-primary">
+                    <i class="fas fa-envelope me-1"></i>
+                    Send Email
+                </a>
+                
+                {% if is_admin_or_owner %}
+                <a href="{{ url_for('dashboard.edit_user', user_id=user.id) }}" class="btn btn-warning">
+                    <i class="fas fa-edit me-1"></i>
+                    Edit User
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

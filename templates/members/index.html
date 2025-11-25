@@ -1,0 +1,2002 @@
+{% extends "layout.html" %}
+
+{% block extra_css %}
+<!-- EMERGENCY TABLE HEADER VISIBILITY FIX FOR COMPANY MEMBERS PAGE -->
+<style>
+/* Force table headers to be visible with maximum specificity */
+.table thead th,
+.employee-table thead th,
+.enhanced-table thead th,
+table thead th {
+    background: #1e40af !important;
+    background-color: #1e40af !important;
+    background-color: #1e40af !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.6) !important;
+    font-size: 0.9rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    padding: 1rem 0.75rem !important;
+    border: none !important;
+    border-bottom: 2px solid #1e3a8a !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+
+/* Force all child elements in headers to be white */
+.table thead th *,
+.employee-table thead th *,
+.enhanced-table thead th *,
+table thead th * {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.6) !important;
+    -webkit-text-fill-color: #ffffff !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* Enhanced Company Members UI */
+.members-page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 20px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.members-page-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+    opacity: 0.1;
+}
+
+.members-page-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+}
+
+.members-page-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin-bottom: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.members-stats-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.members-stat-card {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    border: 1px solid rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.members-stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background-color: #667eea;
+}
+
+.members-stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+}
+
+.members-stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.members-stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #2d3748;
+    margin-bottom: 0.25rem;
+}
+
+.members-stat-label {
+    font-size: 0.9rem;
+    color: #718096;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.members-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    border: 1px solid rgba(0,0,0,0.05);
+    margin-bottom: 2rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.members-card:hover {
+    box-shadow: 0 8px 30px rgba(102, 126, 234, 0.15);
+}
+
+.members-card-header {
+    background-color: #f8fafc;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.members-card-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.members-filters {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.members-search-group {
+    position: relative;
+    min-width: 250px;
+}
+
+.members-search-input {
+    padding-left: 2.5rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.75rem 1rem 0.75rem 2.5rem;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.members-search-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    outline: none;
+}
+
+.members-search-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #a0aec0;
+    font-size: 0.9rem;
+}
+
+.members-filter-select {
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    min-width: 180px;
+    background: white;
+    transition: all 0.3s ease;
+}
+
+.members-filter-select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    outline: none;
+}
+
+.members-table {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.members-table tbody tr {
+    transition: all 0.2s ease;
+    border-bottom: 1px solid #f7fafc;
+}
+
+.members-table tbody tr:hover {
+    background-color: #f8fafc;
+    transform: scale(1.002);
+}
+
+.member-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1rem;
+    margin-right: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.member-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 12px;
+}
+
+.member-info {
+    flex: 1;
+}
+
+.member-name {
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+}
+
+.member-role-info {
+    font-size: 0.85rem;
+    color: #718096;
+}
+
+.member-badge {
+    padding: 0.375rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.member-badge-admin {
+    background-color: #667eea;
+    color: white;
+}
+
+.member-badge-director {
+    background-color: #f093fb;
+    color: white;
+}
+
+.member-badge-manager {
+    background-color: #4facfe;
+    color: white;
+}
+
+.member-badge-employee {
+    background-color: #43e97b;
+    color: white;
+}
+
+.member-department-badge {
+    background-color: #fa709a;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.member-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.member-action-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.member-action-email {
+    background-color: #667eea;
+    color: white;
+}
+
+.member-action-email:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.members-empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: #718096;
+}
+
+.members-empty-icon {
+    font-size: 3rem;
+    color: #e2e8f0;
+    margin-bottom: 1rem;
+}
+
+.members-empty-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #4a5568;
+    margin-bottom: 0.5rem;
+}
+
+.members-empty-text {
+    font-size: 0.95rem;
+    color: #718096;
+}
+
+.members-toggle-section {
+    margin-bottom: 2rem;
+}
+
+.members-section-toggle {
+    background-color: #667eea;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.members-section-toggle:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+    color: white;
+}
+
+.loading-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Scroll Indicators */
+.scroll-indicator {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.3s, background-color 0.3s;
+}
+
+.scroll-indicator.left-indicator {
+    left: 10px;
+}
+
+.scroll-indicator.right-indicator {
+    right: 10px;
+}
+
+.scroll-indicator.active {
+    opacity: 1;
+}
+
+.scroll-indicator:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+/* Custom Scrollbar for table-responsive */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* Enable smooth scrolling on iOS */
+    scroll-behavior: smooth; /* Smooth scrolling for modern browsers */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.table-responsive::-webkit-scrollbar {
+    display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.table-responsive {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+
+/* Enhanced Desktop Styles */
+@media (min-width: 992px) {
+    .members-page-header {
+        padding: 3rem 2.5rem;
+    }
+    
+    .members-page-title {
+        font-size: 3rem;
+    }
+    
+    .members-page-subtitle {
+        font-size: 1.25rem;
+    }
+    
+    .members-card {
+        border-radius: 20px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
+    
+    .members-table {
+        font-size: 0.95rem;
+    }
+    
+    .members-table tbody tr {
+        transition: all 0.2s ease;
+    }
+    
+    .members-table tbody tr:hover {
+        background-color: #f8f9ff;
+        transform: scale(1.01);
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+    }
+    
+    .member-action-btn {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .member-action-btn:hover {
+        transform: translateY(-2px) scale(1.05);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    /* Hide mobile badges on desktop - role and department shown in their own columns */
+    .mobile-badges {
+        display: none !important;
+    }
+    
+    .member-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .member-name {
+        font-weight: 600;
+        color: #1f2937;
+    }
+}
+
+/* Tablet Styles */
+@media (max-width: 991.98px) and (min-width: 768px) {
+    .members-page-header {
+        padding: 2rem 1.5rem;
+    }
+    
+    .members-page-title {
+        font-size: 2.25rem;
+    }
+    
+    .members-card-header {
+        padding: 1.25rem;
+    }
+}
+
+/* Mobile Styles */
+@media (max-width: 768px) {
+    /* Container fixes */
+    .container-fluid {
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+    }
+    
+    /* Center align col-12 in mobile */
+    .col-12 {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+    }
+    
+    .col-12 > * {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    .members-page-header {
+        padding: 1.25rem 1rem !important;
+        text-align: center;
+        border-radius: 16px;
+        margin-bottom: 1.5rem !important;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3) !important;
+    }
+    
+    .members-page-title {
+        font-size: 1.5rem !important;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        color: #ffffff !important;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    .members-page-title i {
+        font-size: 1.75rem !important;
+        color: #ffffff !important;
+    }
+    
+    .members-page-subtitle {
+        font-size: 0.9rem !important;
+        margin-top: 0.5rem;
+        color: rgba(255, 255, 255, 0.95) !important;
+        opacity: 0.95 !important;
+    }
+    
+    .members-page-header .text-white-50 {
+        color: rgba(255, 255, 255, 0.8) !important;
+        font-size: 0.85rem !important;
+    }
+    
+    .members-stats-cards {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        margin-bottom: 1.5rem !important;
+    }
+    
+    .members-stat-card {
+        padding: 1.25rem;
+        text-align: center;
+    }
+    
+    .members-card {
+        border-radius: 16px;
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+    }
+    
+    .members-card-header {
+        padding: 1rem !important;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+    
+    .members-card-title {
+        font-size: 1.1rem !important;
+        margin-bottom: 0 !important;
+    }
+    
+    .members-filters {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+        width: 100%;
+    }
+    
+    .members-filter-select {
+        width: 100% !important;
+        min-height: 48px !important;
+        font-size: 1rem !important;
+        padding: 0.875rem 1rem !important;
+        padding-right: 2.5rem !important;
+        border: 2px solid #e9ecef !important;
+        border-radius: 10px !important;
+        background: #ffffff !important;
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+        appearance: none !important;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
+        background-repeat: no-repeat !important;
+        background-position: right 1rem center !important;
+        background-size: 12px !important;
+        cursor: pointer !important;
+        touch-action: manipulation !important;
+    }
+    
+    .members-filter-select:focus {
+        border-color: #667eea !important;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15) !important;
+        outline: none !important;
+    }
+    
+    .members-search-group {
+        min-width: auto;
+        width: 100% !important;
+        position: relative;
+    }
+    
+    .members-search-input {
+        width: 100% !important;
+        min-height: 48px !important;
+        font-size: 1rem !important;
+        padding: 0.875rem 1rem 0.875rem 2.5rem !important;
+        border: 2px solid #e9ecef !important;
+        border-radius: 10px !important;
+        background: #ffffff !important;
+    }
+    
+    .members-search-input:focus {
+        border-color: #667eea !important;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15) !important;
+        outline: none !important;
+    }
+    
+    /* Mobile Table - Single Row Layout: Avatar → Name → Department → Actions */
+    .table-responsive {
+        overflow-x: visible !important;
+        overflow-y: visible !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    .members-table {
+        width: 100% !important;
+    }
+    
+    .members-table thead {
+        display: none !important;
+    }
+    
+    .members-table tbody tr {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        background: white !important;
+        border-radius: 12px !important;
+        margin-bottom: 0.5rem !important;
+        padding: 0.4rem 0.4rem 0.4rem 0.6rem !important;
+        padding-right: 0.4rem !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+        border: 1px solid #e9ecef !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        gap: 0.35rem !important;
+        flex-wrap: nowrap !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+    }
+    
+    .members-table tbody td {
+        display: flex !important;
+        align-items: center !important;
+        padding: 0 !important;
+        border: none !important;
+        flex-shrink: 0 !important;
+    }
+    
+    /* Member column - Avatar and Name - Flexible width */
+    .members-table tbody td:first-child {
+        min-width: 0 !important;
+        flex: 1 1 auto !important;
+        gap: 0.35rem !important;
+        overflow: hidden !important;
+        display: flex !important;
+        align-items: center !important;
+        max-width: calc(100% - 200px) !important;
+    }
+    
+    /* Ensure member info displays properly */
+    .members-table tbody td:first-child .d-flex {
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.35rem !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        overflow: hidden !important;
+    }
+    
+    .members-table tbody td:first-child .member-info {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0 !important;
+        min-width: 0 !important;
+        overflow: hidden !important;
+        flex: 1 1 auto !important;
+    }
+    
+    .members-table tbody td:first-child .member-name {
+        font-size: 0.85rem !important;
+        font-weight: 600 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        max-width: 100% !important;
+    }
+    
+    /* Contact Info - Hide on mobile */
+    .members-table tbody td:nth-child(2) {
+        display: none !important;
+    }
+    
+    /* Avaya Number - Hide on mobile */
+    .members-table tbody td:nth-child(3) {
+        display: none !important;
+    }
+    
+    /* Department column - Show on mobile with fixed width for alignment */
+    .members-table tbody td:nth-child(4) {
+        display: flex !important;
+        flex-shrink: 0 !important;
+        flex-grow: 0 !important;
+        width: 110px !important;
+        min-width: 110px !important;
+        max-width: 110px !important;
+        overflow: hidden !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+    }
+    
+    /* Actions column - Fixed width for alignment, centered buttons, NO WHITESPACE */
+    .members-table tbody td:last-child {
+        flex-direction: row !important;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 0.2rem !important;
+        flex-shrink: 0 !important;
+        flex-grow: 0 !important;
+        width: 75px !important;
+        min-width: 75px !important;
+        max-width: 75px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        padding-right: 0 !important;
+        margin-right: 0 !important;
+        overflow: visible !important;
+    }
+    
+    /* Remove ALL whitespace after actions on mobile */
+    #activeMembersSection .row,
+    #activeMembersSection .col-12 {
+        padding-right: 0 !important;
+        margin-right: 0 !important;
+    }
+    
+    .members-table tbody tr {
+        padding-right: 0 !important;
+        margin-right: 0 !important;
+    }
+    
+    .table-responsive {
+        padding-right: 0 !important;
+        margin-right: 0 !important;
+        width: 100% !important;
+    }
+    
+    .members-card .card-body {
+        padding-right: 0 !important;
+        margin-right: 0 !important;
+    }
+    
+    .members-card {
+        padding-right: 0 !important;
+        margin-right: 0 !important;
+    }
+    
+    .members-table {
+        margin-right: 0 !important;
+        padding-right: 0 !important;
+        width: 100% !important;
+    }
+    
+    .members-table tbody {
+        margin-right: 0 !important;
+        padding-right: 0 !important;
+    }
+    
+    /* Ensure actions column has NO extra space - COMPREHENSIVE */
+    .members-table tbody td:last-child .member-actions {
+        margin-right: 0 !important;
+        padding-right: 0 !important;
+        width: auto !important;
+        max-width: 100% !important;
+    }
+    
+    .members-table tbody td:last-child .member-action-btn,
+    .members-table tbody td:last-child .member-action-email,
+    .members-table tbody td:last-child .member-action-btn:last-child,
+    .members-table tbody td:last-child .member-action-email:last-child {
+        margin-right: 0 !important;
+        padding-right: 0 !important;
+    }
+    
+    /* Remove ALL whitespace after last button */
+    .members-table tbody td:last-child .member-actions > *:last-child {
+        margin-right: 0 !important;
+        padding-right: 0 !important;
+    }
+    
+    /* Remove any container padding */
+    .container,
+    .container-fluid {
+        padding-right: 0 !important;
+    }
+    
+    /* Ensure no overflow creates space */
+    .members-table tbody tr {
+        overflow: visible !important;
+    }
+    
+    /* Force actions column to have no right spacing */
+    .members-table tbody td:last-child::after {
+        content: none !important;
+        display: none !important;
+    }
+    
+    /* Center buttons within their background */
+    .members-table tbody td:last-child {
+        text-align: center !important;
+    }
+    
+    .members-table tbody td:last-child .member-actions {
+        justify-content: center !important;
+        align-items: center !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+    
+    /* Compact avatar */
+    .member-avatar {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 0.7rem !important;
+        flex-shrink: 0 !important;
+    }
+    
+    /* Member info - Name only, no department badge */
+    .member-info {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0 !important;
+        min-width: 0 !important;
+        overflow: hidden !important;
+    }
+    
+    .member-name {
+        font-size: 0.8rem !important;
+        font-weight: 600 !important;
+        color: #1f2937 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        margin: 0 !important;
+        max-width: 100px !important;
+    }
+    
+    /* Hide mobile badges - Department is in its own column */
+    .mobile-badges,
+    .member-department-badge.mobile-badges,
+    .member-info .mobile-badges {
+        display: none !important;
+    }
+    
+    /* Hide role-info on mobile */
+    .member-role-info {
+        display: none !important;
+    }
+    
+    /* Department badge in department column - Aligned */
+    .members-table tbody td:nth-child(4) .member-department-badge,
+    .members-table tbody td:nth-child(4) .text-muted {
+        font-size: 0.65rem !important;
+        padding: 0.25rem 0.5rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        max-width: 100% !important;
+        display: inline-block !important;
+        width: 100% !important;
+    }
+    
+    .members-table tbody td:nth-child(4) {
+        text-align: left !important;
+    }
+    
+    /* Compact action buttons - Ensure both buttons are identical */
+    .member-action-btn,
+    .member-action-email,
+    .member-action-btn.member-action-email,
+    a.member-action-btn.member-action-email {
+        min-width: 30px !important;
+        min-height: 30px !important;
+        height: 30px !important;
+        width: 30px !important;
+        padding: 0 !important;
+        padding-top: 0.35rem !important;
+        padding-bottom: 0.35rem !important;
+        padding-left: 0.35rem !important;
+        padding-right: 0 !important;
+        font-size: 0.7rem !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-sizing: border-box !important;
+        margin: 0 auto !important;
+    }
+    
+    .member-actions {
+        display: flex !important;
+        gap: 0.2rem !important;
+        justify-content: center !important;
+        align-items: center !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+        padding-right: 0 !important;
+        margin-right: 0 !important;
+        width: auto !important;
+        max-width: 100% !important;
+        flex-shrink: 0 !important;
+    }
+    
+    /* Ensure email button is centered */
+    a.member-action-btn.member-action-email {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin: 0 auto !important;
+    }
+    
+    /* Ensure action buttons are same size - Email button fix */
+    .member-action-btn,
+    .member-action-email,
+    .member-action-btn.member-action-email,
+    a.member-action-btn,
+    a.member-action-email {
+        min-width: 32px !important;
+        min-height: 32px !important;
+        height: 32px !important;
+        width: 32px !important;
+        padding: 0 !important;
+        padding-top: 0.4rem !important;
+        padding-bottom: 0.4rem !important;
+        padding-left: 0.4rem !important;
+        padding-right: 0 !important;
+        font-size: 0.75rem !important;
+        flex-shrink: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-sizing: border-box !important;
+        margin: 0 !important;
+    }
+    
+    /* Ensure email button icons have no padding */
+    .member-action-email i,
+    .member-action-btn.member-action-email i {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    
+    .member-avatar {
+        width: 35px !important;
+        height: 35px !important;
+        font-size: 0.75rem !important;
+        flex-shrink: 0 !important;
+    }
+    
+    /* Scroll indicators for mobile */
+    .scroll-indicator {
+        display: block !important;
+        position: absolute !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        z-index: 20 !important;
+        background: rgba(102, 126, 234, 0.9) !important;
+        color: white !important;
+        width: 32px !important;
+        height: 32px !important;
+        border-radius: 50% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+        transition: all 0.3s ease !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+    }
+    
+    .table-responsive:hover .scroll-indicator {
+        opacity: 1 !important;
+        pointer-events: auto !important;
+    }
+    
+    .scroll-indicator.left-indicator {
+        left: 10px !important;
+    }
+    
+    .scroll-indicator.right-indicator {
+        right: 10px !important;
+    }
+    
+    .scroll-indicator:hover {
+        background: rgba(102, 126, 234, 1) !important;
+        transform: translateY(-50%) scale(1.1) !important;
+    }
+    
+    .scroll-indicator i {
+        font-size: 0.75rem !important;
+    }
+    
+    .table-responsive {
+        overflow-x: visible !important;
+        padding: 0 !important;
+    }
+    
+    .badge {
+        font-size: 0.75rem !important;
+        padding: 0.35rem 0.65rem !important;
+        white-space: nowrap !important;
+    }
+    
+    /* Fix text overflow */
+    .members-table tbody td > * {
+        word-break: break-word;
+        overflow-wrap: break-word;
+    }
+    
+    /* Keep scroll indicators visible on mobile */
+    .scroll-indicator {
+        display: flex !important;
+    }
+    
+    /* Fix card body padding */
+    .card-body {
+        padding: 0 !important;
+    }
+    
+    /* Ensure proper spacing between cards */
+    .members-empty-state {
+        padding: 2rem 1rem !important;
+        text-align: center;
+    }
+    
+    /* Fix member info layout */
+    .d-flex.align-items-center {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    /* Better badge display */
+    .member-badge,
+    .member-department-badge {
+        font-size: 0.7rem !important;
+        padding: 0.3rem 0.6rem !important;
+        white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    /* Fix email links */
+    .members-table tbody td a {
+        word-break: break-all;
+        color: #667eea !important;
+        font-size: 0.85rem !important;
+    }
+    
+    /* Ensure proper text wrapping */
+    .members-table tbody td .text-muted {
+        font-size: 0.8rem !important;
+        word-break: break-word;
+    }
+}
+
+/* ===== MOBILE ACTION BUTTON FIXES ===== */
+@media (max-width: 991.98px) {
+    /* Action Buttons - Compact for Mobile Row Layout */
+    .member-actions,
+    .table .member-actions,
+    table .member-actions {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 0.25rem !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        min-width: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    .member-action-btn,
+    .member-action-email,
+    .member-action-btn.member-action-email,
+    .table .btn,
+    table .btn,
+    .table .member-action-btn,
+    table .member-action-btn {
+        width: 32px !important;
+        min-width: 32px !important;
+        min-height: 32px !important;
+        height: 32px !important;
+        padding: 0 !important;
+        padding-top: 0.4rem !important;
+        padding-bottom: 0.4rem !important;
+        padding-left: 0.4rem !important;
+        padding-right: 0 !important;
+        border-radius: 6px !important;
+        font-size: 0.8rem !important;
+        font-weight: 600 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0 !important;
+        background: linear-gradient(135deg, #667eea 0%, #5a67d8 100%) !important;
+        color: #ffffff !important;
+        border: none !important;
+        box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2) !important;
+        transition: all 0.2s ease !important;
+        text-decoration: none !important;
+        white-space: nowrap !important;
+        flex-shrink: 0 !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
+    }
+    
+    .member-action-btn:hover,
+    .member-action-email:hover,
+    .table .btn:hover,
+    table .btn:hover {
+        background: linear-gradient(135deg, #5a67d8 0%, #4c51bf 100%) !important;
+        box-shadow: 0 4px 10px rgba(102, 126, 234, 0.35) !important;
+        transform: translateY(-1px) scale(1.05) !important;
+        color: #ffffff !important;
+    }
+    
+    .member-action-btn:active,
+    .member-action-email:active,
+    .table .btn:active,
+    table .btn:active {
+        transform: translateY(0) scale(1) !important;
+        box-shadow: 0 1px 4px rgba(102, 126, 234, 0.25) !important;
+    }
+    
+    .member-action-btn i,
+    .member-action-email i,
+    .table .btn i,
+    table .btn i {
+        font-size: 0.9rem !important;
+        margin: 0 !important;
+    }
+    
+    /* Remove text label, keep only icons for compact design */
+    .member-action-email::after {
+        content: '' !important;
+    }
+    
+    /* Table Actions Column - Mobile Optimized */
+    .table td:last-child,
+    table td:last-child,
+    .table th:last-child,
+    table th:last-child {
+        min-width: 100px !important;
+        width: auto !important;
+        padding: 0.75rem 0.5rem !important;
+    }
+    
+    /* Filter and Search - Mobile Optimized */
+    .members-filter-select,
+    .members-search-input {
+        width: 100% !important;
+        min-height: 48px !important;
+        font-size: 1rem !important;
+        padding: 0.875rem 1rem 0.875rem 2.5rem !important;
+        border: 2px solid #667eea !important;
+        border-radius: 10px !important;
+        box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2) !important;
+    }
+    
+    .members-filter-select:focus,
+    .members-search-input:focus {
+        border-color: #5a67d8 !important;
+        box-shadow: 0 0 0 0.3rem rgba(102, 126, 234, 0.25) !important;
+        outline: none !important;
+    }
+    
+    .members-search-icon {
+        font-size: 1rem !important;
+        left: 1rem !important;
+    }
+}
+
+/* Extra Small Devices */
+@media (max-width: 575.98px) {
+    .member-action-btn,
+    .member-action-btn,
+    .member-action-email,
+    .member-action-btn.member-action-email {
+        min-height: 30px !important;
+        min-width: 30px !important;
+        height: 30px !important;
+        width: 30px !important;
+        padding: 0 !important;
+        padding-top: 0.35rem !important;
+        padding-bottom: 0.35rem !important;
+        padding-left: 0.35rem !important;
+        padding-right: 0 !important;
+        font-size: 0.75rem !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-sizing: border-box !important;
+    }
+    
+    .member-action-btn i,
+    .member-action-email i,
+    .member-action-btn.member-action-email i {
+        font-size: 0.8rem !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    
+    /* Even closer buttons on very small screens */
+    .member-actions {
+        gap: 0.2rem !important;
+    }
+    
+    .member-avatar {
+        width: 30px !important;
+        height: 30px !important;
+        font-size: 0.7rem !important;
+    }
+    
+    .member-name {
+        font-size: 0.8rem !important;
+        max-width: 100px !important;
+    }
+    
+    .member-info {
+        gap: 0.4rem !important;
+    }
+    
+    .member-info .member-department-badge {
+        font-size: 0.55rem !important;
+        padding: 0.15rem 0.3rem !important;
+    }
+    
+    .members-table tbody tr {
+        padding: 0.5rem 0.6rem !important;
+        gap: 0.4rem !important;
+    }
+    
+    /* Remove any extra spacing */
+    .members-table tbody tr > *:last-child {
+        margin-right: 0 !important;
+        padding-right: 0 !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Enhanced Page Header -->
+<div class="members-page-header">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h1 class="members-page-title">
+                <i class="fas fa-users me-3"></i>
+                Company Members
+            </h1>
+            <p class="members-page-subtitle">
+                Manage and view all company members across departments and roles
+            </p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <div class="d-flex align-items-center justify-content-md-end gap-2">
+                <div class="text-white-50">
+                    <i class="fas fa-clock me-1"></i>
+                    Last updated: <span id="lastUpdateTime">--:--</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Active Members Section -->
+<div class="row" id="activeMembersSection">
+    <div class="col-12">
+        <div class="members-card">
+            <div class="members-card-header">
+                <h3 class="members-card-title">
+                    <i class="fas fa-user-check me-2" style="color: #6c757d;"></i>
+                    Active Members
+                </h3>
+                <div class="members-filters">
+                    <select id="departmentFilter" class="members-filter-select">
+                            <option value="all">All Departments</option>
+                            {% for dept in departments %}
+                            <option value="{{ dept.department_name }}">{{ dept.department_name }}</option>
+                            {% endfor %}
+                            <option value="none">No Department</option>
+                        </select>
+                    
+                    <div class="members-search-group">
+                        <i class="fas fa-search members-search-icon"></i>
+                        <input type="text" class="members-search-input" id="memberSearch" placeholder="Search members...">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-body p-0 position-relative">
+                <div class="scroll-indicator left-indicator"><i class="fas fa-chevron-left"></i></div>
+                <div class="scroll-indicator right-indicator"><i class="fas fa-chevron-right"></i></div>
+                <div class="table-responsive">
+                    <table class="members-table table" id="membersTable">
+                        <thead>
+                            <tr>
+                                <th>Member</th>
+                                <th>Contact Info</th>
+                                <th>Avaya Number</th>
+                                <th>Department</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if active_users %}
+                                {% for user in active_users %}
+                                <tr data-department="{{ user.department_id if user.department_id else 'none' }}" data-department-name="{{ user.department.department_name if user.department else 'none' }}" data-user-id="{{ user.id }}">
+                                    <td data-label="Member">
+                                        <div class="d-flex align-items-center" style="width: 100%; min-width: 0;">
+                                            <div class="member-avatar" style="background-color: #667eea; color: white; flex-shrink: 0;">
+                                                {% if user.profile_picture %}
+                                                <img src="{{ user.profile_picture }}" alt="Profile">
+                                                {% else %}
+                                                    {{ user.first_name[0] }}{{ user.last_name[0] }}
+                                                {% endif %}
+                                            </div>
+                                            <div class="member-info">
+                                                <span class="member-name">{{ user.first_name }} {{ user.last_name }}</span>
+                                                {% if user.managed_department %}
+                                                <div class="member-role-info" style="display: none;">
+                                                    <i class="fas fa-crown me-1" style="color: #6c757d;"></i>
+                                                    Manager of {{ user.managed_department[0].department_name }}
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td data-label="Contact Info">
+                                        <div>
+                                            <div class="fw-semibold" style="color: #6c757d;">{{ user.email }}</div>
+                                            {% if user.phone %}
+                                            <small class="text-muted">
+                                                <i class="fas fa-phone me-1"></i>{{ user.phone }}
+                                            </small>
+                                        {% endif %}
+                                        </div>
+                                    </td>
+                                    <td data-label="Avaya Number">
+                                        {% if user.avaya_number %}
+                                        <span class="badge" style="background-color: #667eea; color: white;">
+                                            <i class="fas fa-phone-alt me-1"></i>{{ user.avaya_number }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td data-label="Department">
+                                        {% if user.department %}
+                                        <span class="member-department-badge" style="background-color: #6c757d; color: white;">
+                                            <i class="fas fa-building me-1"></i>{{ user.department.department_name }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted">
+                                            <i class="fas fa-minus-circle me-1"></i>No Department
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td data-label="Actions">
+                                        <div class="member-actions">
+                                            <a href="{{ url_for('members.member_profile', slug=user.get_slug()) }}" class="member-action-btn" title="View Details" style="background-color: #667eea; color: white; padding: 8px 12px; border-radius: 8px; text-decoration: none; display: inline-block;">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="mailto:{{ user.email }}" class="member-action-btn member-action-email" title="Send Email" style="background-color: #667eea; color: white; padding: 8px 12px; border-radius: 8px;">
+                                                <i class="fas fa-envelope"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="6">
+                                        <div class="members-empty-state">
+                                            <div class="members-empty-icon">
+                                                <i class="fas fa-users"></i>
+                                            </div>
+                                            <div class="members-empty-title">No Active Members Found</div>
+                                            <div class="members-empty-text">There are currently no active members to display.</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Employee Details Modal -->
+<div class="modal fade" id="memberDetailsModal" tabindex="-1" aria-labelledby="memberDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color: #667eea; color: white;">
+                <h5 class="modal-title" id="memberDetailsModalLabel">
+                    <i class="fas fa-user me-2"></i>Employee Details
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="memberDetailsContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Update time functionality
+        function updateLastUpdateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { 
+                hour12: false, 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            const timeElement = document.getElementById('lastUpdateTime');
+            if (timeElement) {
+                timeElement.textContent = timeString;
+            }
+        }
+
+        // Initialize time immediately and update every minute
+        updateLastUpdateTime();
+        setInterval(updateLastUpdateTime, 60000);
+
+
+        // Enhanced search functionality with debouncing
+        let searchTimeout;
+        
+        // Active members search - Works on mobile and desktop
+        const activeSearchInput = document.getElementById('memberSearch');
+        if (activeSearchInput) {
+            // Input event for typing - immediate on mobile
+            activeSearchInput.addEventListener('input', function(e) {
+                clearTimeout(searchTimeout);
+                const isMobile = window.innerWidth <= 768;
+                const delay = isMobile ? 100 : 300; // Faster on mobile
+                searchTimeout = setTimeout(() => {
+                    filterMembers();
+                }, delay);
+            });
+            
+            // Keyup for immediate feedback
+            activeSearchInput.addEventListener('keyup', function(e) {
+                if (e.key === 'Enter' || e.keyCode === 13) {
+                    clearTimeout(searchTimeout);
+                    filterMembers();
+                }
+            });
+            
+            // Clear event for mobile
+            activeSearchInput.addEventListener('search', function() {
+                filterMembers();
+            });
+            
+            // Touch events for mobile
+            activeSearchInput.addEventListener('touchend', function() {
+                setTimeout(() => filterMembers(), 100);
+            });
+        }
+        
+        // Active members department filter - Works on mobile and desktop
+        const activeDeptFilter = document.getElementById('departmentFilter');
+        if (activeDeptFilter) {
+            // Change event - primary handler
+            activeDeptFilter.addEventListener('change', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                filterMembers();
+            });
+            
+            // Input event for better mobile support
+            activeDeptFilter.addEventListener('input', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                filterMembers();
+            });
+            
+            // Touch events for mobile
+            activeDeptFilter.addEventListener('touchend', function(e) {
+                setTimeout(() => filterMembers(), 100);
+            });
+            
+            // Click event as fallback
+            activeDeptFilter.addEventListener('click', function(e) {
+                setTimeout(() => filterMembers(), 100);
+            });
+        }
+
+
+        // Enhanced filtering function for active members - Works on desktop and mobile
+        function filterMembers() {
+            const searchInput = document.getElementById('memberSearch');
+            const deptFilter = document.getElementById('departmentFilter');
+            
+            if (!searchInput || !deptFilter) {
+                console.error('Filter elements not found');
+                return;
+            }
+            
+            const searchText = searchInput.value.toLowerCase().trim();
+            const departmentFilter = deptFilter.value;
+            const tableRows = document.querySelectorAll('#membersTable tbody tr');
+            
+            let visibleCount = 0;
+            
+            tableRows.forEach(row => {
+                // Skip if it's the results indicator row
+                if (row.classList.contains('results-indicator')) {
+                    return;
+                }
+                
+                if (row.hasAttribute('data-department')) {
+                    // Get text content - works for both desktop and mobile layouts
+                    const nameElement = row.querySelector('.member-name');
+                    const name = nameElement ? nameElement.textContent.toLowerCase().trim() : '';
+                    
+                    // Get email - try multiple selectors for desktop/mobile compatibility
+                    let email = '';
+                    const emailCell = row.querySelector('td:nth-child(2)');
+                    if (emailCell) {
+                        const emailDiv = emailCell.querySelector('div.fw-semibold');
+                        email = emailDiv ? emailDiv.textContent.toLowerCase().trim() : '';
+                    }
+                    
+                    // Get Avaya number - try multiple selectors
+                    let avayaNumber = '';
+                    const avayaCell = row.querySelector('td:nth-child(3)');
+                    if (avayaCell) {
+                        const avayaBadge = avayaCell.querySelector('.badge');
+                        if (avayaBadge) {
+                            avayaNumber = avayaBadge.textContent.toLowerCase().trim();
+                        } else {
+                            avayaNumber = avayaCell.textContent.toLowerCase().trim();
+                        }
+                    }
+                    
+                    // Get department - works for both desktop and mobile
+                    let department = '';
+                    const departmentCell = row.querySelector('td:nth-child(4)');
+                    if (departmentCell) {
+                        const deptBadge = departmentCell.querySelector('.member-department-badge');
+                        if (deptBadge) {
+                            department = deptBadge.textContent.toLowerCase().trim();
+                        } else {
+                            department = departmentCell.textContent.toLowerCase().trim();
+                        }
+                    }
+                    
+                    // Get department from data attributes (more reliable)
+                    const rowDepartmentName = row.getAttribute('data-department-name') ? row.getAttribute('data-department-name').toLowerCase() : '';
+                    const rowDepartmentId = row.getAttribute('data-department');
+                    
+                    // Search matching - check all fields
+                    const matchesSearch = searchText === '' || 
+                                          name.includes(searchText) || 
+                                          email.includes(searchText) || 
+                                          avayaNumber.includes(searchText) ||
+                                          department.includes(searchText) ||
+                                          rowDepartmentName.includes(searchText);
+
+                    // Department filter matching
+                    const matchesDepartment = 
+                        departmentFilter === 'all' || 
+                        (departmentFilter === 'none' && rowDepartmentId === 'none') || 
+                        (departmentFilter !== 'none' && departmentFilter !== 'all' && rowDepartmentName === departmentFilter.toLowerCase());
+                    
+                    // Show or hide row
+                    if (matchesSearch && matchesDepartment) {
+                        // Remove inline display style to let CSS handle it
+                        row.style.display = '';
+                        row.removeAttribute('style');
+                        // Re-apply display for mobile
+                        const isMobile = window.innerWidth <= 768;
+                        if (isMobile) {
+                            row.style.setProperty('display', 'flex', 'important');
+                        }
+                        visibleCount++;
+                    } else {
+                        row.style.setProperty('display', 'none', 'important');
+                    }
+                }
+            });
+
+            // Update table footer with results count
+            updateResultsCount(visibleCount);
+        }
+
+        function updateResultsCount(count) {
+            // Remove existing results indicator
+            const existingIndicator = document.querySelector('#membersTable .results-indicator');
+            if (existingIndicator) {
+                existingIndicator.remove();
+            }
+
+            // Add results count indicator if filtering is active
+            const searchInput = document.getElementById('memberSearch');
+            const deptFilter = document.getElementById('departmentFilter');
+            
+            const hasActiveFilters = (searchInput && searchInput.value.trim() !== '') || 
+                                   (deptFilter && deptFilter.value !== 'all');
+
+            if (hasActiveFilters) {
+                const table = document.getElementById('membersTable');
+                const tbody = table.querySelector('tbody');
+                const indicator = document.createElement('div');
+                indicator.className = 'results-indicator text-muted text-center p-3';
+                indicator.innerHTML = `
+                    <small>
+                        <i class="fas fa-filter me-1"></i>
+                        Showing ${count} result${count !== 1 ? 's' : ''} 
+                        ${count === 0 ? '- try adjusting your filters' : ''}
+                    </small>
+                `;
+                tbody.appendChild(indicator);
+            }
+        }
+
+        // Initialize active members filtering
+        filterMembers();
+
+        // Mobile horizontal scroll functionality
+        const tableResponsive = document.querySelector('.table-responsive');
+        const leftIndicator = document.querySelector('.scroll-indicator.left-indicator');
+        const rightIndicator = document.querySelector('.scroll-indicator.right-indicator');
+        
+        if (tableResponsive && leftIndicator && rightIndicator) {
+            function updateScrollIndicators() {
+                const scrollLeft = tableResponsive.scrollLeft;
+                const maxScroll = tableResponsive.scrollWidth - tableResponsive.clientWidth;
+                const scrollThreshold = 10;
+                
+                // Show/hide left indicator
+                if (scrollLeft > scrollThreshold) {
+                    leftIndicator.classList.add('active');
+                } else {
+                    leftIndicator.classList.remove('active');
+                }
+                
+                // Show/hide right indicator
+                if (scrollLeft < maxScroll - scrollThreshold) {
+                    rightIndicator.classList.add('active');
+                } else {
+                    rightIndicator.classList.remove('active');
+                }
+            }
+            
+            // Scroll event listener
+            tableResponsive.addEventListener('scroll', updateScrollIndicators);
+            
+            // Initial check
+            updateScrollIndicators();
+            
+            // Left scroll button
+            leftIndicator.addEventListener('click', function() {
+                tableResponsive.scrollBy({ left: -200, behavior: 'smooth' });
+            });
+            
+            // Right scroll button
+            rightIndicator.addEventListener('click', function() {
+                tableResponsive.scrollBy({ left: 200, behavior: 'smooth' });
+            });
+            
+            // Touch scroll support
+            let isScrolling = false;
+            tableResponsive.addEventListener('touchstart', function() {
+                isScrolling = true;
+            });
+            
+            tableResponsive.addEventListener('touchmove', function() {
+                if (isScrolling) {
+                    updateScrollIndicators();
+                }
+            });
+            
+            tableResponsive.addEventListener('touchend', function() {
+                isScrolling = false;
+                updateScrollIndicators();
+            });
+            
+            // Resize observer to update on window resize
+            const resizeObserver = new ResizeObserver(function() {
+                updateScrollIndicators();
+            });
+            resizeObserver.observe(tableResponsive);
+        }
+
+        // Initial check and update on scroll
+        if (tableResponsive) {
+            tableResponsive.addEventListener('scroll', updateScrollIndicators);
+            // Use a timeout to ensure layout is stable before initial check
+            setTimeout(updateScrollIndicators, 100); 
+        }
+
+        // Smooth scroll function
+        function smoothScroll(element, distance) {
+            element.scrollBy({
+                left: distance,
+                behavior: 'smooth'
+            });
+        }
+
+        // Event listeners for indicators
+        if (leftIndicator) {
+            leftIndicator.addEventListener('click', () => {
+                smoothScroll(tableResponsive, -200); // Scroll left by 200px
+            });
+        }
+
+        if (rightIndicator) {
+            rightIndicator.addEventListener('click', () => {
+                smoothScroll(tableResponsive, 200); // Scroll right by 200px
+            });
+        }
+
+        // Handle window resize to update indicators
+        window.addEventListener('resize', updateScrollIndicators);
+    });
+
+    // View member details in popup
+    function viewMemberDetails(userId) {
+        const modal = new bootstrap.Modal(document.getElementById('memberDetailsModal'));
+        const content = document.getElementById('memberDetailsContent');
+        
+        // Show loading state
+        content.innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        `;
+        
+        modal.show();
+        
+        // Fetch member details
+        fetch(`/members/${userId}/details`, {
+            credentials: 'include'
+        })
+        .then(response => response.json())
+        .then(data => {
+            const canEdit = {% if current_user.role in ['admin', 'product_owner'] %}true{% else %}false{% endif %};
+            const isAdminOrOwner = data.is_admin_or_owner || false;
+            
+            // Build HTML based on user role
+            let html = '<div class="row">';
+            
+            // First Name - Always shown
+            html += `
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold text-muted">First Name</label>
+                    <div class="form-control-plaintext">${data.first_name || 'N/A'}</div>
+                </div>
+            `;
+            
+            // Last Name - Always shown
+            html += `
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold text-muted">Last Name</label>
+                    <div class="form-control-plaintext">${data.last_name || 'N/A'}</div>
+                </div>
+            `;
+            
+            // Email - Always shown
+            html += `
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold text-muted">Email</label>
+                    <div class="form-control-plaintext">
+                        <a href="mailto:${data.email}">${data.email}</a>
+                    </div>
+                </div>
+            `;
+            
+            // Avaya Number - Always shown
+            html += `
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold text-muted">Avaya Number</label>
+                    <div class="form-control-plaintext">${data.avaya_number}</div>
+                </div>
+            `;
+            
+            // Position - Always shown
+            html += `
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold text-muted">Position</label>
+                    <div class="form-control-plaintext">${data.position}</div>
+                </div>
+            `;
+            
+            // Department - Always shown
+            html += `
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold text-muted">Department</label>
+                    <div class="form-control-plaintext">${data.department}</div>
+                </div>
+            `;
+            
+            // Admin/Product Owner only fields
+            if (isAdminOrOwner) {
+                // Full Name (editable for admin/owner)
+                html += `
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-muted">Full Name</label>
+                        ${canEdit ? `
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="editFullName" value="${data.full_name || ''}" placeholder="Enter full name">
+                                <button class="btn btn-primary" onclick="updateFullName(${data.id})" type="button">
+                                    <i class="fas fa-save"></i> Save
+                                </button>
+                            </div>
+                        ` : `
+                            <div class="form-control-plaintext">${data.full_name || 'N/A'}</div>
+                        `}
+                    </div>
+                `;
+                
+                // Employee Code
+                html += `
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-muted">Employee Code</label>
+                        <div class="form-control-plaintext">${data.employee_code}</div>
+                    </div>
+                `;
+                
+                // Insurance Number
+                html += `
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-muted">Insurance Number</label>
+                        <div class="form-control-plaintext">${data.insurance_number}</div>
+                    </div>
+                `;
+                
+                // Fingerprint Number
+                html += `
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-muted">Fingerprint Number</label>
+                        <div class="form-control-plaintext">${data.fingerprint_number}</div>
+                    </div>
+                `;
+                
+                // Phone Number
+                html += `
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-muted">Phone Number</label>
+                        <div class="form-control-plaintext">${data.phone_number}</div>
+                    </div>
+                `;
+                
+                // Role
+                html += `
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-muted">Role</label>
+                        <div class="form-control-plaintext">
+                            <span class="badge bg-primary">${data.role.charAt(0).toUpperCase() + data.role.slice(1)}</span>
+                        </div>
+                    </div>
+                `;
+                
+                // Joining Date
+                html += `
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold text-muted">Joining Date</label>
+                        <div class="form-control-plaintext">${data.joining_date}</div>
+                    </div>
+                `;
+            }
+            
+            html += '</div>';
+            content.innerHTML = html;
+        })
+        .catch(error => {
+            content.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error loading employee details: ${error.message}
+                </div>
+            `;
+        });
+    }
+
+    // Update full name
+    function updateFullName(userId) {
+        const fullNameInput = document.getElementById('editFullName');
+        const fullName = fullNameInput.value.trim();
+        
+        fetch(`/members/${userId}/update-fullname`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({ full_name: fullName })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success message
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-success alert-dismissible fade show';
+                alert.innerHTML = `
+                    <i class="fas fa-check-circle me-2"></i>${data.message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.getElementById('memberDetailsContent').insertBefore(alert, document.getElementById('memberDetailsContent').firstChild);
+                
+                // Update the input value
+                fullNameInput.value = fullName;
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error updating full name: ' + error.message);
+        });
+    }
+</script>
+{% endblock %}
