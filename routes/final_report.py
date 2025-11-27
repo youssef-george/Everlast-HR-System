@@ -493,9 +493,9 @@ def ensure_attendance_logs_processed(start_date, end_date):
 
 @final_report_bp.route('/final-report')
 @login_required
-@role_required(['admin', 'product_owner', 'manager'])
+@role_required(['admin', 'product_owner', 'manager', 'employee'])
 def final_report():
-    """Final Report - Admin, Product Owner, and Manager attendance report with auto-fetch and duplicate removal"""
+    """Final Report - Admin, Product Owner, Manager, and Employee attendance report with auto-fetch and duplicate removal"""
     
     try:
         # Clean up orphaned paid holiday records before processing
@@ -524,7 +524,10 @@ def final_report():
         logging.info('Skipping sync on final report page load - another sync is already running')
     
     # Get users based on role
-    if current_user.role == 'manager':
+    if current_user.role == 'employee':
+        # Employees can only see their own data
+        users = [current_user] if current_user.status == 'active' else []
+    elif current_user.role == 'manager':
         # Managers see only their employees
         from helpers import get_employees_for_manager
         users = get_employees_for_manager(current_user.id)
@@ -542,6 +545,19 @@ def final_report():
             User.first_name != '',           # Exclude empty names
             User.last_name != ''             # Exclude users without last names
         ).all()
+    
+    # Sort users by fingerprint number: Not Assigned (None/empty) first, then numeric low to high
+    def get_fingerprint_sort_key(user):
+        fp = user.fingerprint_number
+        if not fp or fp.strip() == '':
+            return (0, 0)  # Not Assigned comes first
+        try:
+            fp_int = int(fp.strip())
+            return (1, fp_int)  # Numeric sorting
+        except (ValueError, TypeError):
+            return (2, 0)  # Invalid/non-numeric comes last
+    
+    users = sorted(users, key=get_fingerprint_sort_key)
     
     # Get date range from query parameters (no default - user must choose)
     start_date_str = request.args.get('start_date')
@@ -572,13 +588,27 @@ def final_report():
     
     # Filter users if specific users are selected
     if user_ids:
+        # For employees, ensure they can only view themselves
+        if current_user.role == 'employee':
+            user_ids = [current_user.id] if current_user.id in user_ids else []
         # For managers, ensure they can only view their own employees
-        if current_user.role == 'manager':
+        elif current_user.role == 'manager':
             manager_employee_ids = [u.id for u in users]
             user_ids = [uid for uid in user_ids if uid in manager_employee_ids]
         users = [user for user in users if user.id in user_ids]
     
-    # Sorting is not needed for summary view
+    # Sort users by fingerprint number: Not Assigned (None/empty) first, then numeric low to high
+    def get_fingerprint_sort_key(user):
+        fp = user.fingerprint_number
+        if not fp or fp.strip() == '':
+            return (0, 0)  # Not Assigned comes first
+        try:
+            fp_int = int(fp.strip())
+            return (1, fp_int)  # Numeric sorting
+        except (ValueError, TypeError):
+            return (2, 0)  # Invalid/non-numeric comes last
+    
+    users = sorted(users, key=get_fingerprint_sort_key)
     
     # Generate report data using unified calculation logic
     all_user_reports = []
@@ -686,7 +716,7 @@ def final_report():
 
 @final_report_bp.route('/final-report/export')
 @login_required
-@role_required(['admin', 'product_owner', 'manager'])
+@role_required(['admin', 'product_owner', 'manager', 'employee'])
 def export_final_report():
     """Export final report to Excel"""
     
@@ -705,7 +735,10 @@ def export_final_report():
         return jsonify({'error': 'Invalid date format'}), 400
     
     # Get users for export based on role
-    if current_user.role == 'manager':
+    if current_user.role == 'employee':
+        # Employees can only export their own data
+        users = [current_user] if current_user.status == 'active' else []
+    elif current_user.role == 'manager':
         # Managers can only export their employees
         from helpers import get_employees_for_manager
         users = get_employees_for_manager(current_user.id)
@@ -726,11 +759,27 @@ def export_final_report():
     
     # Filter users if specific users are selected
     if user_ids:
+        # For employees, ensure they can only export themselves
+        if current_user.role == 'employee':
+            user_ids = [current_user.id] if current_user.id in user_ids else []
         # For managers, ensure they can only export their own employees
-        if current_user.role == 'manager':
+        elif current_user.role == 'manager':
             manager_employee_ids = [u.id for u in users]
             user_ids = [uid for uid in user_ids if uid in manager_employee_ids]
         users = [user for user in users if user.id in user_ids]
+    
+    # Sort users by fingerprint number: Not Assigned (None/empty) first, then numeric low to high
+    def get_fingerprint_sort_key(user):
+        fp = user.fingerprint_number
+        if not fp or fp.strip() == '':
+            return (0, 0)  # Not Assigned comes first
+        try:
+            fp_int = int(fp.strip())
+            return (1, fp_int)  # Numeric sorting
+        except (ValueError, TypeError):
+            return (2, 0)  # Invalid/non-numeric comes last
+    
+    users = sorted(users, key=get_fingerprint_sort_key)
     
     # Generate report data using the EXACT SAME logic as the main route
     all_user_reports = []
@@ -893,6 +942,19 @@ def detailed_attendance_report():
         User.first_name != '',           # Exclude empty names
         User.last_name != ''             # Exclude users without last names
     ).all()
+    
+    # Sort users by fingerprint number: Not Assigned (None/empty) first, then numeric low to high
+    def get_fingerprint_sort_key(user):
+        fp = user.fingerprint_number
+        if not fp or fp.strip() == '':
+            return (0, 0)  # Not Assigned comes first
+        try:
+            fp_int = int(fp.strip())
+            return (1, fp_int)  # Numeric sorting
+        except (ValueError, TypeError):
+            return (2, 0)  # Invalid/non-numeric comes last
+    
+    users = sorted(users, key=get_fingerprint_sort_key)
     
     # Get date range from query parameters (no default - user must choose)
     start_date_str = request.args.get('start_date')
@@ -1080,12 +1142,29 @@ def get_employee_logs(user_id):
                                 extra_time = getattr(attendance_record, 'extra_time', 0.0)
                                 check_in = attendance_record.first_check_in
                                 check_out = attendance_record.last_check_out
+                                
+                                # FIX: Always use the last log as check-out when there are 2+ logs
+                                if len(daily_logs) >= 2:
+                                    # Sort logs by timestamp and use the last log's timestamp as check-out
+                                    sorted_logs = sorted(daily_logs, key=lambda x: x['timestamp'])
+                                    last_log_timestamp = sorted_logs[-1]['timestamp']
+                                    last_log_dt = datetime.strptime(last_log_timestamp, '%Y-%m-%d %H:%M:%S')
+                                    check_out = last_log_dt
                         else:
                             status = paid_holiday.description
                     elif attendance_record and (attendance_record.first_check_in or attendance_record.last_check_out):
                         # User has attendance logs - use pre-calculated values from unified calculation
                         check_in = attendance_record.first_check_in
                         check_out = attendance_record.last_check_out
+                        
+                        # FIX: Always use the last log as check-out when there are 2+ logs
+                        if len(daily_logs) >= 2:
+                            # Sort logs by timestamp and use the last log's timestamp as check-out
+                            sorted_logs = sorted(daily_logs, key=lambda x: x['timestamp'])
+                            last_log_timestamp = sorted_logs[-1]['timestamp']
+                            last_log_dt = datetime.strptime(last_log_timestamp, '%Y-%m-%d %H:%M:%S')
+                            check_out = last_log_dt
+                        
                         hours_worked = getattr(attendance_record, 'hours_worked', 0.0)
                         extra_time = getattr(attendance_record, 'extra_time', 0.0)
                         
@@ -1119,6 +1198,12 @@ def get_employee_logs(user_id):
                         # No attendance record or logs
                         if current_date.weekday() in [4, 5]:  # Friday/Saturday
                             status = 'Day Off'
+                        elif leave_request:
+                            # FIX: Show leave type instead of Absent for approved leave days
+                            if leave_request.leave_type:
+                                status = leave_request.leave_type.name
+                            else:
+                                status = 'Annual Leave'  # Default if no type specified
                         else:
                             status = 'Absent'
                         hours_worked = 0.0
@@ -1242,6 +1327,19 @@ def export_detailed_attendance_report():
     # Filter users if specific users are selected
     if user_ids:
         users = [user for user in users if user.id in user_ids]
+    
+    # Sort users by fingerprint number: Not Assigned (None/empty) first, then numeric low to high
+    def get_fingerprint_sort_key(user):
+        fp = user.fingerprint_number
+        if not fp or fp.strip() == '':
+            return (0, 0)  # Not Assigned comes first
+        try:
+            fp_int = int(fp.strip())
+            return (1, fp_int)  # Numeric sorting
+        except (ValueError, TypeError):
+            return (2, 0)  # Invalid/non-numeric comes last
+    
+    users = sorted(users, key=get_fingerprint_sort_key)
     
     # Generate report data using the unified calculation logic
     all_user_reports = []

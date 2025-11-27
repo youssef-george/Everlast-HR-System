@@ -186,6 +186,9 @@
                     <div class="col-lg-6 col-md-12">
                         <label class="form-label">Select Employees (Multiple Selection)</label>
                         <div class="employee-selection-container">
+                            <div class="mb-3">
+                                <input type="text" class="form-control" id="employee-search" placeholder="Search employees by name, fingerprint, or department..." autocomplete="off">
+                            </div>
                             <div class="form-check mb-2">
                                 <input class="form-check-input" type="checkbox" id="select_all_employees" onchange="toggleAllEmployees()">
                                 <label class="form-check-label fw-bold" for="select_all_employees">
@@ -193,18 +196,20 @@
                                 </label>
                             </div>
                             <hr class="my-2">
-                            {% for user in users %}
-                            <div class="form-check mb-1">
-                                <input class="form-check-input employee-checkbox" type="checkbox" 
-                                       id="user_{{ user.id }}" name="user_ids" value="{{ user.id }}" 
-                                       {% if user.id|string in request.args.getlist('user_ids') %}checked{% endif %}>
-                                <label class="form-check-label" for="user_{{ user.id }}">
-                                    {{ user.first_name }} {{ user.last_name }} 
-                                    {% if user.department %}({{ user.department.department_name }}){% endif %}
-                                    {% if user.fingerprint_number %}[FP: {{ user.fingerprint_number }}]{% endif %}
-                                </label>
+                            <div id="employee-list-container">
+                                {% for user in users %}
+                                <div class="form-check mb-1 employee-item" data-name="{{ (user.first_name + ' ' + user.last_name)|lower }}" data-fingerprint="{{ (user.fingerprint_number or '')|lower }}" data-department="{{ (user.department.department_name if user.department else '')|lower }}">
+                                    <input class="form-check-input employee-checkbox" type="checkbox" 
+                                           id="user_{{ user.id }}" name="user_ids" value="{{ user.id }}" 
+                                           {% if user.id|string in request.args.getlist('user_ids') %}checked{% endif %}>
+                                    <label class="form-check-label" for="user_{{ user.id }}">
+                                        {{ user.first_name }} {{ user.last_name }} 
+                                        {% if user.department %}({{ user.department.department_name }}){% endif %}
+                                        {% if user.fingerprint_number %}[FP: {{ user.fingerprint_number }}]{% endif %}
+                                    </label>
+                                </div>
+                                {% endfor %}
                             </div>
-                            {% endfor %}
                         </div>
                         <small class="form-text text-muted">Select specific employees or leave all unchecked to select all employees.</small>
                     </div>
@@ -361,7 +366,7 @@
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <div class="h4 mb-1">{{ user_report.summary_metrics.permission_hours }}</div>
+                                    <div class="h4 mb-1">{{ user_report.summary_metrics.permission_hours|hours_minutes }}</div>
                                     <div class="small">Permission Hours</div>
                                 </div>
                                 <div class="fs-2"><i class="fas fa-user-check"></i></div>
@@ -849,32 +854,38 @@
         // Use vanilla JavaScript with jQuery fallback
         let isChecked, selectAllElement, employeeCheckboxes;
         
+        // Get only visible checkboxes (not filtered out by search)
+        const visibleItems = document.querySelectorAll('.employee-item:not([style*="display: none"])');
+        const visibleCheckboxes = Array.from(visibleItems).map(item => item.querySelector('.employee-checkbox')).filter(cb => cb);
+        
         if (typeof $ !== 'undefined') {
             // jQuery is available
             isChecked = $('#select_all_employees').is(':checked');
             selectAllElement = $('#select_all_employees')[0];
-            employeeCheckboxes = $('.employee-checkbox');
-            employeeCheckboxes.prop('checked', isChecked);
             
-            // Add visual feedback
-            if (isChecked) {
-                employeeCheckboxes.addClass('selected-highlight');
-                setTimeout(() => {
-                    employeeCheckboxes.removeClass('selected-highlight');
-                }, 300);
-            } else {
-                employeeCheckboxes.addClass('cleared-highlight');
-                setTimeout(() => {
-                    employeeCheckboxes.removeClass('cleared-highlight');
-                }, 300);
-            }
+            // Update only visible checkboxes
+            visibleCheckboxes.forEach(checkbox => {
+                $(checkbox).prop('checked', isChecked);
+                
+                // Add visual feedback
+                if (isChecked) {
+                    $(checkbox).addClass('selected-highlight');
+                    setTimeout(() => {
+                        $(checkbox).removeClass('selected-highlight');
+                    }, 300);
+                } else {
+                    $(checkbox).addClass('cleared-highlight');
+                    setTimeout(() => {
+                        $(checkbox).removeClass('cleared-highlight');
+                    }, 300);
+                }
+            });
         } else {
             // Vanilla JavaScript fallback
             selectAllElement = document.getElementById('select_all_employees');
             isChecked = selectAllElement.checked;
-            employeeCheckboxes = document.querySelectorAll('.employee-checkbox');
             
-            employeeCheckboxes.forEach(checkbox => {
+            visibleCheckboxes.forEach(checkbox => {
                 checkbox.checked = isChecked;
                 
                 // Add visual feedback
@@ -892,37 +903,13 @@
             });
         }
         
+        updateSelectAllState();
         submitFormWithLoading();
     }
     
     function updateSelectAllCheckbox() {
-        // Use vanilla JavaScript with jQuery fallback
-        let totalCheckboxes, checkedCheckboxes, selectAllElement;
-        
-        if (typeof $ !== 'undefined') {
-            // jQuery is available
-            totalCheckboxes = $('.employee-checkbox').length;
-            checkedCheckboxes = $('.employee-checkbox:checked').length;
-            selectAllElement = $('#select_all_employees')[0];
-        } else {
-            // Vanilla JavaScript fallback
-            const allCheckboxes = document.querySelectorAll('.employee-checkbox');
-            const checkedBoxes = document.querySelectorAll('.employee-checkbox:checked');
-            totalCheckboxes = allCheckboxes.length;
-            checkedCheckboxes = checkedBoxes.length;
-            selectAllElement = document.getElementById('select_all_employees');
-        }
-        
-        if (checkedCheckboxes === 0) {
-            selectAllElement.indeterminate = false;
-            selectAllElement.checked = false;
-        } else if (checkedCheckboxes === totalCheckboxes) {
-            selectAllElement.indeterminate = false;
-            selectAllElement.checked = true;
-        } else {
-            selectAllElement.indeterminate = true;
-            selectAllElement.checked = false;
-        }
+        // Use updateSelectAllState which works with visible checkboxes
+        updateSelectAllState();
     }
     
     // Export functionality
@@ -978,6 +965,50 @@
     }
 
     // JavaScript for Logs Modal
+    // Employee search functionality
+    document.getElementById('employee-search')?.addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase().trim();
+        const employeeItems = document.querySelectorAll('.employee-item');
+        
+        employeeItems.forEach(item => {
+            const name = item.getAttribute('data-name') || '';
+            const fingerprint = item.getAttribute('data-fingerprint') || '';
+            const department = item.getAttribute('data-department') || '';
+            
+            const matches = name.includes(searchTerm) || 
+                          fingerprint.includes(searchTerm) || 
+                          department.includes(searchTerm);
+            
+            item.style.display = matches ? '' : 'none';
+        });
+        
+        // Update select all checkbox state based on visible checkboxes
+        updateSelectAllState();
+    });
+    
+    function updateSelectAllState() {
+        const visibleCheckboxes = Array.from(document.querySelectorAll('.employee-item:not([style*="display: none"]) .employee-checkbox'));
+        const checkedVisible = visibleCheckboxes.filter(cb => cb.checked);
+        const selectAllCheckbox = document.getElementById('select_all_employees');
+        
+        if (visibleCheckboxes.length === 0) {
+            selectAllCheckbox.indeterminate = false;
+            selectAllCheckbox.checked = false;
+            return;
+        }
+        
+        if (checkedVisible.length === 0) {
+            selectAllCheckbox.indeterminate = false;
+            selectAllCheckbox.checked = false;
+        } else if (checkedVisible.length === visibleCheckboxes.length) {
+            selectAllCheckbox.indeterminate = false;
+            selectAllCheckbox.checked = true;
+        } else {
+            selectAllCheckbox.indeterminate = true;
+            selectAllCheckbox.checked = false;
+        }
+    }
+    
     document.addEventListener('DOMContentLoaded', function () {
         const logsModal = document.getElementById('logsModal');
         if (logsModal) {

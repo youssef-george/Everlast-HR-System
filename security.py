@@ -395,7 +395,19 @@ def setup_security_middleware(app):
         
         # Skip bot detection for authenticated users (they've already passed login)
         from flask_login import current_user
-        if current_user.is_authenticated:
+        from sqlalchemy.exc import OperationalError
+        from psycopg2 import OperationalError as Psycopg2OperationalError
+        try:
+            if current_user.is_authenticated:
+                return
+        except (OperationalError, Psycopg2OperationalError) as e:
+            # If database connection fails, allow the request through
+            # The actual route will handle the database error
+            logging.warning(f"Database connection error in bot check, allowing request: {str(e)}")
+            return
+        except Exception as e:
+            # For other errors, log and allow request
+            logging.warning(f"Error checking authentication in bot check: {str(e)}")
             return
         
         sensitive_paths = [

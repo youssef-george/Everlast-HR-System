@@ -37,8 +37,14 @@ if __name__ == '__main__':
         port = Config.PORT
         
         # Print network access information
+        import sys
+        import io
+        # Set UTF-8 encoding for console output
+        if sys.stdout.encoding != 'utf-8':
+            sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+        
         print("\n" + "=" * 70)
-        print("🚀 EverLast ERP Server Starting")
+        print("Everlast HR System Server Starting")
         print("=" * 70)
         print(f"\n📍 Server Configuration:")
         print(f"   • Host: 0.0.0.0 (Listening on all network interfaces)")

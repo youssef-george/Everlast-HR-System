@@ -277,7 +277,7 @@ class SMTPConfigurationForm(FlaskForm):
     use_tls = BooleanField('Use TLS', default=True)
     use_ssl = BooleanField('Use SSL', default=False)
     sender_name = StringField('Sender Name', validators=[DataRequired(), Length(max=255)], 
-                             default='EverLastERP System')
+                             default='Everlast HR System')
     sender_email = EmailField('Sender Email', validators=[DataRequired(), Email(), Length(max=255)], 
                              render_kw={'placeholder': 'noreply@yourcompany.com'})
     is_active = BooleanField('Active Configuration', default=True)

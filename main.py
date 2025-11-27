@@ -26,7 +26,7 @@ def handle_csrf_error(e):
 
 if __name__ == '__main__':
     # Run the application on specific IP and port
-    logging.info('Starting EverLast ERP on http://192.168.11.68:5000')
+    logging.info('Starting Everlast HR System on http://192.168.11.68:5000')
     app.run(
         host='0.0.0.0',
         port=5000,

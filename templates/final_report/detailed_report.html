@@ -1106,6 +1106,9 @@
                     <div class="col-lg-6 col-md-12">
                         <label class="form-label">Employees</label>
                         <div class="employee-selection-container">
+                            <div class="mb-3">
+                                <input type="text" class="form-control" id="employee-search" placeholder="Search employees by name, fingerprint, or department..." autocomplete="off">
+                            </div>
                             <div class="form-check mb-2">
                                 <input class="form-check-input" type="checkbox" id="selectAll" checked>
                                 <label class="form-check-label fw-bold" for="selectAll">
@@ -1113,15 +1116,17 @@
                                 </label>
                             </div>
                             <hr class="my-2">
-                            {% for user in users %}
-                            <div class="form-check">
-                                <input class="form-check-input employee-checkbox" type="checkbox" 
-                                       name="user_ids" value="{{ user.id }}" id="user_{{ user.id }}" checked>
-                                <label class="form-check-label" for="user_{{ user.id }}">
-                                    {{ user.get_full_name() }} ({{ user.fingerprint_number or 'Not Assigned' }})
-                                </label>
+                            <div id="employee-list-container">
+                                {% for user in users %}
+                                <div class="form-check employee-item" data-name="{{ user.get_full_name()|lower }}" data-fingerprint="{{ (user.fingerprint_number or '')|lower }}" data-department="{{ (user.department.department_name if user.department else '')|lower }}">
+                                    <input class="form-check-input employee-checkbox" type="checkbox" 
+                                           name="user_ids" value="{{ user.id }}" id="user_{{ user.id }}" checked>
+                                    <label class="form-check-label" for="user_{{ user.id }}">
+                                        {{ user.get_full_name() }} ({{ user.fingerprint_number or 'Not Assigned' }})
+                                    </label>
+                                </div>
+                                {% endfor %}
                             </div>
-                            {% endfor %}
                         </div>
                     </div>
                 </div>
@@ -1264,7 +1269,7 @@
                                         <span class="metric-badge paid-leave">{{ user_report.summary_metrics.paid_leave_days|default(0) }}</span>
                                     </td>
                                     <td class="text-center">
-                                        <span class="metric-badge permission">{{ user_report.summary_metrics.permission_hours|default(0) }}</span>
+                                        <span class="metric-badge permission">{{ user_report.summary_metrics.permission_hours|default(0)|hours_minutes }}</span>
                                     </td>
                                     <td class="text-center">
                                         <span class="metric-badge incomplete">{{ user_report.summary_metrics.incomplete_days|default(0) }}</span>
@@ -1306,7 +1311,6 @@
                                                                 <th><i class="fas fa-sign-out-alt me-1"></i>Check Out</th>
                                                                 <th><i class="fas fa-clock me-1"></i>Duration</th>
                                                                 <th><i class="fas fa-info-circle me-1"></i>Status</th>
-                                                                <th><i class="fas fa-clock me-1"></i>Hours</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody class="logs-tbody">
@@ -1947,9 +1951,63 @@ document.getElementById('reportForm').addEventListener('submit', function() {
     submitBtn.disabled = true;
 });
 
+// Employee search functionality
+function setupEmployeeSearch() {
+    const searchInput = document.getElementById('employee-search');
+    if (!searchInput) return;
+    
+    searchInput.addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase().trim();
+        const employeeItems = document.querySelectorAll('.employee-item');
+        
+        employeeItems.forEach(item => {
+            const name = item.getAttribute('data-name') || '';
+            const fingerprint = item.getAttribute('data-fingerprint') || '';
+            const department = item.getAttribute('data-department') || '';
+            
+            const matches = name.includes(searchTerm) || 
+                          fingerprint.includes(searchTerm) || 
+                          department.includes(searchTerm);
+            
+            item.style.display = matches ? '' : 'none';
+        });
+        
+        // Update select all checkbox state based on visible checkboxes
+        updateSelectAllStateDetailed();
+    });
+}
+
+function updateSelectAllStateDetailed() {
+    const visibleCheckboxes = Array.from(document.querySelectorAll('.employee-item:not([style*="display: none"]) .employee-checkbox'));
+    const checkedVisible = visibleCheckboxes.filter(cb => cb.checked);
+    const selectAllCheckbox = document.getElementById('selectAll');
+    
+    if (!selectAllCheckbox) return;
+    
+    if (visibleCheckboxes.length === 0) {
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.checked = false;
+        return;
+    }
+    
+    if (checkedVisible.length === 0) {
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.checked = false;
+    } else if (checkedVisible.length === visibleCheckboxes.length) {
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.checked = true;
+    } else {
+        selectAllCheckbox.indeterminate = true;
+        selectAllCheckbox.checked = false;
+    }
+}
+
 // Detailed Attendance Report - Enhanced debugging for expand functionality
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Detailed Attendance Report - DOMContentLoaded fired');
+    
+    // Setup employee search
+    setupEmployeeSearch();
     
     // Enhanced debugging for page state
     const selectAllCheckbox = document.getElementById('selectAll');
@@ -1962,23 +2020,26 @@ document.addEventListener('DOMContentLoaded', function() {
         // Select All checkbox change handler
         selectAllCheckbox.addEventListener('change', function() {
             console.log('✅ Select All clicked, checked:', this.checked);
-            const checkboxes = document.querySelectorAll('.employee-checkbox');
+            const visibleCheckboxes = document.querySelectorAll('.employee-item:not([style*="display: none"]) .employee-checkbox');
             
-            // Update all employee checkboxes to match Select All state
-            checkboxes.forEach(checkbox => {
+            // Update only visible employee checkboxes to match Select All state
+            visibleCheckboxes.forEach(checkbox => {
                 checkbox.checked = this.checked;
             });
             
             // Update visual state
             this.indeterminate = false;
             
-            console.log('✅ Updated', checkboxes.length, 'employee checkboxes to:', this.checked);
+            console.log('✅ Updated', visibleCheckboxes.length, 'visible employee checkboxes to:', this.checked);
         });
         
         // Individual checkbox change handlers for synchronization
         employeeCheckboxes.forEach(checkbox => {
             checkbox.addEventListener('change', function() {
                 console.log('📋 Individual checkbox changed for:', this.value);
+                
+                // Update Select All checkbox state based on visible checkboxes
+                updateSelectAllStateDetailed();
                 
                 // Get all current checkboxes (in case new ones were added)
                 const allCheckboxes = document.querySelectorAll('.employee-checkbox');
@@ -2247,6 +2308,29 @@ function formatTimeToAMPM(time24) {
     return `${hour12}:${minutes} ${ampm}`;
 }
 
+function formatHoursMinutes(decimalHours) {
+    // Convert decimal hours (e.g., 3.75) to 'Xh Ym' format
+    if (!decimalHours || decimalHours === 0) return '0h 0m';
+    
+    const isNegative = decimalHours < 0;
+    const hours = Math.abs(decimalHours);
+    const wholeHours = Math.floor(hours);
+    const minutes = Math.floor((hours - wholeHours) * 60);
+    
+    let result = '';
+    if (wholeHours > 0 && minutes > 0) {
+        result = `${wholeHours}h ${minutes}m`;
+    } else if (wholeHours > 0) {
+        result = `${wholeHours}h 0m`;
+    } else if (minutes > 0) {
+        result = `0h ${minutes}m`;
+    } else {
+        result = '0h 0m';
+    }
+    
+    return isNegative ? `-${result}` : result;
+}
+
 function addDayExpandListeners() {
     // Use event delegation to handle dynamically created buttons
     document.addEventListener('click', function(e) {
@@ -2427,12 +2511,6 @@ function loadEmployeeLogs(userId, startDate, endDate, expandableRow) {
                         </td>
                         <td>${duration}</td>
                         <td>${status}</td>
-                        <td>
-                            ${(dayData.raw_hours_worked || (typeof dayData.hours_worked === 'number' ? dayData.hours_worked : 0)) > 0 ? 
-                                `<span class="badge bg-primary">${(dayData.raw_hours_worked || dayData.hours_worked || 0).toFixed(1)}h</span>` : 
-                                '<span class="text-muted">-</span>'
-                            }
-                        </td>
                         <td style="white-space: nowrap; min-width: 120px;">
                             <button class="btn btn-sm btn-outline-primary day-expand-btn" 
                                     data-date="${dayData.date}" 
@@ -2500,7 +2578,7 @@ function loadEmployeeLogs(userId, startDate, endDate, expandableRow) {
                                         <div class="log-summary-badges d-flex align-items-center">
                                             <span class="badge badge-light-primary me-2 total-hours-badge">
                                                 <i class="ki-duotone ki-time fs-4 me-1"></i>
-                                                Total: ${(dayData.raw_hours_worked || (typeof dayData.hours_worked === 'number' ? dayData.hours_worked : 0)) > 0 ? (dayData.raw_hours_worked || dayData.hours_worked || 0).toFixed(1) + 'h' : '-'}
+                                                Total: ${(dayData.raw_hours_worked || (typeof dayData.hours_worked === 'number' ? dayData.hours_worked : 0)) > 0 ? formatHoursMinutes(dayData.raw_hours_worked || dayData.hours_worked || 0) : '-'}
                                             </span>
                                             <span class="badge badge-light-info extra-time-badge">
                                                 <i class="ki-duotone ki-hourglass-2 fs-4 me-1"></i>
@@ -2560,15 +2638,27 @@ function loadEmployeeLogs(userId, startDate, endDate, expandableRow) {
                                                     }
                                                 
                                                     const logTime = log.time || (log.timestamp ? log.timestamp.split(' ')[1] : '');
-                                                    const scanType = log.scan_type || log.type || 'unknown';
+                                                    
+                                                    // Always use position-based logic: first = check-in, last = check-out
+                                                    let scanTypeLabel = '';
+                                                    let badgeClass = 'bg-secondary';
+                                                    
+                                                    if (index === 0) {
+                                                        scanTypeLabel = 'Check In';
+                                                        badgeClass = 'bg-success';
+                                                    } else if (index === logsArray.length - 1) {
+                                                        scanTypeLabel = 'Check Out';
+                                                        badgeClass = 'bg-danger';
+                                                    } else {
+                                                        scanTypeLabel = 'Additional';
+                                                        badgeClass = 'bg-secondary';
+                                                    }
                                                     
                                                     return `
                                                         <tr>
                                                             <td><span class="badge bg-info">${logTime ? formatTimeToAMPM(logTime) : '-'}</span></td>
                                                             <td>
-                                                                <span class="badge ${scanType === 'check-in' ? 'bg-success' : 'bg-warning'}">
-                                                                    ${scanType === 'check-in' ? 'Check In' : 'Check Out'}
-                                                                </span>
+                                                                <span class="badge ${badgeClass}">${scanTypeLabel}</span>
                                                             </td>
                                                             <td class="fw-bold">${durationFromPrevious}</td>
                                                         </tr>

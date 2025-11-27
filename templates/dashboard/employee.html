@@ -1298,7 +1298,7 @@
                                             </div>
                                             <div class="col-6">
                                                 <div class="mini-stat-card">
-                                                    <div class="mini-stat-value">{{ stats.total_working_hours_this_month or 0 }}h</div>
+                                                    <div class="mini-stat-value">{{ (stats.total_working_hours_this_month or 0)|hours_minutes }}</div>
                                                     <div class="mini-stat-label">Working Hours</div>
                                                 </div>
                                             </div>

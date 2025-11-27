@@ -1,4 +1,4 @@
-// Everlast ERP - Calendar JavaScript
+// Everlast HR System - Calendar JavaScript
 
 document.addEventListener('DOMContentLoaded', function() {
     const calendarEl = document.getElementById('calendar');

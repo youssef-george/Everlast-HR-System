@@ -767,9 +767,9 @@ table thead th * {
                                     </td>
                                     <td>
                                         <div class="member-actions">
-                                            <button type="button" class="member-action-btn" onclick="viewMemberDetails({{ user.id }})" title="View Details" style="background-color: #667eea; color: white; padding: 8px 12px; border-radius: 8px; border: none; cursor: pointer;">
+                                            <a href="{{ url_for('dashboard.member_profile', slug=user.get_slug()) }}" class="member-action-btn" title="View Details" style="background-color: #667eea; color: white; padding: 8px 12px; border-radius: 8px; text-decoration: none; display: inline-block;">
                                                 <i class="fas fa-eye"></i>
-                                            </button>
+                                            </a>
                                             <a href="mailto:{{ user.email }}" class="member-action-btn member-action-email" title="Send Email" style="background-color: #667eea; color: white; padding: 8px 12px; border-radius: 8px;">
                                                 <i class="fas fa-envelope"></i>
                                             </a>
@@ -1032,9 +1032,65 @@ table thead th * {
         .then(response => response.json())
         .then(data => {
             const canEdit = {% if current_user.role in ['admin', 'product_owner'] %}true{% else %}false{% endif %};
+            const isAdminOrOwner = data.is_admin_or_owner || false;
             
-            content.innerHTML = `
-                <div class="row">
+            // Build HTML based on user role
+            let html = '<div class="row">';
+            
+            // First Name - Always shown
+            html += `
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold text-muted">First Name</label>
+                    <div class="form-control-plaintext">${data.first_name || 'N/A'}</div>
+                </div>
+            `;
+            
+            // Last Name - Always shown
+            html += `
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold text-muted">Last Name</label>
+                    <div class="form-control-plaintext">${data.last_name || 'N/A'}</div>
+                </div>
+            `;
+            
+            // Email - Always shown
+            html += `
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold text-muted">Email</label>
+                    <div class="form-control-plaintext">
+                        <a href="mailto:${data.email}">${data.email}</a>
+                    </div>
+                </div>
+            `;
+            
+            // Avaya Number - Always shown
+            html += `
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold text-muted">Avaya Number</label>
+                    <div class="form-control-plaintext">${data.avaya_number}</div>
+                </div>
+            `;
+            
+            // Position - Always shown
+            html += `
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold text-muted">Position</label>
+                    <div class="form-control-plaintext">${data.position}</div>
+                </div>
+            `;
+            
+            // Department - Always shown
+            html += `
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold text-muted">Department</label>
+                    <div class="form-control-plaintext">${data.department}</div>
+                </div>
+            `;
+            
+            // Admin/Product Owner only fields
+            if (isAdminOrOwner) {
+                // Full Name (editable for admin/owner)
+                html += `
                     <div class="col-md-6 mb-3">
                         <label class="form-label fw-bold text-muted">Full Name</label>
                         ${canEdit ? `
@@ -1048,52 +1104,61 @@ table thead th * {
                             <div class="form-control-plaintext">${data.full_name || 'N/A'}</div>
                         `}
                     </div>
+                `;
+                
+                // Employee Code
+                html += `
                     <div class="col-md-6 mb-3">
                         <label class="form-label fw-bold text-muted">Employee Code</label>
                         <div class="form-control-plaintext">${data.employee_code}</div>
                     </div>
+                `;
+                
+                // Insurance Number
+                html += `
                     <div class="col-md-6 mb-3">
                         <label class="form-label fw-bold text-muted">Insurance Number</label>
                         <div class="form-control-plaintext">${data.insurance_number}</div>
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold text-muted">Email</label>
-                        <div class="form-control-plaintext">
-                            <a href="mailto:${data.email}">${data.email}</a>
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold text-muted">Avaya Number</label>
-                        <div class="form-control-plaintext">${data.avaya_number}</div>
-                    </div>
+                `;
+                
+                // Fingerprint Number
+                html += `
                     <div class="col-md-6 mb-3">
                         <label class="form-label fw-bold text-muted">Fingerprint Number</label>
                         <div class="form-control-plaintext">${data.fingerprint_number}</div>
                     </div>
+                `;
+                
+                // Phone Number
+                html += `
                     <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold text-muted">Department</label>
-                        <div class="form-control-plaintext">${data.department}</div>
+                        <label class="form-label fw-bold text-muted">Phone Number</label>
+                        <div class="form-control-plaintext">${data.phone_number}</div>
                     </div>
+                `;
+                
+                // Role
+                html += `
                     <div class="col-md-6 mb-3">
                         <label class="form-label fw-bold text-muted">Role</label>
                         <div class="form-control-plaintext">
                             <span class="badge bg-primary">${data.role.charAt(0).toUpperCase() + data.role.slice(1)}</span>
                         </div>
                     </div>
+                `;
+                
+                // Joining Date
+                html += `
                     <div class="col-md-6 mb-3">
                         <label class="form-label fw-bold text-muted">Joining Date</label>
                         <div class="form-control-plaintext">${data.joining_date}</div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold text-muted">Phone Number</label>
-                        <div class="form-control-plaintext">${data.phone_number}</div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-bold text-muted">Position</label>
-                        <div class="form-control-plaintext">${data.position}</div>
-                    </div>
                 </div>
             `;
+            }
+            
+            html += '</div>';
+            content.innerHTML = html;
         })
         .catch(error => {
             content.innerHTML = `

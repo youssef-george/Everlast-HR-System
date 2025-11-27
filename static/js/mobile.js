@@ -1,4 +1,4 @@
-// Everlast ERP - Mobile Enhancement JavaScript
+// Everlast HR System - Mobile Enhancement JavaScript
 
 document.addEventListener('DOMContentLoaded', function() {
     'use strict';

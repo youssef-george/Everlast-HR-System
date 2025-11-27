@@ -327,10 +327,14 @@ def get_dashboard_stats(user):
                 DailyAttendance.status.in_(['present', 'half-day', 'in_office'])
             ).count()
             
-            # Count team members absent today
-            stats['team_absent_today'] = len(employee_ids) - stats['team_present_today']
+            # Filter to only active employees for counts
+            active_employee_ids = [emp.id for emp in employees if emp.status == 'active']
             
-            stats['total_employees'] = len(employee_ids)
+            # Count team members absent today (only active employees)
+            stats['team_absent_today'] = len(active_employee_ids) - stats['team_present_today']
+            
+            # Count only active employees
+            stats['total_employees'] = len(active_employee_ids)
         else:
             # If manager has no employees, set defaults
             stats['team_present_today'] = 0
@@ -722,7 +726,7 @@ def send_admin_email_notification(subject, message, request_type=None, request_i
                         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
                             <h2 style="margin: 0; font-size: 24px;">
                                 <span style="margin-right: 10px;">📧</span>
-                                EverLastERP Notification
+                                Everlast HR System Notification
                             </h2>
                         </div>
                         
@@ -734,14 +738,14 @@ def send_admin_email_notification(subject, message, request_type=None, request_i
                             
                             <div style="margin: 20px 0; padding: 15px; background: #e3f2fd; border-radius: 6px;">
                                 <p style="margin: 0; font-size: 14px; color: #1565c0;">
-                                    <strong>Action Required:</strong> Please log in to the EverLastERP system to review and process this request.
+                                    <strong>Action Required:</strong> Please log in to the Everlast HR System to review and process this request.
                                 </p>
                             </div>
                         </div>
                         
                         <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; text-align: center;">
                             <p style="margin: 0; font-size: 12px; color: #666;">
-                                This is an automated message from EverLastERP System.<br>
+                                This is an automated message from Everlast HR System.<br>
                                 Please do not reply to this email.
                             </p>
                         </div>

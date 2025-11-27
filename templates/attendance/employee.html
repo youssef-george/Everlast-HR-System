@@ -536,15 +536,23 @@
                                                         </tr>
                                                     </thead>
                                                     <tbody>
+                                                        {% set day_logs = [] %}
                                                         {% for log in record.user.attendance_logs %}
                                                             {% if log.timestamp.date() == record.date %}
+                                                                {% set _ = day_logs.append(log) %}
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                        {% set day_logs = day_logs|sort(attribute='timestamp') %}
+                                                        {% for log in day_logs %}
                                                             <tr>
                                                                 <td>{{ log.timestamp.strftime('%I:%M:%S %p') }}</td>
                                                                 <td>
-                                                                    {% if log.scan_type == 'check-in' %}
+                                                                    {% if loop.first %}
                                                                         <span class="text-success">Check In</span>
-                                                                    {% else %}
+                                                                    {% elif loop.last %}
                                                                         <span class="text-danger">Check Out</span>
+                                                                    {% else %}
+                                                                        <span class="text-secondary">Additional</span>
                                                                     {% endif %}
                                                                 </td>
                                                                 <td>

@@ -1,4 +1,4 @@
-// Everlast ERP - Dashboard JavaScript
+// Everlast HR System - Dashboard JavaScript
 
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize Mini Calendar

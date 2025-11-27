@@ -1,4 +1,4 @@
-// EverLast ERP - Auto-Fetch System for All Roles
+// Everlast HR System - Auto-Fetch System for All Roles
 // This system automatically fetches and updates data for all user roles
 
 class AutoFetchSystem {
@@ -524,7 +524,7 @@ class AutoFetchSystem {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken()
                 },
-                signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : null
+                signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : null  // Increased timeout to 15 seconds
             });
             
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -545,7 +545,7 @@ class AutoFetchSystem {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken()
                 },
-                signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : null
+                signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : null  // Increased timeout to 15 seconds
             });
             
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -566,7 +566,7 @@ class AutoFetchSystem {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken()
                 },
-                signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : null
+                signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : null  // Increased timeout to 15 seconds
             });
             
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -587,7 +587,7 @@ class AutoFetchSystem {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken()
                 },
-                signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : null
+                signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : null  // Increased timeout to 15 seconds
             });
             
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -608,7 +608,7 @@ class AutoFetchSystem {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken()
                 },
-                signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : null
+                signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : null  // Increased timeout to 15 seconds
             });
             
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -629,7 +629,7 @@ class AutoFetchSystem {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken()
                 },
-                signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : null
+                signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : null  // Increased timeout to 15 seconds
             });
             
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -650,7 +650,7 @@ class AutoFetchSystem {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken()
                 },
-                signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : null
+                signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : null  // Increased timeout to 15 seconds
             });
             
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -671,7 +671,7 @@ class AutoFetchSystem {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken()
                 },
-                signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : null
+                signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : null  // Increased timeout to 15 seconds
             });
             
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -692,7 +692,7 @@ class AutoFetchSystem {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken()
                 },
-                signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : null
+                signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : null  // Increased timeout to 15 seconds
             });
             
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -713,7 +713,7 @@ class AutoFetchSystem {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken()
                 },
-                signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : null
+                signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : null  // Increased timeout to 15 seconds
             });
             
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -816,7 +816,7 @@ class AutoFetchSystem {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken()
                 },
-                signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : null
+                signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : null  // Increased timeout to 15 seconds
             });
             
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -837,7 +837,7 @@ class AutoFetchSystem {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken()
                 },
-                signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : null
+                signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : null  // Increased timeout to 15 seconds
             });
             
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -858,7 +858,7 @@ class AutoFetchSystem {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken()
                 },
-                signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : null
+                signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : null  // Increased timeout to 15 seconds
             });
             
             if (!response.ok) throw new Error(`HTTP ${response.status}`);

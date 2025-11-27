@@ -1,4 +1,4 @@
-// Dashboard Enhancements for EverLast ERP
+// Dashboard Enhancements for Everlast HR System
 // Enhanced UI interactions and chart functionality
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -139,8 +139,13 @@ function initializeStatsAnimations() {
         });
         
         statCards.forEach(card => {
-            if (card && card instanceof Node) {
-                observer.observe(card);
+            // Enhanced validation before observing
+            if (card && card instanceof Node && card.nodeType && document.contains(card)) {
+                try {
+                    observer.observe(card);
+                } catch (error) {
+                    console.warn('MutationObserver.observe error for card:', error.message);
+                }
                 
                 // Add hover effects
                 card.addEventListener('mouseenter', function() {

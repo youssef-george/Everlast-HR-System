@@ -232,7 +232,8 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for log in logs %}
+                                    {% set sorted_logs = logs|sort(attribute='timestamp') %}
+                                    {% for log in sorted_logs %}
                                     <tr>
                                         <td>
                                             <div class="d-flex align-items-center">
@@ -242,9 +243,13 @@
                                             </div>
                                         </td>
                                         <td>
-                                            <span class="badge badge-{{ 'success' if log.scan_type == 'check-in' else 'danger' }} fs-7 fw-bolder">
-                                                {{ log.scan_type|title }}
-                                            </span>
+                                            {% if loop.first %}
+                                                <span class="badge badge-success fs-7 fw-bolder">Check In</span>
+                                            {% elif loop.last %}
+                                                <span class="badge badge-danger fs-7 fw-bolder">Check Out</span>
+                                            {% else %}
+                                                <span class="badge badge-secondary fs-7 fw-bolder">Additional</span>
+                                            {% endif %}
                                         </td>
                                         <td>
                                             <span class="text-dark fw-bolder text-hover-primary fs-6">

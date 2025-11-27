@@ -1,4 +1,4 @@
-// Everlast ERP - Main JavaScript v1.1
+// Everlast HR System - Main JavaScript v1.1
 
 // Prevent MutationObserver errors from external scripts
 (function() {

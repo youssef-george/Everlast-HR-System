@@ -1,4 +1,4 @@
-/* Everlast ERP - Main Stylesheet */
+/* Everlast HR System - Main Stylesheet */
 
 :root {
     /* Primary colors as specified in requirements */
@@ -89,6 +89,7 @@ body {
     border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
     min-height: 80px;
+    gap: 0.75rem;
 }
 
 .sidebar-nav-container {
@@ -125,12 +126,26 @@ body {
     font-size: 1.25rem;
     font-weight: 600;
     color: var(--primary-color);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .logo-icon {
     color: var(--primary-color);
     font-size: 24px;
     margin-right: 10px;
+    flex-shrink: 0;
+}
+
+.logo-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 1.1rem;
+    line-height: 1.3;
+    flex: 1;
+    min-width: 0;
 }
 
 .sidebar-toggle {

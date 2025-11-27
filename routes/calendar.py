@@ -1,12 +1,13 @@
 from flask import Blueprint, render_template, jsonify, request, redirect, url_for, make_response, send_file
 from flask_login import login_required, current_user
-from datetime import datetime, timedelta
-from models import LeaveRequest, PermissionRequest, User, Department, AttendanceLog
+from datetime import datetime, timedelta, date
+from models import LeaveRequest, PermissionRequest, User, Department, AttendanceLog, DailyAttendance, db
 from helpers import role_required
 from report_helpers.report_calculations import calculate_multiple_users_report_data
 from sqlalchemy import func, or_, and_
 import io
 import os
+import logging
 
 calendar_bp = Blueprint('calendar', __name__, url_prefix='/calendar')
 
@@ -506,6 +507,19 @@ def attendance_report():
         # Specific users selected - filter to only those users
         users = [user for user in users if user.id in user_ids]
     
+    # Sort users by fingerprint number: Not Assigned (None/empty) first, then numeric low to high
+    def get_fingerprint_sort_key(user):
+        fp = user.fingerprint_number
+        if not fp or fp.strip() == '':
+            return (0, 0)  # Not Assigned comes first
+        try:
+            fp_int = int(fp.strip())
+            return (1, fp_int)  # Numeric sorting
+        except (ValueError, TypeError):
+            return (2, 0)  # Invalid/non-numeric comes last
+    
+    users = sorted(users, key=get_fingerprint_sort_key)
+    
     # Optimize: Fetch all attendance logs for all users in the date range at once
     start_datetime = datetime.combine(start_date, datetime.min.time())
     end_datetime = datetime.combine(end_date, datetime.max.time())
@@ -529,6 +543,59 @@ def attendance_report():
         if log_date not in logs_by_user_date[log.user_id]:
             logs_by_user_date[log.user_id][log_date] = []
         logs_by_user_date[log.user_id][log_date].append(log)
+    
+    # BULK FIX: Fix all existing records with 2+ logs but no checkout
+    # This ensures checkout time appears for all days with multiple logs
+    logging.info("Starting bulk fix for records with 2+ logs but no checkout...")
+    fixed_count = 0
+    
+    for user_id in user_ids:
+        # Get all records for this user in the date range
+        all_records = DailyAttendance.query.filter(
+            DailyAttendance.user_id == user_id,
+            DailyAttendance.date >= start_date,
+            DailyAttendance.date <= end_date
+        ).all()
+        
+        for record in all_records:
+            # Get all logs for this day to check actual count
+            start_of_day = datetime.combine(record.date, datetime.min.time())
+            end_of_day = datetime.combine(record.date, datetime.max.time())
+            daily_logs = AttendanceLog.query.filter(
+                AttendanceLog.user_id == user_id,
+                AttendanceLog.timestamp.between(start_of_day, end_of_day)
+            ).order_by(AttendanceLog.timestamp).all()
+            
+            # Fix if we have 2+ logs but no checkout (check actual log count, not entry_count)
+            if len(daily_logs) >= 2 and not record.last_check_out:
+                # Use the last log as checkout (same logic as reports)
+                sorted_logs = sorted(daily_logs, key=lambda x: x.timestamp)
+                record.last_check_out = sorted_logs[-1].timestamp
+                
+                # Update entry_count to match actual log count
+                record.entry_count = len(daily_logs)
+                
+                # Recalculate working hours if we have both check-in and checkout
+                if record.first_check_in and record.last_check_out:
+                    duration_seconds = (record.last_check_out - record.first_check_in).total_seconds()
+                    record.total_working_hours = duration_seconds / 3600
+                
+                # Mark as complete day (not incomplete)
+                record.is_incomplete_day = False
+                
+                # Update the record in the database
+                db.session.add(record)
+                fixed_count += 1
+                logging.info(f"Bulk fix: Set checkout for user {user_id} on {record.date}: {record.last_check_out} (found {len(daily_logs)} logs)")
+    
+    # Commit all fixes at once
+    try:
+        db.session.commit()
+        if fixed_count > 0:
+            logging.info(f"Bulk fix completed: Fixed {fixed_count} records with missing checkout times")
+    except Exception as e:
+        logging.error(f"Error committing bulk fixes: {str(e)}")
+        db.session.rollback()
     
     # Generate report data for each user using shared calculation logic
     all_user_reports = calculate_multiple_users_report_data(users, start_date, end_date)
@@ -652,13 +719,33 @@ def export_attendance_report():
         employees = get_employees_for_manager(current_user.id)
         users = [emp for emp in employees if emp.status == 'active'] + [current_user]
     elif current_user.role in ['admin', 'product_owner', 'director']:
-        users = User.query.filter_by(status='active').all()
+        # Admin/Product Owner/Director sees all active users (same as regular report)
+        users = User.query.filter(
+            User.status == 'active',
+            ~User.first_name.like('User%'),  # Exclude generic test users
+            ~User.first_name.like('NN-%'),   # Exclude numbered test users
+            User.first_name != '',           # Exclude empty names
+            User.last_name != ''             # Exclude users without last names
+        ).all()
     else:
         users = [current_user] if current_user.status == 'active' else []
     
     # Filter users if specific users are selected
     if user_ids:
         users = [user for user in users if user.id in user_ids]
+    
+    # Sort users by fingerprint number: Not Assigned (None/empty) first, then numeric low to high
+    def get_fingerprint_sort_key(user):
+        fp = user.fingerprint_number
+        if not fp or fp.strip() == '':
+            return (0, 0)  # Not Assigned comes first
+        try:
+            fp_int = int(fp.strip())
+            return (1, fp_int)  # Numeric sorting
+        except (ValueError, TypeError):
+            return (2, 0)  # Invalid/non-numeric comes last
+    
+    users = sorted(users, key=get_fingerprint_sort_key)
     
     # Calculate report data using shared calculation logic
     all_user_reports = calculate_multiple_users_report_data(users, start_date, end_date)

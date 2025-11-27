@@ -1517,10 +1517,10 @@ table thead th * {
         if (activeSearchInput) {
             // Input event for typing - immediate on mobile
             activeSearchInput.addEventListener('input', function(e) {
-                clearTimeout(searchTimeout);
+            clearTimeout(searchTimeout);
                 const isMobile = window.innerWidth <= 768;
                 const delay = isMobile ? 100 : 300; // Faster on mobile
-                searchTimeout = setTimeout(() => {
+            searchTimeout = setTimeout(() => {
                     filterMembers();
                 }, delay);
             });
@@ -1541,7 +1541,7 @@ table thead th * {
             // Touch events for mobile
             activeSearchInput.addEventListener('touchend', function() {
                 setTimeout(() => filterMembers(), 100);
-            });
+        });
         }
         
         // Active members department filter - Works on mobile and desktop
@@ -1708,26 +1708,26 @@ table thead th * {
         const tableResponsive = document.querySelector('.table-responsive');
         const leftIndicator = document.querySelector('.scroll-indicator.left-indicator');
         const rightIndicator = document.querySelector('.scroll-indicator.right-indicator');
-        
+
         if (tableResponsive && leftIndicator && rightIndicator) {
-            function updateScrollIndicators() {
+        function updateScrollIndicators() {
                 const scrollLeft = tableResponsive.scrollLeft;
                 const maxScroll = tableResponsive.scrollWidth - tableResponsive.clientWidth;
                 const scrollThreshold = 10;
-                
-                // Show/hide left indicator
-                if (scrollLeft > scrollThreshold) {
-                    leftIndicator.classList.add('active');
-                } else {
-                    leftIndicator.classList.remove('active');
-                }
-                
-                // Show/hide right indicator
+
+            // Show/hide left indicator
+            if (scrollLeft > scrollThreshold) {
+                leftIndicator.classList.add('active');
+            } else {
+                leftIndicator.classList.remove('active');
+            }
+
+            // Show/hide right indicator
                 if (scrollLeft < maxScroll - scrollThreshold) {
-                    rightIndicator.classList.add('active');
-                } else {
-                    rightIndicator.classList.remove('active');
-                }
+                rightIndicator.classList.add('active');
+            } else {
+                rightIndicator.classList.remove('active');
+            }
             }
             
             // Scroll event listener

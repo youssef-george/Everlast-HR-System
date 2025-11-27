@@ -1,4 +1,4 @@
-// Global Loading Indicator for Everlast ERP
+// Global Loading Indicator for Everlast HR System
 // This script provides a universal loading indicator for all pages
 
 (function() {

@@ -1,4 +1,4 @@
-// Connection Monitor for Everlast ERP
+// Connection Monitor for Everlast HR System
 // Monitors connection health and provides user feedback
 
 class ConnectionMonitor {

@@ -1,5 +1,5 @@
 /**
- * Everlast ERP - Responsive Sidebar Manager
+ * Everlast HR System - Responsive Sidebar Manager
  * Handles mobile sidebar behavior, touch events, and responsive layout
  */
 

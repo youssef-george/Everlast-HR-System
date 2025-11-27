@@ -120,7 +120,11 @@ def view(slug):
 @role_required('product_owner')
 def admin_panel():
     """Admin panel for Product Owner to manage all documentation"""
-    pages = DocumentationPage.query.order_by(DocumentationPage.created_at.desc()).all()
+    # Expire all objects to ensure fresh data from database
+    db.session.expire_all()
+    
+    # Query pages with fresh data - use a new query to bypass any caching
+    pages = db.session.query(DocumentationPage).order_by(DocumentationPage.created_at.desc()).all()
     
     # Get statistics
     total_pages = len(pages)
@@ -169,20 +173,35 @@ def create():
             slug = f"{base_slug}-{counter}"
             counter += 1
         
+        # Handle visible_roles - ensure it's properly set
+        visible_roles_data = form.visible_roles.data
+        if visible_roles_data:
+            # Ensure it's a list
+            if isinstance(visible_roles_data, str):
+                visible_roles_data = [visible_roles_data]
+            visible_roles_data = list(visible_roles_data) if visible_roles_data else None
+        else:
+            visible_roles_data = None
+        
         page = DocumentationPage(
             title=form.title.data,
             slug=slug,
             content=form.content.data,
             category=form.category.data,
             tags=tags if tags else None,
-            visible_roles=form.visible_roles.data if form.visible_roles.data else None,
+            visible_roles=visible_roles_data,
             is_published=is_published,
             created_by=current_user.id,
             updated_by=current_user.id
         )
         
         db.session.add(page)
+        db.session.flush()  # Flush to ensure changes are tracked
         db.session.commit()
+        
+        # Re-query the page to ensure we have the latest data from database
+        db.session.expire_all()  # Expire all objects to force refresh
+        page = DocumentationPage.query.get(page.id)
         
         flash(f'Documentation page "{page.title}" has been created successfully!', 'success')
         return redirect(url_for('documentation.admin_panel'))
@@ -196,15 +215,24 @@ def create():
 def edit(page_id):
     """Edit an existing documentation page"""
     page = DocumentationPage.query.get_or_404(page_id)
-    form = DocumentationPageForm(obj=page)
+    form = DocumentationPageForm()
+    
+    # Populate form with existing data
+    if request.method == 'GET':
+        form.title.data = page.title
+        form.content.data = page.content
+        form.category.data = page.category
+        form.is_published.data = page.is_published
     
     # Convert tags array to comma-separated string for form
     if page.tags:
         form.tags.data = ', '.join(page.tags)
     
-    # Set visible_roles
+    # Set visible_roles - ensure it's a list
     if page.visible_roles:
-        form.visible_roles.data = page.visible_roles
+        form.visible_roles.data = list(page.visible_roles) if isinstance(page.visible_roles, (list, tuple)) else [page.visible_roles]
+    else:
+        form.visible_roles.data = []
     
     if form.validate_on_submit():
         # Handle tags
@@ -228,16 +256,47 @@ def edit(page_id):
                 counter += 1
             page.slug = slug
         
+        # Update all fields
         page.title = form.title.data
         page.content = form.content.data
         page.category = form.category.data
         page.tags = tags if tags else None
-        page.visible_roles = form.visible_roles.data if form.visible_roles.data else None
+        
+        # Handle visible_roles - ensure it's properly set
+        visible_roles_data = form.visible_roles.data
+        logger.info(f"Form visible_roles.data: {visible_roles_data}, type: {type(visible_roles_data)}")
+        
+        if visible_roles_data and len(visible_roles_data) > 0:
+            # Ensure it's a list
+            if isinstance(visible_roles_data, str):
+                visible_roles_data = [visible_roles_data]
+            elif not isinstance(visible_roles_data, (list, tuple)):
+                visible_roles_data = [visible_roles_data]
+            page.visible_roles = list(visible_roles_data)
+            logger.info(f"Setting visible_roles to: {page.visible_roles}")
+        else:
+            page.visible_roles = None
+            logger.info("Setting visible_roles to None (empty selection)")
+        
         page.is_published = is_published
         page.updated_by = current_user.id
         page.updated_at = datetime.utcnow()
         
+        # Explicitly mark the object as modified
+        db.session.add(page)
+        db.session.flush()  # Flush to ensure changes are tracked
+        
+        # Log before commit
+        logger.info(f"About to commit page {page.id}: title={page.title}, visible_roles={page.visible_roles}, is_published={page.is_published}")
+        
         db.session.commit()
+        
+        # Re-query the page to ensure we have the latest data from database
+        db.session.expire_all()  # Expire all objects to force refresh
+        page = DocumentationPage.query.get(page_id)
+        
+        # Log after re-query
+        logger.info(f"After commit and re-query page {page.id}: title={page.title}, visible_roles={page.visible_roles}, is_published={page.is_published}")
         
         flash(f'Documentation page "{page.title}" has been updated successfully!', 'success')
         return redirect(url_for('documentation.admin_panel'))

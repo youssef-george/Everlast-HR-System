@@ -48,6 +48,45 @@ class User(UserMixin, db.Model):
     def get_full_name(self):
         return f"{self.first_name} {self.last_name}"
     
+    @staticmethod
+    def generate_slug(first_name, last_name):
+        """Generate a URL-friendly slug from first and last name"""
+        import re
+        # Combine first and last name
+        full_name = f"{first_name} {last_name}".strip()
+        # Convert to lowercase
+        slug = full_name.lower()
+        # Replace special characters with hyphens
+        slug = re.sub(r'[^\w\s-]', '', slug)
+        # Replace multiple spaces/hyphens with single hyphen
+        slug = re.sub(r'[-\s]+', '-', slug)
+        # Remove leading/trailing hyphens
+        slug = slug.strip('-')
+        return slug
+    
+    def get_slug(self):
+        """Get the slug for this user (first-last-name format)"""
+        from extensions import db
+        base_slug = self.generate_slug(self.first_name, self.last_name)
+        # Get all users with the same first and last name, ordered by ID
+        users_with_same_name = User.query.filter(
+            db.func.lower(User.first_name) == self.first_name.lower(),
+            db.func.lower(User.last_name) == self.last_name.lower()
+        ).order_by(User.id).all()
+        
+        # Find this user's position in the list
+        if len(users_with_same_name) > 1:
+            # Find index of current user (0-based)
+            for idx, user in enumerate(users_with_same_name):
+                if user.id == self.id:
+                    # If it's the first one, no suffix needed
+                    if idx == 0:
+                        return base_slug
+                    # Otherwise, add 1-based index as suffix
+                    return f"{base_slug}-{idx + 1}"
+        
+        return base_slug
+    
     def is_admin(self):
         return self.role == 'admin'
     
@@ -292,7 +331,7 @@ class SMTPConfiguration(db.Model):
     smtp_password = db.Column(db.Text, nullable=False)  # This should be encrypted in production
     use_tls = db.Column(db.Boolean, default=True)
     use_ssl = db.Column(db.Boolean, default=False)
-    sender_name = db.Column(db.String(255), nullable=False, default='EverLastERP System')
+    sender_name = db.Column(db.String(255), nullable=False, default='Everlast HR System')
     sender_email = db.Column(db.String(255), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
     

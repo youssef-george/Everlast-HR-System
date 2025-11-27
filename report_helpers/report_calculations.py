@@ -71,6 +71,7 @@ def calculate_unified_report_data(user, start_date, end_date):
     # Calculate present and absent days more accurately
     present_days = 0
     absent_days = 0
+    incomplete_days = 0  # Track incomplete days based on actual log count
     
     # Count actual days from attendance records
     for record in attendance_records:
@@ -93,17 +94,31 @@ def calculate_unified_report_data(user, start_date, end_date):
                 'scan_type': log.scan_type
             } for log in raw_logs
         ]
+        
+        # FIX: Count incomplete days only if there is exactly 1 log (not based on database flag)
+        if len(raw_logs) == 1:
+            incomplete_days += 1
 
         # Process attendance records to dynamically add check-in/out and hours worked for display
         # Ensure these attributes are present for template rendering
         record.check_in = record.first_check_in
-        record.check_out = record.last_check_out
+        
+        # FIX: Always use the last log as check-out when there are 2+ logs
+        if len(raw_logs) >= 2:
+            # If we have 2+ logs, always use the last log as check-out
+            sorted_logs = sorted(raw_logs, key=lambda x: x.timestamp)
+            record.check_out = sorted_logs[-1].timestamp
+            # Also update last_check_out for consistency
+            if not record.last_check_out:
+                record.last_check_out = sorted_logs[-1].timestamp
+        else:
+            record.check_out = record.last_check_out
 
         hours_worked = 0.0
         extra_time = 0.0
 
-        if record.first_check_in and record.last_check_out:
-            time_diff = record.last_check_out - record.first_check_in
+        if record.first_check_in and record.check_out:
+            time_diff = record.check_out - record.first_check_in
             hours_worked = time_diff.total_seconds() / 3600
             extra_time = hours_worked - 9 # Assuming 9 hours is standard
         elif record.is_incomplete_day:
@@ -111,13 +126,27 @@ def calculate_unified_report_data(user, start_date, end_date):
             hours_worked = 9.0
             extra_time = 0.0
         
-        # Format hours_worked to HH:MM
-        total_seconds = int(hours_worked * 3600)
-        h, remainder = divmod(total_seconds, 3600)
-        m, _ = divmod(remainder, 60)
-        record.formatted_hours_worked = f"{h:02}:{m:02}" if (h > 0 or m > 0) else "-"
+        # Format hours_worked to 'Xh Ym' format
+        from helpers import format_hours_minutes
+        record.formatted_hours_worked = format_hours_minutes(hours_worked) if hours_worked > 0 else "-"
         record.hours_worked = hours_worked # Keep raw value for other calculations if needed
         record.extra_time = extra_time
+        
+        # FIX: Check for approved leave requests and update status accordingly
+        leave_request_for_date = LeaveRequest.query.filter(
+            LeaveRequest.user_id == user.id,
+            LeaveRequest.start_date <= record.date,
+            LeaveRequest.end_date >= record.date,
+            LeaveRequest.status == 'approved'
+        ).first()
+        
+        if leave_request_for_date:
+            # Update status to show leave type instead of Absent
+            if leave_request_for_date.leave_type:
+                leave_type_name = leave_request_for_date.leave_type.name
+                record.status = leave_type_name
+            else:
+                record.status = 'Annual Leave'  # Default if no type specified
     
     # Calculate different types of leave days from actual leave requests
     annual_leave_days = 0  # This will now include both annual and sick leave
@@ -448,9 +477,7 @@ def calculate_unified_report_data(user, start_date, end_date):
     # - Multiple log entries (even with same timestamp): Complete day
     # - No logs: Absent (not incomplete)
     # FIXED: Days with 10+ logs are now correctly marked as complete
-    incomplete_days = 0
-    if attendance_records:
-        incomplete_days = sum(1 for record in attendance_records if record.is_incomplete_day)
+    # NOTE: incomplete_days is now calculated above during the loop by checking actual log count (len(raw_logs) == 1)
     
     # Calculate total working days as: day off + present + annual + paid
     total_working_days = day_off_days + present_days + annual_leave_days + paid_leave_days

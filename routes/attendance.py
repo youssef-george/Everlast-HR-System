@@ -162,6 +162,9 @@ def determine_attendance_type_dynamic(logs_for_user):
     
     FIXED: Days with 10+ logs should NEVER be marked as incomplete
     
+    IMPORTANT: When there are 2 or more logs, ALWAYS use the LAST log (by timestamp) as checkout.
+    This ensures the checkout column always shows the most recent log time.
+    
     Args:
         logs_for_user: List of logs for a single user on a single day
     
@@ -171,7 +174,7 @@ def determine_attendance_type_dynamic(logs_for_user):
     if not logs_for_user:
         return {'check_in': None, 'check_out': None, 'is_incomplete': False}
 
-    # Sort all logs by timestamp to ensure proper order
+    # Sort all logs by timestamp to ensure proper order (ascending)
     all_logs = sorted(logs_for_user, key=lambda x: x.timestamp)
     
     # ALWAYS use first log as check-in and last log as check-out
@@ -189,10 +192,12 @@ def determine_attendance_type_dynamic(logs_for_user):
             'is_incomplete': True
         }
     else:
-        # Multiple logs = complete day, use first and last logs
+        # Multiple logs (2 or more) = complete day
+        # ALWAYS use the LAST log (most recent timestamp) as checkout
+        # This ensures checkout column always displays when there are 2+ logs
         return {
             'check_in': first_log,
-            'check_out': last_log,
+            'check_out': last_log,  # Always the last log when 2+ logs exist
             'is_incomplete': False
         }
 
@@ -344,10 +349,21 @@ def process_daily_attendance(user_id, attendance_date):
     attendance_result = determine_attendance_type_dynamic(daily_logs)
 
     logging.debug(f"[ATTENDANCE_DEBUG] determine_attendance_type_dynamic returned: {attendance_result}")
+    logging.debug(f"[ATTENDANCE_DEBUG] Total logs for this day: {len(daily_logs)}")
 
     first_check_in = attendance_result['check_in'].timestamp if attendance_result['check_in'] else None
+    # ALWAYS use the last log as checkout when there are 2+ logs
+    # Extract timestamp from the last log object returned by determine_attendance_type_dynamic
     last_check_out = attendance_result['check_out'].timestamp if attendance_result['check_out'] else None
     is_incomplete_day = attendance_result['is_incomplete']
+    
+    # Additional validation: If we have 2+ logs but no checkout, force it to be the last log
+    # This ensures checkout always appears in the Calendar Attendance Report when there are multiple logs
+    if len(daily_logs) >= 2 and not last_check_out:
+        # This should not happen, but as a safety measure, use the last log directly
+        sorted_logs = sorted(daily_logs, key=lambda x: x.timestamp)
+        last_check_out = sorted_logs[-1].timestamp
+        logging.warning(f"[ATTENDANCE_DEBUG] Safety fix: Forced last_check_out to last log timestamp: {last_check_out}")
 
     logging.debug(f"[ATTENDANCE_DEBUG] After assignment from attendance_result: First Check-in: {first_check_in}, Last Check-out: {last_check_out}, Incomplete: {is_incomplete_day}")
     
@@ -2482,6 +2498,38 @@ def employee_attendance(user_id):
         # Get daily attendance records
         attendance_records = user.get_daily_attendance(start_date, end_date)
         
+        # FIX: Ensure records with 2+ logs always have checkout set (same logic as my_attendance)
+        for record in attendance_records:
+            if record.entry_count >= 2 and not record.last_check_out:
+                # Get all logs for this day
+                start_of_day = datetime.combine(record.date, datetime.min.time())
+                end_of_day = datetime.combine(record.date, datetime.max.time())
+                daily_logs = AttendanceLog.query.filter(
+                    AttendanceLog.user_id == user_id,
+                    AttendanceLog.timestamp.between(start_of_day, end_of_day)
+                ).order_by(AttendanceLog.timestamp).all()
+                
+                if len(daily_logs) >= 2:
+                    # Use the last log as checkout (same logic as reports)
+                    sorted_logs = sorted(daily_logs, key=lambda x: x.timestamp)
+                    record.last_check_out = sorted_logs[-1].timestamp
+                    
+                    # Recalculate working hours if we have both check-in and checkout
+                    if record.first_check_in and record.last_check_out:
+                        duration_seconds = (record.last_check_out - record.first_check_in).total_seconds()
+                        record.total_working_hours = duration_seconds / 3600
+                    
+                    # Update the record in the database
+                    db.session.add(record)
+                    logging.info(f"Fixed checkout for user {user_id} on {record.date}: Set to {record.last_check_out}")
+        
+        # Commit any fixes we made
+        try:
+            db.session.commit()
+        except Exception as e:
+            logging.error(f"Error committing checkout fixes in employee_attendance: {str(e)}")
+            db.session.rollback()
+        
         # Get leave and permission requests for the date range
         leave_requests = LeaveRequest.query.filter(
             LeaveRequest.user_id == user.id,
@@ -3561,7 +3609,34 @@ def my_attendance():
                 for current_date in date_list:
                     if current_date in existing_records_dict:
                         # Use existing record
-                        user_records_for_display.append(existing_records_dict[current_date])
+                        record = existing_records_dict[current_date]
+                        
+                        # FIX: If record has 2+ logs but no checkout, fetch the last log and set it as checkout
+                        # This ensures checkout always appears when there are multiple logs
+                        if record.entry_count >= 2 and not record.last_check_out:
+                            # Get all logs for this day
+                            start_of_day = datetime.combine(current_date, datetime.min.time())
+                            end_of_day = datetime.combine(current_date, datetime.max.time())
+                            daily_logs = AttendanceLog.query.filter(
+                                AttendanceLog.user_id == user_id,
+                                AttendanceLog.timestamp.between(start_of_day, end_of_day)
+                            ).order_by(AttendanceLog.timestamp).all()
+                            
+                            if len(daily_logs) >= 2:
+                                # Use the last log as checkout (same logic as reports)
+                                sorted_logs = sorted(daily_logs, key=lambda x: x.timestamp)
+                                record.last_check_out = sorted_logs[-1].timestamp
+                                
+                                # Recalculate working hours if we have both check-in and checkout
+                                if record.first_check_in and record.last_check_out:
+                                    duration_seconds = (record.last_check_out - record.first_check_in).total_seconds()
+                                    record.total_working_hours = duration_seconds / 3600
+                                
+                                # Update the record in the database
+                                db.session.add(record)
+                                logging.info(f"Fixed checkout for user {user_id} on {current_date}: Set to {record.last_check_out}")
+                        
+                        user_records_for_display.append(record)
                     else:
                         # Create a placeholder record
                         placeholder = DailyAttendance()
@@ -3579,6 +3654,13 @@ def my_attendance():
                             placeholder.status = 'absent'
                         
                         user_records_for_display.append(placeholder)
+                
+                # Commit any fixes we made
+                try:
+                    db.session.commit()
+                except Exception as e:
+                    logging.error(f"Error committing checkout fixes: {str(e)}")
+                    db.session.rollback()
                 
                 # Sort records by date (newest first)
                 user_records_for_display.sort(key=lambda x: x.date, reverse=True)

@@ -111,7 +111,17 @@ def create_app(config_name='default'):
     @login_manager.user_loader
     def load_user(user_id):
         from models import User
-        return User.query.get(int(user_id))
+        from sqlalchemy.exc import OperationalError
+        from psycopg2 import OperationalError as Psycopg2OperationalError
+        try:
+            return User.query.get(int(user_id))
+        except (OperationalError, Psycopg2OperationalError) as e:
+            logging.error(f"Database connection error while loading user: {str(e)}")
+            # Return None to indicate user cannot be loaded
+            return None
+        except Exception as e:
+            logging.error(f"Error loading user {user_id}: {str(e)}")
+            return None
     
     # Make config available to templates
     @app.context_processor
@@ -647,6 +657,7 @@ def create_app(config_name='default'):
         from routes.documentation import documentation_bp
         from routes.email_templates import email_templates_bp
         from routes.tickets import tickets_bp
+        from routes.members import members_bp
         
         # Register blueprints
         app.register_blueprint(auth_bp)
@@ -663,6 +674,7 @@ def create_app(config_name='default'):
         app.register_blueprint(documentation_bp)
         app.register_blueprint(email_templates_bp)
         app.register_blueprint(tickets_bp)
+        app.register_blueprint(members_bp)
         
         # Initialize database
         # db.create_all()  # Commented out - using migrations instead
@@ -713,7 +725,7 @@ def create_app(config_name='default'):
                             
                             <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; text-align: center;">
                                 <p style="margin: 0; font-size: 12px; color: #666;">
-                                    This is an automated message from EverLastERP System.<br>
+                                    This is an automated message from Everlast HR System.<br>
                                     Please do not reply to this email.
                                 </p>
                             </div>
@@ -762,7 +774,7 @@ def create_app(config_name='default'):
                             
                             <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; text-align: center;">
                                 <p style="margin: 0; font-size: 12px; color: #666;">
-                                    This is an automated message from EverLastERP System.<br>
+                                    This is an automated message from Everlast HR System.<br>
                                     Please do not reply to this email.
                                 </p>
                             </div>
@@ -809,7 +821,7 @@ def create_app(config_name='default'):
                             
                             <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; text-align: center;">
                                 <p style="margin: 0; font-size: 12px; color: #666;">
-                                    This is an automated message from EverLastERP System.<br>
+                                    This is an automated message from Everlast HR System.<br>
                                     Please do not reply to this email.
                                 </p>
                             </div>
@@ -856,7 +868,7 @@ def create_app(config_name='default'):
                             
                             <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; text-align: center;">
                                 <p style="margin: 0; font-size: 12px; color: #666;">
-                                    This is an automated message from EverLastERP System.<br>
+                                    This is an automated message from Everlast HR System.<br>
                                     Please do not reply to this email.
                                 </p>
                             </div>
@@ -903,7 +915,7 @@ def create_app(config_name='default'):
                             
                             <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; text-align: center;">
                                 <p style="margin: 0; font-size: 12px; color: #666;">
-                                    This is an automated message from EverLastERP System.<br>
+                                    This is an automated message from Everlast HR System.<br>
                                     Please do not reply to this email.
                                 </p>
                             </div>
@@ -952,7 +964,7 @@ def create_app(config_name='default'):
                             
                             <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; text-align: center;">
                                 <p style="margin: 0; font-size: 12px; color: #666;">
-                                    This is an automated message from EverLastERP System.<br>
+                                    This is an automated message from Everlast HR System.<br>
                                     Please do not reply to this email.
                                 </p>
                             </div>
@@ -999,7 +1011,7 @@ def create_app(config_name='default'):
                             
                             <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; text-align: center;">
                                 <p style="margin: 0; font-size: 12px; color: #666;">
-                                    This is an automated message from EverLastERP System.<br>
+                                    This is an automated message from Everlast HR System.<br>
                                     Please do not reply to this email.
                                 </p>
                             </div>
@@ -1046,7 +1058,7 @@ def create_app(config_name='default'):
                             
                             <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; text-align: center;">
                                 <p style="margin: 0; font-size: 12px; color: #666;">
-                                    This is an automated message from EverLastERP System.<br>
+                                    This is an automated message from Everlast HR System.<br>
                                     Please do not reply to this email.
                                 </p>
                             </div>
@@ -1091,7 +1103,7 @@ def create_app(config_name='default'):
         
         <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; text-align: center;">
             <p style="margin: 0; font-size: 12px; color: #666;">
-                This is an automated message from EverLastERP System.<br>
+                This is an automated message from Everlast HR System.<br>
                 Please do not reply to this email.
             </p>
         </div>
@@ -1135,7 +1147,7 @@ def create_app(config_name='default'):
         
         <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; text-align: center;">
             <p style="margin: 0; font-size: 12px; color: #666;">
-                This is an automated message from EverLastERP System.<br>
+                This is an automated message from Everlast HR System.<br>
                 Please do not reply to this email.
             </p>
         </div>
@@ -1380,7 +1392,7 @@ if __name__ == '__main__':
     
     try:
         print("\n" + "=" * 70)
-        print("EverLast ERP Server Starting")
+        print("Everlast HR System Server Starting")
         print("=" * 70)
         print(f"\nServer Configuration:")
         print(f"   - Host: 0.0.0.0 (Listening on all network interfaces)")
@@ -1402,7 +1414,7 @@ if __name__ == '__main__':
     except UnicodeEncodeError:
         # Fallback without emojis if encoding still fails
         print("\n" + "=" * 70)
-        print("EverLast ERP Server Starting")
+        print("Everlast HR System Server Starting")
         print("=" * 70)
         print(f"\nServer Configuration:")
         print(f"   - Host: 0.0.0.0 (Listening on all network interfaces)")
