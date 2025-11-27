@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ title }} | Everlast ERP</title>
+    <title>{{ title }} | Everlast HR System</title>
     
     <!-- Favicon -->
     <link rel="shortcut icon" href="#" type="image/x-icon">
@@ -30,6 +30,7 @@
     <link href="{{ url_for('static', filename='css/mobile-tables.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/mobile-sidebar.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/mobile-complete-fix.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/mobile-unified-fix.css') }}" rel="stylesheet">
     
     {% block extra_css %}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -131,13 +132,22 @@
             }
             // Suppress Chrome extension runtime errors and dynamic import errors
             if (message.includes('runtime.lastError') || 
+                message.includes('runtime.lasterror') ||
+                message.includes('Unchecked runtime.lastError') ||
                 message.includes('message channel closed') ||
+                message.includes('Message channel closed') ||
                 message.includes('Extension context invalidated') ||
                 message.includes('extension context invalidated') ||
                 message.includes('A listener indicated an asynchronous response') ||
+                message.includes('listener indicated an asynchronous response') ||
+                message.includes('asynchronous response') ||
                 message.includes('Failed to fetch dynamically imported module') ||
                 message.includes('chrome-extension://') ||
                 fullMessage.includes('chrome-extension://') ||
+                fullMessage.includes('runtime.lasterror') ||
+                fullMessage.includes('message channel closed') ||
+                fullMessage.includes('listener indicated an asynchronous response') ||
+                fullMessage.includes('asynchronous response') ||
                 fullMessage.includes('failed to fetch dynamically imported module') ||
                 fullMessage.includes('extension context invalidated') ||
                 fullMessage.includes('vendor.js') && (fullMessage.includes('extension') || fullMessage.includes('invalidated')) ||
@@ -154,7 +164,7 @@
             const message = event.message || '';
             const source = event.filename || '';
             const stack = (event.error && event.error.stack) ? event.error.stack : '';
-            const fullInfo = message + ' ' + source + ' ' + stack;
+            const fullInfo = (message + ' ' + source + ' ' + stack).toLowerCase();
             
             // Catch MutationObserver errors from any source
             if ((message.includes('MutationObserver') || 
@@ -168,6 +178,22 @@
                 // Catch errors from any .js file with observe errors
                 (source.includes('.js') && message.includes('observe') && message.includes('not of type'))) {
                 // Silently suppress - don't even warn to avoid console noise
+                event.preventDefault();
+                event.stopPropagation();
+                return false;
+            }
+            
+            // Catch browser extension errors
+            if (fullInfo.includes('runtime.lasterror') ||
+                fullInfo.includes('message channel closed') ||
+                fullInfo.includes('listener indicated an asynchronous response') ||
+                fullInfo.includes('asynchronous response') ||
+                fullInfo.includes('extension context invalidated') ||
+                fullInfo.includes('chrome-extension://') ||
+                message.includes('runtime.lastError') ||
+                message.includes('message channel closed') ||
+                message.includes('A listener indicated an asynchronous response')) {
+                // Silently suppress browser extension errors
                 event.preventDefault();
                 event.stopPropagation();
                 return false;
@@ -196,6 +222,13 @@
             // Catch Chrome extension errors
             if (fullInfo.includes('extension context invalidated') ||
                 fullInfo.includes('chrome-extension://') ||
+                fullInfo.includes('runtime.lasterror') ||
+                fullInfo.includes('message channel closed') ||
+                fullInfo.includes('listener indicated an asynchronous response') ||
+                fullInfo.includes('asynchronous response') ||
+                message.includes('runtime.lastError') ||
+                message.includes('message channel closed') ||
+                message.includes('A listener indicated an asynchronous response') ||
                 (fullInfo.includes('vendor.js') && (fullInfo.includes('extension') || fullInfo.includes('invalidated')))) {
                 // Silently suppress
                 event.preventDefault();
@@ -297,12 +330,38 @@
                 }
                 // Suppress Chrome extension runtime errors
                 if (message.includes('runtime.lastError') || 
+                    message.includes('runtime.lasterror') ||
+                    message.includes('Unchecked runtime.lastError') ||
                     message.includes('message channel closed') ||
+                    message.includes('Message channel closed') ||
                     message.includes('Extension context invalidated') ||
-                    message.includes('A listener indicated an asynchronous response')) {
+                    message.includes('extension context invalidated') ||
+                    message.includes('A listener indicated an asynchronous response') ||
+                    message.includes('listener indicated an asynchronous response') ||
+                    message.includes('asynchronous response') ||
+                    message.includes('chrome-extension://')) {
                     return; // Suppress browser extension errors
                 }
                 originalConsoleError.apply(console, args);
+            };
+            
+            // Override console.warn to suppress browser extension warnings
+            const originalConsoleWarn = console.warn;
+            console.warn = function(...args) {
+                const message = args.join(' ');
+                const lowerMessage = message.toLowerCase();
+                
+                // Suppress Chrome extension runtime warnings
+                if (lowerMessage.includes('runtime.lasterror') ||
+                    lowerMessage.includes('unchecked runtime.lasterror') ||
+                    lowerMessage.includes('message channel closed') ||
+                    lowerMessage.includes('listener indicated an asynchronous response') ||
+                    lowerMessage.includes('asynchronous response') ||
+                    lowerMessage.includes('extension context invalidated') ||
+                    lowerMessage.includes('chrome-extension://')) {
+                    return; // Suppress browser extension warnings
+                }
+                originalConsoleWarn.apply(console, args);
             };
         } catch (error) {
             console.warn('Error in MutationObserver override setup:', error.message);
@@ -315,7 +374,7 @@
     <div id="page-loader" class="page-loader">
         <div class="d-flex flex-column align-items-center">
             <div class="page-loader-logo mb-3">
-                <span class="fw-bold fs-2 text-primary">Everlast ERP</span>
+                <span class="fw-bold fs-2 text-primary">Everlast HR System</span>
             </div>
             <div class="page-loader-spinner"></div>
         </div>
@@ -328,7 +387,7 @@
             <div class="sidebar-header">
                 <div class="logo">
                     <i class="fas fa-calendar-check logo-icon"></i>
-                    <span class="logo-text">Everlast ERP</span>
+                    <span class="logo-text">Everlast HR System</span>
                 </div>
                 <button id="sidebar-toggle" class="sidebar-toggle">
                     <i class="fas fa-chevron-left"></i>
@@ -339,7 +398,7 @@
             <div class="sidebar-nav-container">
                 <ul class="nav-menu">
                 <li class="nav-item">
-                    <a href="{{ url_for('dashboard.index') }}" class="nav-link {{ 'active' if request.path.startswith('/dashboard') and request.path != '/dashboard/members' and request.path != '/dashboard/users' }}">
+                    <a href="{{ url_for('dashboard.index') }}" class="nav-link {{ 'active' if request.path.startswith('/dashboard') and request.path != '/dashboard/users' }}">
                         <i class="fas fa-tachometer-alt nav-icon"></i>
                         <span class="nav-text">Dashboard</span>
                     </a>
@@ -471,7 +530,7 @@
                 {% endif %}
                 
                 <li class="nav-item">
-                    <a href="{{ url_for('dashboard.members') }}" class="nav-link {{ 'active' if request.path == '/dashboard/members' }}">
+                    <a href="{{ url_for('members.index') }}" class="nav-link {{ 'active' if request.path.startswith('/members') }}">
                         <i class="fas fa-users nav-icon"></i>
                         <span class="nav-text">Company Members</span>
                     </a>
@@ -491,14 +550,14 @@
             </a>
         </li>
         {% if current_user.role in ['admin', 'product_owner', 'director'] %}
-        <li class="nav-item">
+        <li class="nav-item" style="display: none;">
             <a href="{{ url_for('calendar.attendance_report') }}" class="nav-link {{ 'active' if request.path == '/calendar/attendance-report' }}">
                 <i class="fas fa-chart-line nav-icon"></i>
                 <span class="nav-text">Attendance Report</span>
             </a>
         </li>
         {% endif %}
-        {% if current_user.role in ['admin', 'product_owner', 'manager'] %}
+        {% if current_user.role in ['admin', 'product_owner', 'manager', 'employee'] %}
         <li class="nav-item">
             <a href="{{ url_for('final_report.final_report') }}" class="nav-link {{ 'active' if request.path.startswith('/final-report') }}">
                 <i class="fas fa-chart-bar nav-icon"></i>
@@ -631,7 +690,7 @@
                 <button id="mobile-menu-toggle" class="mobile-menu-toggle">
                     <i class="fas fa-bars"></i>
                 </button>
-                <div class="fw-bold">Everlast ERP</div>
+                <div class="fw-bold">Everlast HR System</div>
                 <div class="ms-auto d-flex align-items-center">
                     <!-- Notifications removed - replaced with SMTP email notifications for admins -->
                     <!-- User Menu -->
@@ -645,7 +704,7 @@
                             {% endif %}
                             <li><a class="dropdown-item" href="{{ url_for('profile.index') }}">My Profile</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('dashboard.members') }}">Company Members</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('members.index') }}">Company Members</a></li>
                             {% if current_user.role in ['admin', 'product_owner'] %}
                             <li><a class="dropdown-item" href="{{ url_for('dashboard.users') }}">User Management System</a></li>
                             {% endif %}

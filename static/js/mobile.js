@@ -364,6 +364,71 @@ document.addEventListener('DOMContentLoaded', function() {
         document.head.appendChild(style);
     }
     
+    // Enhanced table scrolling indicators and interactions
+    const tableResponsive = document.querySelectorAll('.table-responsive, .table-wrapper');
+    
+    tableResponsive.forEach(function(table) {
+        let isScrolling = false;
+        let scrollTimeout;
+        
+        // Check if table is scrollable
+        function checkScrollable() {
+            if (table.scrollWidth > table.clientWidth) {
+                table.classList.add('scrollable');
+            } else {
+                table.classList.remove('scrollable');
+            }
+        }
+        
+        checkScrollable();
+        window.addEventListener('resize', checkScrollable);
+        
+        // Handle scrolling with indicator
+        table.addEventListener('scroll', function() {
+            if (!isScrolling) {
+                isScrolling = true;
+                table.classList.add('scrolling');
+            }
+            
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(function() {
+                isScrolling = false;
+                table.classList.remove('scrolling');
+            }, 150);
+        });
+    });
+    
+    // Improve touch interactions for buttons in tables
+    if (isMobile) {
+        const tableButtons = document.querySelectorAll('.table .btn, table .btn, .table button, table button');
+        tableButtons.forEach(function(btn) {
+            btn.addEventListener('touchstart', function() {
+                this.style.transform = 'scale(0.95)';
+                this.style.transition = 'transform 0.1s ease';
+            });
+            
+            btn.addEventListener('touchend', function() {
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 150);
+            });
+        });
+    }
+    
+    // Auto-adjust table container widths on mobile
+    function adjustTableContainers() {
+        if (isMobile) {
+            const containers = document.querySelectorAll('.table-responsive, .table-wrapper');
+            containers.forEach(function(container) {
+                container.style.width = '100%';
+                container.style.maxWidth = '100%';
+            });
+        }
+    }
+    
+    adjustTableContainers();
+    window.addEventListener('resize', adjustTableContainers);
+    
     // Expose mobile functions globally
     window.mobileUtils = {
         showAlert: showMobileAlert,
