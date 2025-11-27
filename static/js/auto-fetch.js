@@ -808,65 +808,72 @@ class AutoFetchSystem {
         }
     }
     
-    async fetchCalendarEvents() {
-        try {
-            const response = await fetch('/calendar/events', {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': this.getCSRFToken()
-                },
-                signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : null  // Increased timeout to 15 seconds
-            });
-            
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            
-            const data = await response.json();
-            return { type: 'calendar_events', data };
-        } catch (error) {
-            console.warn('Failed to fetch calendar events:', error);
-            return null;
-        }
-    }
-    
     async fetchUpcomingEvents() {
         try {
+            const { controller, timeoutId } = this._createTimeoutSignal(15000);
+            
             const response = await fetch('/api/calendar/upcoming', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken()
                 },
-                signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : null  // Increased timeout to 15 seconds
+                credentials: 'same-origin',
+                redirect: 'follow',
+                signal: controller.signal
             });
             
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             
             const data = await response.json();
             return { type: 'upcoming_events', data };
         } catch (error) {
-            console.warn('Failed to fetch upcoming events:', error);
+            // Suppress SSL protocol errors (usually means HTTP/HTTPS mismatch or redirect issues)
+            if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+                return null;
+            }
+            if (error.message && (error.message.includes('SSL') || error.message.includes('ERR_SSL_PROTOCOL_ERROR') || error.message.includes('Failed to fetch'))) {
+                console.debug('SSL protocol error (likely HTTP/HTTPS mismatch) - suppressing');
+                return null;
+            }
+            console.warn('Failed to fetch upcoming events:', error.message || error);
             return null;
         }
     }
     
     async fetchCalendarEvents() {
         try {
+            const { controller, timeoutId } = this._createTimeoutSignal(15000);
+            
             const response = await fetch('/calendar/events', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken()
                 },
-                signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : null  // Increased timeout to 15 seconds
+                credentials: 'same-origin',
+                redirect: 'follow',
+                signal: controller.signal
             });
             
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             
             const data = await response.json();
             return { type: 'calendar_events', data };
         } catch (error) {
-            console.warn('Failed to fetch calendar events:', error);
+            // Suppress SSL protocol errors (usually means HTTP/HTTPS mismatch or redirect issues)
+            if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+                return null;
+            }
+            if (error.message && (error.message.includes('SSL') || error.message.includes('ERR_SSL_PROTOCOL_ERROR') || error.message.includes('Failed to fetch'))) {
+                console.debug('SSL protocol error (likely HTTP/HTTPS mismatch) - suppressing');
+                return null;
+            }
+            console.warn('Failed to fetch calendar events:', error.message || error);
             return null;
         }
     }

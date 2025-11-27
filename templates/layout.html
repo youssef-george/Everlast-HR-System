@@ -67,6 +67,8 @@
                 fullInfo.includes('chrome-extension://') ||
                 fullInfo.includes('extension context invalidated') ||
                 fullInfo.includes('failed to fetch dynamically imported module') ||
+                fullInfo.includes('err_ssl_protocol_error') ||
+                fullInfo.includes('ssl protocol error') ||
                 srcStr.includes('vendor.js') && (fullInfo.includes('extension') || fullInfo.includes('invalidated'))) {
                 return true; // Suppress error
             }
@@ -142,11 +144,15 @@
                 message.includes('listener indicated an asynchronous response') ||
                 message.includes('asynchronous response') ||
                 message.includes('Failed to fetch dynamically imported module') ||
+                message.includes('ERR_SSL_PROTOCOL_ERROR') ||
+                message.includes('SSL protocol error') ||
                 message.includes('chrome-extension://') ||
                 fullMessage.includes('chrome-extension://') ||
                 fullMessage.includes('runtime.lasterror') ||
                 fullMessage.includes('message channel closed') ||
                 fullMessage.includes('listener indicated an asynchronous response') ||
+                fullMessage.includes('err_ssl_protocol_error') ||
+                fullMessage.includes('ssl protocol error') ||
                 fullMessage.includes('asynchronous response') ||
                 fullMessage.includes('failed to fetch dynamically imported module') ||
                 fullMessage.includes('extension context invalidated') ||
@@ -219,16 +225,20 @@
                 return false;
             }
             
-            // Catch Chrome extension errors
+            // Catch Chrome extension errors and SSL protocol errors
             if (fullInfo.includes('extension context invalidated') ||
                 fullInfo.includes('chrome-extension://') ||
                 fullInfo.includes('runtime.lasterror') ||
                 fullInfo.includes('message channel closed') ||
                 fullInfo.includes('listener indicated an asynchronous response') ||
                 fullInfo.includes('asynchronous response') ||
+                fullInfo.includes('err_ssl_protocol_error') ||
+                fullInfo.includes('ssl protocol error') ||
                 message.includes('runtime.lastError') ||
                 message.includes('message channel closed') ||
                 message.includes('A listener indicated an asynchronous response') ||
+                message.includes('ERR_SSL_PROTOCOL_ERROR') ||
+                message.includes('SSL protocol error') ||
                 (fullInfo.includes('vendor.js') && (fullInfo.includes('extension') || fullInfo.includes('invalidated')))) {
                 // Silently suppress
                 event.preventDefault();
