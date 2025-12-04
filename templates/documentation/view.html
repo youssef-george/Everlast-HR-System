@@ -144,10 +144,122 @@
 }
 
 .documentation-content img {
-    max-width: 100%;
+    max-width: 1200px;
+    min-width: 100px;
+    width: 100%;
     height: auto;
     border-radius: 8px;
-    margin: 1rem 0;
+    margin: 1.5rem auto;
+    display: block;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    object-fit: contain;
+}
+
+/* Ensure images don't exceed container width */
+.documentation-content figure {
+    margin: 1.5rem 0;
+    text-align: center;
+    max-width: 1200px;
+    min-width: 100px;
+}
+
+.documentation-content figure img {
+    max-width: 1200px;
+    min-width: 100px;
+    width: 100%;
+    height: auto;
+}
+
+/* Image size controls with min/max constraints */
+.documentation-content img.img-small {
+    max-width: 300px;
+    min-width: 100px;
+    width: 100%;
+}
+
+.documentation-content img.img-medium {
+    max-width: 500px;
+    min-width: 100px;
+    width: 100%;
+}
+
+.documentation-content img.img-large {
+    max-width: 700px;
+    min-width: 100px;
+    width: 100%;
+}
+
+.documentation-content img.img-full {
+    max-width: 1200px;
+    min-width: 100px;
+    width: 100%;
+}
+
+.documentation-content img.img-left {
+    float: left;
+    margin-right: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.documentation-content img.img-right {
+    float: right;
+    margin-left: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.documentation-content img.img-center {
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
+}
+
+/* Clear floats */
+.documentation-content::after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+/* Handle images in tables */
+.documentation-content table img {
+    max-width: 1200px;
+    min-width: 100px;
+    width: 100%;
+    height: auto;
+}
+
+/* Responsive image containers */
+.documentation-content p img,
+.documentation-content div img {
+    max-width: 1200px;
+    min-width: 100px;
+    width: 100%;
+    height: auto;
+}
+
+/* Prevent images from breaking layout - enforce min/max */
+.documentation-content img[width],
+.documentation-content img[style*="width"] {
+    max-width: 1200px !important;
+    min-width: 100px !important;
+    width: 100% !important;
+    height: auto !important;
+}
+
+/* Ensure large images are constrained */
+.documentation-content img[width]:not([width*="%"]):not([width=""]) {
+    max-width: min(100%, 1200px) !important;
+    min-width: 100px !important;
+}
+
+/* Enforce minimum size for all images */
+.documentation-content img:not([style*="min-width"]) {
+    min-width: 100px;
+}
+
+/* Enforce maximum size for all images */
+.documentation-content img:not([style*="max-width"]) {
+    max-width: 1200px;
 }
 
 .documentation-content h1,

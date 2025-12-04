@@ -1,13 +1,52 @@
 {% extends "layout.html" %}
 
 {% block extra_css %}
-<!-- CKEditor 5 -->
-<script src="https://cdn.ckeditor.com/ckeditor5/40.0.0/classic/ckeditor.js"></script>
 <style>
 .ck-editor__editable {
     min-height: 400px;
 }
+
+/* Image size controls in editor */
+.ck-editor__editable img {
+    max-width: 1200px;
+    min-width: 100px;
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 1rem 0;
+    object-fit: contain;
+}
+
+.ck-editor__editable img[style*="width"] {
+    height: auto !important;
+    max-width: 1200px !important;
+    min-width: 100px !important;
+}
+
+/* Ensure images maintain aspect ratio */
+.ck-editor__editable .image {
+    display: block;
+    max-width: 1200px;
+    min-width: 100px;
+}
+
+.ck-editor__editable .image_resized {
+    max-width: 1200px;
+    min-width: 100px;
+}
+
+/* Prevent images from being too small or too large */
+.ck-editor__editable figure {
+    max-width: 1200px;
+    min-width: 100px;
+    margin: 1rem auto;
+}
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<!-- CKEditor 5 -->
+<script src="https://cdn.ckeditor.com/ckeditor5/40.0.0/classic/ckeditor.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -66,6 +105,9 @@
                         {% endif %}
                         <small class="form-text text-muted">
                             Use the rich text editor to format your content. You can add images, links, and format text.
+                            <br>
+                            <i class="fas fa-info-circle me-1"></i>
+                            <strong>Image Size Limits:</strong> Minimum width: 100px, Maximum width: 1200px. Images will be automatically resized to fit these constraints.
                         </small>
                     </div>
                     
@@ -141,53 +183,273 @@
 // Initialize CKEditor
 let editor;
 
-ClassicEditor
-    .create(document.querySelector('#doc_content'), {
-        toolbar: {
-            items: [
-                'heading', '|',
-                'bold', 'italic', 'link', '|',
-                'bulletedList', 'numberedList', '|',
-                'outdent', 'indent', '|',
-                'blockQuote', 'insertTable', '|',
-                'imageUpload', 'mediaEmbed', '|',
-                'undo', 'redo'
-            ]
-        },
-        heading: {
-            options: [
-                { model: 'paragraph', title: 'Paragraph', class: 'ck-heading_paragraph' },
-                { model: 'heading1', view: 'h1', title: 'Heading 1', class: 'ck-heading_heading1' },
-                { model: 'heading2', view: 'h2', title: 'Heading 2', class: 'ck-heading_heading2' },
-                { model: 'heading3', view: 'h3', title: 'Heading 3', class: 'ck-heading_heading3' }
-            ]
-        },
-        image: {
-            toolbar: ['imageTextAlternative', 'imageStyle:full', 'imageStyle:side']
-        },
-        table: {
-            contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells']
-        },
-        simpleUpload: {
-            uploadUrl: '{{ url_for("documentation.upload_image") }}',
-            withCredentials: true,
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+// Wait for DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    const textareaElement = document.querySelector('#doc_content');
+    
+    // Check if element exists before initializing
+    if (!textareaElement) {
+        console.error('Textarea element #doc_content not found');
+        return;
+    }
+    
+    // Remove required attribute to prevent validation issues when textarea is hidden by CKEditor
+    // We'll handle validation manually
+    const wasRequired = textareaElement.hasAttribute('required');
+    if (wasRequired) {
+        textareaElement.removeAttribute('required');
+    }
+    
+    // Initialize CKEditor
+    ClassicEditor
+        .create(textareaElement, {
+            toolbar: {
+                items: [
+                    'heading', '|',
+                    'bold', 'italic', 'link', '|',
+                    'bulletedList', 'numberedList', '|',
+                    'outdent', 'indent', '|',
+                    'blockQuote', 'insertTable', '|',
+                    'imageUpload', 'mediaEmbed', '|',
+                    'undo', 'redo'
+                ]
+            },
+            heading: {
+                options: [
+                    { model: 'paragraph', title: 'Paragraph', class: 'ck-heading_paragraph' },
+                    { model: 'heading1', view: 'h1', title: 'Heading 1', class: 'ck-heading_heading1' },
+                    { model: 'heading2', view: 'h2', title: 'Heading 2', class: 'ck-heading_heading2' },
+                    { model: 'heading3', view: 'h3', title: 'Heading 3', class: 'ck-heading_heading3' }
+                ]
+            },
+            image: {
+                toolbar: [
+                    'imageTextAlternative',
+                    '|',
+                    'imageStyle:alignLeft',
+                    'imageStyle:alignCenter',
+                    'imageStyle:alignRight',
+                    '|',
+                    'imageStyle:inline',
+                    'imageStyle:block',
+                    'imageStyle:side'
+                ],
+                styles: [
+                    'full',
+                    'side',
+                    'alignLeft',
+                    'alignCenter',
+                    'alignRight'
+                ]
+            },
+            table: {
+                contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells']
+            },
+            simpleUpload: {
+                uploadUrl: '{{ url_for("documentation.upload_image") }}',
+                withCredentials: true,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrf_token]')?.value || ''
+                }
             }
-        }
-    })
-    .then(ed => {
-        editor = ed;
-    })
-    .catch(error => {
-        console.error('Error initializing CKEditor:', error);
-    });
-
-// Handle form submission
-document.getElementById('docForm').addEventListener('submit', function(e) {
-    // Update textarea with editor content
-    if (editor) {
-        editor.updateSourceElement();
+        })
+        .then(ed => {
+            editor = ed;
+            console.log('CKEditor initialized successfully');
+            
+            // Image size constraints
+            const MIN_IMAGE_WIDTH = 100;  // Minimum width in pixels
+            const MAX_IMAGE_WIDTH = 1200; // Maximum width in pixels
+            
+            // Function to validate and adjust image size
+            function validateImageSize(imgElement) {
+                return new Promise((resolve) => {
+                    if (imgElement.complete) {
+                        processImageSize(imgElement);
+                        resolve();
+                    } else {
+                        imgElement.onload = () => {
+                            processImageSize(imgElement);
+                            resolve();
+                        };
+                        imgElement.onerror = resolve;
+                    }
+                });
+            }
+            
+            function processImageSize(imgElement) {
+                const naturalWidth = imgElement.naturalWidth || imgElement.width;
+                
+                if (naturalWidth < MIN_IMAGE_WIDTH) {
+                    console.warn(`Image width (${naturalWidth}px) is below minimum (${MIN_IMAGE_WIDTH}px). Adjusting...`);
+                    // Scale up to minimum
+                    const scale = MIN_IMAGE_WIDTH / naturalWidth;
+                    imgElement.style.width = MIN_IMAGE_WIDTH + 'px';
+                    imgElement.style.height = 'auto';
+                } else if (naturalWidth > MAX_IMAGE_WIDTH) {
+                    console.warn(`Image width (${naturalWidth}px) exceeds maximum (${MAX_IMAGE_WIDTH}px). Constraining...`);
+                    // Scale down to maximum
+                    imgElement.style.maxWidth = MAX_IMAGE_WIDTH + 'px';
+                    imgElement.style.width = '100%';
+                    imgElement.style.height = 'auto';
+                }
+                
+                // Always ensure min/max constraints in style
+                const currentStyle = imgElement.getAttribute('style') || '';
+                if (!currentStyle.includes('min-width')) {
+                    imgElement.style.minWidth = MIN_IMAGE_WIDTH + 'px';
+                }
+                if (!currentStyle.includes('max-width')) {
+                    imgElement.style.maxWidth = MAX_IMAGE_WIDTH + 'px';
+                }
+                imgElement.style.height = 'auto';
+            }
+            
+            // Process images before form submission to ensure proper sizing with min/max constraints
+            const originalUpdateSourceElement = editor.updateSourceElement.bind(editor);
+            editor.updateSourceElement = function() {
+                originalUpdateSourceElement();
+                
+                // Process images in the textarea content
+                const textarea = document.querySelector('#doc_content');
+                if (textarea && textarea.value) {
+                    // Create a temporary div to parse HTML
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = textarea.value;
+                    
+                    // Process all images
+                    const images = tempDiv.querySelectorAll('img');
+                    for (const img of images) {
+                        const width = img.getAttribute('width');
+                        let style = img.getAttribute('style') || '';
+                        let currentWidth = null;
+                        
+                        // Get current width from attribute or style
+                        if (width) {
+                            currentWidth = parseInt(width);
+                        } else {
+                            // Try to extract from style
+                            const widthMatch = style.match(/width:\s*(\d+)px/i);
+                            if (widthMatch) {
+                                currentWidth = parseInt(widthMatch[1]);
+                            }
+                        }
+                        
+                        // Clean up existing width/min-width/max-width from style
+                        style = style.replace(/width:\s*\d+px/gi, '')
+                                     .replace(/min-width:\s*\d+px/gi, '')
+                                     .replace(/max-width:\s*\d+px/gi, '')
+                                     .replace(/height:\s*\d+px/gi, '')
+                                     .replace(/height:\s*auto/gi, '')
+                                     .replace(/;\s*;/g, ';')
+                                     .replace(/^\s*;\s*/, '')
+                                     .replace(/\s*;\s*$/, '');
+                        
+                        // Apply min/max constraints
+                        if (currentWidth !== null) {
+                            if (currentWidth < MIN_IMAGE_WIDTH) {
+                                // Enforce minimum width
+                                img.removeAttribute('width');
+                                style = (style ? style + '; ' : '') + `min-width: ${MIN_IMAGE_WIDTH}px; max-width: ${MAX_IMAGE_WIDTH}px; width: 100%; height: auto;`;
+                            } else if (currentWidth > MAX_IMAGE_WIDTH) {
+                                // Enforce maximum width
+                                img.removeAttribute('width');
+                                style = (style ? style + '; ' : '') + `min-width: ${MIN_IMAGE_WIDTH}px; max-width: ${MAX_IMAGE_WIDTH}px; width: 100%; height: auto;`;
+                            } else {
+                                // Within range, ensure responsive with constraints
+                                img.removeAttribute('width');
+                                style = (style ? style + '; ' : '') + `min-width: ${MIN_IMAGE_WIDTH}px; max-width: ${MAX_IMAGE_WIDTH}px; width: 100%; height: auto;`;
+                            }
+                        } else {
+                            // No width specified, add min/max constraints
+                            style = (style ? style + '; ' : '') + `min-width: ${MIN_IMAGE_WIDTH}px; max-width: ${MAX_IMAGE_WIDTH}px; width: 100%; height: auto;`;
+                        }
+                        
+                        // Remove height attribute and set style
+                        img.removeAttribute('height');
+                        img.setAttribute('style', style);
+                    }
+                    
+                    // Update textarea with processed content
+                    textarea.value = tempDiv.innerHTML;
+                }
+            };
+            
+            // Monitor image insertion and enforce size constraints
+            editor.model.document.on('change:data', () => {
+                const viewDocument = editor.editing.view.document;
+                const viewRoot = viewDocument.getRoot();
+                
+                // Process images in the editor view
+                const viewWriter = editor.editing.view;
+                const viewImages = Array.from(viewRoot.getChildren()).filter(item => 
+                    item.is && (item.is('element', 'imageBlock') || item.is('element', 'imageInline'))
+                );
+                
+                viewImages.forEach(imageElement => {
+                    if (imageElement && imageElement.getStyle) {
+                        const width = imageElement.getStyle('width');
+                        if (width) {
+                            const widthNum = parseInt(width);
+                            if (widthNum < MIN_IMAGE_WIDTH) {
+                                imageElement.setStyle('width', MIN_IMAGE_WIDTH + 'px');
+                            } else if (widthNum > MAX_IMAGE_WIDTH) {
+                                imageElement.setStyle('max-width', MAX_IMAGE_WIDTH + 'px');
+                                imageElement.setStyle('width', '100%');
+                            }
+                        }
+                    }
+                });
+            });
+        })
+        .catch(error => {
+            console.error('Error initializing CKEditor:', error);
+            // Restore required attribute if CKEditor failed to initialize
+            if (wasRequired) {
+                textareaElement.setAttribute('required', 'required');
+            }
+        });
+    
+    // Handle form submission
+    const form = document.getElementById('docForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // Update textarea with editor content before validation
+            if (editor) {
+                editor.updateSourceElement();
+                
+                // Custom validation: check if content is empty
+                const content = textareaElement.value.trim();
+                if (!content) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // Show error message
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'text-danger small mt-1';
+                    errorDiv.textContent = 'This field is required.';
+                    
+                    // Remove existing error messages
+                    const existingError = textareaElement.parentElement.querySelector('.text-danger.small');
+                    if (existingError) {
+                        existingError.remove();
+                    }
+                    
+                    // Add error message
+                    textareaElement.parentElement.appendChild(errorDiv);
+                    
+                    // Scroll to error
+                    textareaElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    
+                    // Focus on editor
+                    if (editor.editing && editor.editing.view) {
+                        editor.editing.view.focus();
+                    }
+                    
+                    return false;
+                }
+            }
+        });
     }
 });
 </script>

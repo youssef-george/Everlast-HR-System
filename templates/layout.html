@@ -765,6 +765,23 @@
     // Prevent tooltip errors from breaking the page
     (function() {
         'use strict';
+        
+        // Override Element.prototype.closest to handle null elements safely
+        if (typeof Element !== 'undefined' && Element.prototype.closest) {
+            const originalClosest = Element.prototype.closest;
+            Element.prototype.closest = function(selector) {
+                if (!this || this === null) {
+                    return null;
+                }
+                try {
+                    return originalClosest.call(this, selector);
+                } catch (e) {
+                    console.warn('closest() called on invalid element:', e);
+                    return null;
+                }
+            };
+        }
+        
         // Wait for Bootstrap to load
         if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
             const OriginalTooltip = bootstrap.Tooltip;
@@ -776,7 +793,7 @@
                     const config = args[1];
                     
                     // Check if element exists and is in the DOM
-                    if (!element || !element.parentNode) {
+                    if (!element || !(element instanceof Node) || !element.parentNode) {
                         console.warn('Tooltip: Element is null or not in DOM', element);
                         return null;
                     }
