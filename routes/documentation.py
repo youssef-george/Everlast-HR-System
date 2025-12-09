@@ -33,7 +33,7 @@ def index():
     # Base query - only published pages visible to user's role
     query = DocumentationPage.query.filter_by(is_published=True)
     
-    # Filter by visibility - Product Owner sees everything
+    # Filter by visibility - Technical Support sees everything
     if current_user.role != 'product_owner':
         # Filter pages visible to user's role
         # Check if the user's role is in the visible_roles array
@@ -119,7 +119,7 @@ def view(slug):
 @login_required
 @role_required('product_owner')
 def admin_panel():
-    """Admin panel for Product Owner to manage all documentation"""
+    """Admin panel for Technical Support to manage all documentation"""
     # Expire all objects to ensure fresh data from database
     db.session.expire_all()
     

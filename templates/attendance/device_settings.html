@@ -340,7 +340,7 @@ code {
                 <i class="fas fa-info-circle me-2"></i>
                 <div>
                     <h4 class="alert-heading mb-1">View-Only Mode</h4>
-                    <p class="mb-0">You are viewing the device settings in read-only mode. Only Product Owner can modify these settings.</p>
+                    <p class="mb-0">You are viewing the device settings in read-only mode. Only Technical Support can modify these settings.</p>
                 </div>
             </div>
         </div>
@@ -853,10 +853,10 @@ document.addEventListener('DOMContentLoaded', function() {
 // JavaScript functions available to all users who can view the page
 // Test device connection
 function testDeviceConnection(deviceId, deviceIp, devicePort) {
-    // Check user role for Product Owner access
+    // Check user role for Technical Support access
     const userRole = '{{ current_user.role }}';
     if (userRole !== 'product_owner') {
-        toastr.warning('Only Product Owner can test device connections');
+        toastr.warning('Only Technical Support can test device connections');
         return;
     }
     const button = event && event.target ? event.target.closest('button') : null;
@@ -893,10 +893,10 @@ function testDeviceConnection(deviceId, deviceIp, devicePort) {
 
 // Edit device
 function editDevice(deviceId, deviceName, deviceIp, devicePort, isActive) {
-    // Check user role for Product Owner access
+    // Check user role for Technical Support access
     const userRole = '{{ current_user.role }}';
     if (userRole !== 'product_owner') {
-        toastr.warning('Only Product Owner can edit devices');
+        toastr.warning('Only Technical Support can edit devices');
         return;
     }
     document.getElementById('edit_device_name').value = deviceName;
@@ -1131,10 +1131,10 @@ function displayDeviceUsers(data) {
 
 // Delete device
 function deleteDevice(deviceId, deviceName) {
-    // Check user role for Product Owner access
+    // Check user role for Technical Support access
     const userRole = '{{ current_user.role }}';
     if (userRole !== 'product_owner') {
-        toastr.warning('Only Product Owner can delete devices');
+        toastr.warning('Only Technical Support can delete devices');
         return;
     }
     if (confirm(`Are you sure you want to delete "${deviceName}"? This action cannot be undone.`)) {

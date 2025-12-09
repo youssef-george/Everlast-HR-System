@@ -68,7 +68,7 @@ def recent_requests():
                 ).order_by(PermissionRequest.created_at.desc()).limit(5).all()
         
         elif user_role in ['admin', 'product_owner', 'director']:
-            # Admin/Product Owner/Director sees all pending requests
+            # Admin/Technical Support/Director sees all pending requests
             leave_requests = LeaveRequest.query.filter_by(
                 status='pending'
             ).order_by(LeaveRequest.created_at.desc()).limit(5).all()
@@ -196,7 +196,7 @@ def pending_approvals():
                     })
         
         elif user_role in ['admin', 'product_owner', 'director']:
-            # Admin/Product Owner/Director sees all pending requests
+            # Admin/Technical Support/Director sees all pending requests
             leave_requests = LeaveRequest.query.filter_by(
                 status='pending'
             ).order_by(LeaveRequest.created_at.desc()).limit(10).all()
@@ -526,7 +526,7 @@ def leave_requests():
                 ).order_by(LeaveRequest.created_at.desc()).all()
         
         elif user_role in ['admin', 'product_owner', 'director']:
-            # Admin/Product Owner/Director sees all requests
+            # Admin/Technical Support/Director sees all requests
             leave_requests = LeaveRequest.query.order_by(LeaveRequest.created_at.desc()).all()
         
         # Convert to JSON-serializable format
@@ -600,7 +600,7 @@ def leave_balances():
         current_year = datetime.now().year
         
         if user_role in ['admin', 'product_owner', 'director']:
-            # Admin/Product Owner/Director sees all balances
+            # Admin/Technical Support/Director sees all balances
             balances = LeaveBalance.query.join(LeaveType).join(User).filter(
                 LeaveBalance.year == current_year
             ).all()
@@ -664,7 +664,7 @@ def attendance_data():
             else:
                 records = []
         else:
-            # Admin/Product Owner/Director sees all attendance
+            # Admin/Technical Support/Director sees all attendance
             records = DailyAttendance.query.filter_by(date=today).all()
         
         records_data = []

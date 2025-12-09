@@ -684,7 +684,7 @@ def create_app(config_name='default'):
             from models import EmailTemplate, User
             from helpers import get_email_template
             
-            # Get first product owner or admin for created_by
+            # Get first technical support or admin for created_by
             creator = User.query.filter(User.role.in_(['product_owner', 'admin'])).first()
             creator_id = creator.id if creator else None
             

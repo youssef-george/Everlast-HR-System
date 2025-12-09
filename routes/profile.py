@@ -46,13 +46,13 @@ def edit():
     form = ProfileEditForm(obj=current_user)
     
     if form.validate_on_submit():
-        # Only admins and product owners can edit profiles and change passwords
+        # Only admins and technical support can edit profiles and change passwords
         if current_user.role not in ['admin', 'product_owner']:
             # Employees cannot change their password or profile information
             flash('You do not have permission to update your profile. Please contact an administrator.', 'warning')
             return redirect(url_for('profile.index'))
         
-        # For admins and product owners, allow full profile updates
+        # For admins and technical support, allow full profile updates
         else:
             # Check if email is being changed and if it's already taken
             if form.email.data != current_user.email:

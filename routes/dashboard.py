@@ -379,7 +379,7 @@ def manager():
 @login_required
 @role_required(['admin', 'product_owner'])
 def admin():
-    """Admin/Product Owner dashboard showing all company data and analytics"""
+    """Admin/Technical Support dashboard showing all company data and analytics"""
     stats = get_dashboard_stats(current_user)
     
     # Get pending requests that need admin approval based on department assignments
@@ -540,7 +540,7 @@ def admin():
         })
     
     # Set title based on user role
-    dashboard_title = 'Product Owner Dashboard' if current_user.role == 'product_owner' else 'Admin Dashboard'
+    dashboard_title = 'Technical Support Dashboard' if current_user.role == 'product_owner' else 'Admin Dashboard'
     
     return render_template('dashboard/admin.html',
                           title=dashboard_title,
@@ -601,11 +601,11 @@ def toggle_user_status(user_id):
         flash('You cannot deactivate your own account.', 'danger')
         return redirect(url_for('dashboard.users'))
     
-    # ADMIN AND PRODUCT OWNER FULL ACCESS: Can deactivate/activate any account
+    # ADMIN AND TECHNICAL SUPPORT FULL ACCESS: Can deactivate/activate any account
     if current_user.role not in ['admin', 'product_owner']:
         # Director can only deactivate Employee/Manager accounts
         if current_user.role == 'director' and user.role in ['admin', 'product_owner']:
-            flash('❌ Access Denied: Director cannot deactivate Admin or Product Owner accounts.', 'danger')
+            flash('❌ Access Denied: Director cannot deactivate Admin or Technical Support accounts.', 'danger')
             return redirect(url_for('dashboard.users'))
         elif current_user.role in ['manager', 'employee']:
             flash('❌ Access Denied: You cannot deactivate other users.', 'danger')
@@ -637,11 +637,11 @@ def delete_member(user_id):
         flash('You cannot delete your own account.', 'danger')
         return redirect(url_for('dashboard.users'))
     
-    # ADMIN AND PRODUCT OWNER FULL ACCESS: Can delete any account
+    # ADMIN AND TECHNICAL SUPPORT FULL ACCESS: Can delete any account
     if current_user.role not in ['admin', 'product_owner']:
         # Director can only delete Employee/Manager accounts
         if current_user.role == 'director' and user.role in ['admin', 'product_owner']:
-            flash('❌ Access Denied: Director cannot delete Admin or Product Owner accounts.', 'danger')
+            flash('❌ Access Denied: Director cannot delete Admin or Technical Support accounts.', 'danger')
             return redirect(url_for('dashboard.users'))
         elif current_user.role in ['manager', 'employee']:
             flash('❌ Access Denied: You cannot delete other users.', 'danger')
@@ -737,14 +737,14 @@ def edit_user(user_id):
     user = User.query.get_or_404(user_id)
     departments = Department.query.all()
 
-    # Check if the user being edited is a Product Owner
+    # Check if the user being edited is a Technical Support
     is_editing_product_owner = user.role == 'product_owner'
     
-    # ADMIN AND PRODUCT OWNER FULL ACCESS: No restrictions for Admin and Product Owner roles
+    # ADMIN AND TECHNICAL SUPPORT FULL ACCESS: No restrictions for Admin and Technical Support roles
     if current_user.role not in ['admin', 'product_owner']:
-        # Only Admin and Product Owner can edit any account
+        # Only Admin and Technical Support can edit any account
         if current_user.role == 'director' and user.role in ['admin', 'product_owner']:
-            flash('❌ Access Denied: Director cannot edit Admin or Product Owner accounts.', 'danger')
+            flash('❌ Access Denied: Director cannot edit Admin or Technical Support accounts.', 'danger')
             return redirect(url_for('dashboard.users'))
         elif current_user.role in ['manager', 'employee'] and current_user.id != user.id:
             flash('❌ Access Denied: You can only edit your own account.', 'danger')
@@ -791,7 +791,7 @@ def edit_user(user_id):
             user.avaya_number = form.avaya_number.data or None
             user.fingerprint_number = form.fingerprint_number.data or None
             
-            # ROLE ASSIGNMENT: Admin and Product Owner can assign any role
+            # ROLE ASSIGNMENT: Admin and Technical Support can assign any role
             original_role = user.role
             new_role = form.role.data
             
@@ -800,9 +800,9 @@ def edit_user(user_id):
                 import logging
                 logging.info(f"Role change: {user.get_full_name()} (ID: {user.id}) role changing from '{original_role}' to '{new_role}' by {current_user.get_full_name()} ({current_user.role})")
                 
-                # Only Admin and Product Owner can assign any role
+                # Only Admin and Technical Support can assign any role
                 if current_user.role not in ['admin', 'product_owner']:
-                    flash(f'❌ Access Denied: Only Admin and Product Owner can change user roles.', 'danger')
+                    flash(f'❌ Access Denied: Only Admin and Technical Support can change user roles.', 'danger')
                     return render_template('dashboard/edit_user.html', title='Edit User',
                                             form=form, attachment_form=attachment_form, user=user,
                                             is_editing_product_owner=is_editing_product_owner)
@@ -1236,7 +1236,7 @@ def search_employees_ajax():
 @login_required
 @role_required(['admin', 'product_owner'])
 def emergency_db_cleanup():
-    """Emergency database connection cleanup (Admin/Product Owner only)"""
+    """Emergency database connection cleanup (Admin/Technical Support only)"""
     try:
         from connection_manager import emergency_connection_cleanup, get_connection_pool_status
         
@@ -1266,7 +1266,7 @@ def emergency_db_cleanup():
 @login_required
 @role_required(['admin', 'product_owner'])
 def db_pool_status():
-    """Get database connection pool status (Admin/Product Owner only)"""
+    """Get database connection pool status (Admin/Technical Support only)"""
     try:
         from connection_manager import get_connection_pool_status
         
@@ -1836,7 +1836,7 @@ def leave_balances():
     # Filter balances based on user role
     # IMPORTANT: Only show employees with fingerprint_number and only annual leave type
     if current_user.role in ['admin', 'product_owner', 'director']:
-        # Admins, Product Owners and directors can see all balances
+        # Admins, Technical Support and directors can see all balances
         # Filter to only users with fingerprint_number
         users = User.query.filter(
             User.status == 'active',
@@ -2298,7 +2298,7 @@ def api_stats():
 @login_required
 @role_required(['product_owner'])
 def smtp_configuration():
-    """SMTP Configuration management for product owner only"""
+    """SMTP Configuration management for technical support only"""
     # Query active SMTP configuration (PostgreSQL boolean comparison)
     config = SMTPConfiguration.query.filter(SMTPConfiguration.is_active == True).first()
     form = SMTPConfigurationForm()
@@ -2330,7 +2330,7 @@ def smtp_configuration():
 
 @dashboard_bp.route('/smtp-configuration/save', methods=['POST'])
 @login_required
-@role_required(['product_owner'])  # Only Product Owner can edit
+@role_required(['product_owner'])  # Only Technical Support can edit
 def save_smtp_configuration():
     """Save SMTP Configuration"""
     form = SMTPConfigurationForm()
@@ -2476,7 +2476,7 @@ def save_smtp_configuration():
 
 @dashboard_bp.route('/smtp-configuration/test', methods=['POST'])
 @login_required
-@role_required(['product_owner'])  # Only Product Owner can test
+@role_required(['product_owner'])  # Only Technical Support can test
 def test_smtp_configuration():
     """Test SMTP Configuration using stored database settings"""
     
@@ -2693,7 +2693,7 @@ def allocate_default_leave():
 @login_required
 @role_required(['product_owner'])
 def activity_log():
-    """Display activity log - only accessible to product owners"""
+    """Display activity log - only accessible to technical support"""
     from models import ActivityLog
     
     # Get filter parameters

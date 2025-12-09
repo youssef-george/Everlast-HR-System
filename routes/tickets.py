@@ -102,7 +102,7 @@ def submit():
     form.category_id.choices = [(c.id, c.name) for c in categories]
     
     if not form.category_id.choices:
-        flash('No ticket categories available. Please contact the Product Owner.', 'warning')
+        flash('No ticket categories available. Please contact Technical Support.', 'warning')
         return redirect(url_for('tickets.index'))
     
     if form.validate_on_submit():
@@ -324,7 +324,7 @@ def update_status(id):
 @login_required
 @role_required('product_owner')
 def delete_ticket(id):
-    """Delete a ticket - Product Owner only"""
+    """Delete a ticket - Technical Support only"""
     ticket = Ticket.query.get_or_404(id)
     
     try:
@@ -354,7 +354,7 @@ def delete_ticket(id):
         db.session.delete(ticket)
         db.session.commit()
         
-        logger.info(f"Product Owner {current_user.id} deleted ticket #{ticket_id}: {ticket_title}")
+        logger.info(f"Technical Support {current_user.id} deleted ticket #{ticket_id}: {ticket_title}")
         flash(f'Ticket #{ticket_id} "{ticket_title}" deleted successfully!', 'success')
         
     except Exception as e:
@@ -362,7 +362,7 @@ def delete_ticket(id):
         logger.error(f"Error deleting ticket {id}: {str(e)}", exc_info=True)
         flash('An error occurred while deleting the ticket. Please try again.', 'danger')
     
-    # Redirect Product Owner to manager dashboard, others to their ticket list
+    # Redirect Technical Support to manager dashboard, others to their ticket list
     if current_user.role == 'product_owner':
         return redirect(url_for('tickets.manager'))
     return redirect(url_for('tickets.index'))
@@ -414,7 +414,7 @@ def inbox():
 @login_required
 @role_required('product_owner', 'admin')
 def manager():
-    """Product Owner and Admin ticket manager dashboard"""
+    """Technical Support and Admin ticket manager dashboard"""
     tickets = Ticket.query.order_by(Ticket.created_at.desc()).all()
     
     # Statistics
@@ -449,7 +449,7 @@ def manager():
 @login_required
 @role_required('product_owner')
 def categories():
-    """Product Owner category management"""
+    """Technical Support category management"""
     categories = TicketCategory.query.order_by(TicketCategory.name).all()
     return render_template('tickets/categories.html',
                          title='Ticket Categories',
@@ -570,10 +570,10 @@ def edit_category(id):
 @login_required
 @role_required('product_owner')
 def delete_category(id):
-    """Delete ticket category - Product Owner can delete any category"""
+    """Delete ticket category - Technical Support can delete any category"""
     category = TicketCategory.query.get_or_404(id)
     
-    # Product Owner can delete categories even if they have tickets
+    # Technical Support can delete categories even if they have tickets
     # When category is deleted, tickets will have category_id set to NULL (due to ondelete='SET NULL')
     ticket_count = Ticket.query.filter_by(category_id=category.id).count()
     
@@ -598,7 +598,7 @@ def delete_category(id):
 @login_required
 @role_required('product_owner')
 def email_templates():
-    """Product Owner email template management"""
+    """Technical Support email template management"""
     templates = TicketEmailTemplate.query.order_by(TicketEmailTemplate.template_type).all()
     
     # Template types that should exist

@@ -201,28 +201,28 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Initialize CKEditor
-    ClassicEditor
+ClassicEditor
         .create(textareaElement, {
-            toolbar: {
-                items: [
-                    'heading', '|',
-                    'bold', 'italic', 'link', '|',
-                    'bulletedList', 'numberedList', '|',
-                    'outdent', 'indent', '|',
-                    'blockQuote', 'insertTable', '|',
-                    'imageUpload', 'mediaEmbed', '|',
-                    'undo', 'redo'
-                ]
-            },
-            heading: {
-                options: [
-                    { model: 'paragraph', title: 'Paragraph', class: 'ck-heading_paragraph' },
-                    { model: 'heading1', view: 'h1', title: 'Heading 1', class: 'ck-heading_heading1' },
-                    { model: 'heading2', view: 'h2', title: 'Heading 2', class: 'ck-heading_heading2' },
-                    { model: 'heading3', view: 'h3', title: 'Heading 3', class: 'ck-heading_heading3' }
-                ]
-            },
-            image: {
+        toolbar: {
+            items: [
+                'heading', '|',
+                'bold', 'italic', 'link', '|',
+                'bulletedList', 'numberedList', '|',
+                'outdent', 'indent', '|',
+                'blockQuote', 'insertTable', '|',
+                'imageUpload', 'mediaEmbed', '|',
+                'undo', 'redo'
+            ]
+        },
+        heading: {
+            options: [
+                { model: 'paragraph', title: 'Paragraph', class: 'ck-heading_paragraph' },
+                { model: 'heading1', view: 'h1', title: 'Heading 1', class: 'ck-heading_heading1' },
+                { model: 'heading2', view: 'h2', title: 'Heading 2', class: 'ck-heading_heading2' },
+                { model: 'heading3', view: 'h3', title: 'Heading 3', class: 'ck-heading_heading3' }
+            ]
+        },
+        image: {
                 toolbar: [
                     'imageTextAlternative',
                     '|',
@@ -241,20 +241,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     'alignCenter',
                     'alignRight'
                 ]
-            },
-            table: {
-                contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells']
-            },
-            simpleUpload: {
-                uploadUrl: '{{ url_for("documentation.upload_image") }}',
-                withCredentials: true,
-                headers: {
+        },
+        table: {
+            contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells']
+        },
+        simpleUpload: {
+            uploadUrl: '{{ url_for("documentation.upload_image") }}',
+            withCredentials: true,
+            headers: {
                     'X-CSRFToken': document.querySelector('[name=csrf_token]')?.value || ''
-                }
             }
-        })
-        .then(ed => {
-            editor = ed;
+        }
+    })
+    .then(ed => {
+        editor = ed;
             console.log('CKEditor initialized successfully');
             
             // Image size constraints
@@ -401,22 +401,22 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
             });
-        })
-        .catch(error => {
-            console.error('Error initializing CKEditor:', error);
+    })
+    .catch(error => {
+        console.error('Error initializing CKEditor:', error);
             // Restore required attribute if CKEditor failed to initialize
             if (wasRequired) {
                 textareaElement.setAttribute('required', 'required');
             }
-        });
-    
-    // Handle form submission
+    });
+
+// Handle form submission
     const form = document.getElementById('docForm');
     if (form) {
         form.addEventListener('submit', function(e) {
             // Update textarea with editor content before validation
-            if (editor) {
-                editor.updateSourceElement();
+    if (editor) {
+        editor.updateSourceElement();
                 
                 // Custom validation: check if content is empty
                 const content = textareaElement.value.trim();

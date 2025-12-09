@@ -1193,7 +1193,7 @@ def last_fingerprint_reading():
 
 @attendance_bp.route('/sync-all-device-users', methods=['POST'])
 @login_required
-@role_required(['product_owner'])  # Only Product Owner can sync users
+@role_required(['product_owner'])  # Only Technical Support can sync users
 def sync_all_device_users():
     """Sync users from all active devices to system users"""
     try:
@@ -1276,7 +1276,7 @@ def sync_all_device_users():
 @login_required
 @role_required(['admin', 'product_owner'])
 def clear_sync_lock():
-    """Clear stuck sync operations (Admin/Product Owner only)"""
+    """Clear stuck sync operations (Admin/Technical Support only)"""
     try:
         from connection_manager import clear_all_sync_operations
         cleared_count = clear_all_sync_operations()
@@ -1306,7 +1306,7 @@ def manual_sync():
     # Check if sync is already running using connection manager
     from connection_manager import is_sync_running, clear_all_sync_operations
     if is_sync_running():
-        # For Admin and Product Owner, allow force clearing stuck syncs after a timeout
+        # For Admin and Technical Support, allow force clearing stuck syncs after a timeout
         if current_user.role in ['admin', 'product_owner']:
             import time
             # Check if we should clear stuck operations (after 5 minutes)
@@ -1655,7 +1655,7 @@ def index():
         
         # Get users based on role
         if current_user.role in ['admin', 'product_owner', 'director']:
-            # Admins, Product Owners, and directors can see all users
+            # Admins, Technical Support, and directors can see all users
             user_query = User.query.filter_by(status='active').filter(
                 User.fingerprint_number != None,
                 User.fingerprint_number != '',
@@ -2465,7 +2465,7 @@ def employee_attendance(user_id):
     
     # Check permissions
     if current_user.is_admin() or current_user.is_product_owner() or current_user.is_director():
-        # Admins, Product Owners, and directors can view any employee's attendance
+        # Admins, Technical Support, and directors can view any employee's attendance
         pass
     elif current_user.id == user_id:
         # Users can view their own attendance
@@ -2737,7 +2737,7 @@ def device_settings():
 
 @attendance_bp.route('/device/add', methods=['POST'])
 @login_required
-@role_required(['product_owner'])  # Only Product Owner can add devices
+@role_required(['product_owner'])  # Only Technical Support can add devices
 def add_device():
     """Add a new device"""
     form = DeviceSettingsForm(request.form)
@@ -2798,7 +2798,7 @@ def add_device():
 
 @attendance_bp.route('/device/<int:device_id>/edit', methods=['POST'])
 @login_required
-@role_required(['product_owner'])  # Only Product Owner can edit devices
+@role_required(['product_owner'])  # Only Technical Support can edit devices
 def edit_device(device_id):
     """Edit an existing device"""
     device = DeviceSettings.query.get_or_404(device_id)
@@ -2828,7 +2828,7 @@ def edit_device(device_id):
 
 @attendance_bp.route('/device/<int:device_id>/delete', methods=['POST'])
 @login_required
-@role_required(['product_owner'])  # Only Product Owner can delete devices
+@role_required(['product_owner'])  # Only Technical Support can delete devices
 def delete_device(device_id):
     """Delete a device"""
     device = DeviceSettings.query.get_or_404(device_id)
@@ -3536,7 +3536,7 @@ def my_attendance():
         active_permissions = {}
         
         if current_user.is_admin() or current_user.is_product_owner() or current_user.is_director():
-            # Admin/Product Owner/Director view - show all users or selected user
+            # Admin/Technical Support/Director view - show all users or selected user
             users = User.query.order_by(User.first_name).all()
             logging.info(f'Found {len(users)} total users')
             

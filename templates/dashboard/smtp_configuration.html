@@ -254,7 +254,7 @@ table thead th * {
 {% if current_user.role != 'product_owner' %}
 <div class="alert alert-danger">
     <h4>Access Denied</h4>
-    <p>You do not have permission to access SMTP Configuration. Only Product Owners can manage email settings.</p>
+    <p>You do not have permission to access SMTP Configuration. Only Technical Support can manage email settings.</p>
     <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">Return to Dashboard</a>
 </div>
 {% else %}
@@ -325,7 +325,7 @@ table thead th * {
                         <i class="fas fa-info-circle me-2"></i>
                         <div>
                             <h4 class="alert-heading mb-1">View-Only Mode</h4>
-                            <p class="mb-0">You are viewing the email settings in read-only mode. Only Product Owner can modify these settings.</p>
+                            <p class="mb-0">You are viewing the email settings in read-only mode. Only Technical Support can modify these settings.</p>
                         </div>
                     </div>
                 </div>
@@ -476,7 +476,7 @@ table thead th * {
                             {% else %}
                                 <button type="button" class="btn btn-outline-secondary btn-sm" disabled>
                                     <i class="fas fa-lock me-1"></i>
-                                    Auto-Configure (Product Owner Only)
+                                    Auto-Configure (Technical Support Only)
                                 </button>
                             {% endif %}
                         </div>
@@ -580,7 +580,7 @@ table thead th * {
                     <div class="d-flex gap-2 mt-4">
                         <button type="button" class="smtp-btn smtp-btn-secondary" disabled>
                             <i class="fas fa-lock"></i>
-                            View Only - Contact Product Owner to Edit
+                            View Only - Contact Technical Support to Edit
                         </button>
                     </div>
                     {% endif %}
@@ -677,7 +677,7 @@ table thead th * {
 <script>
 function setEverlastConfig() {
     {% if current_user.role != 'product_owner' %}
-    alert('Only Product Owner can use auto-configuration');
+    alert('Only Technical Support can use auto-configuration');
     return;
     {% endif %}
     // Auto-fill Everlast Wellness SMTP settings

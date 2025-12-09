@@ -85,20 +85,20 @@ A comprehensive internal support ticket management system for handling IT reques
   - Automatic routing to appropriate departments based on ticket category
 
 - **Ticket Categories & Routing:**
-  - Product Owner manages ticket categories
+  - Technical Support manages ticket categories
   - Each category can be assigned to specific departments (IT/Web)
   - Automatic ticket routing to assigned departments upon submission
 
 - **Role-Based Access:**
   - **Employees:** Can view and submit their own tickets
   - **IT/Web Department:** Access to department inbox with all tickets assigned to their department
-  - **Product Owner/Admin:** Full access to all tickets via manager dashboard
+  - **Technical Support/Admin:** Full access to all tickets via manager dashboard
 
 - **Ticket Management:**
   - Status tracking: Open → In Progress → Resolved → Closed
   - Priority-based filtering and sorting
   - Status history with change tracking
-  - Ticket deletion (Product Owner only)
+  - Ticket deletion (Technical Support only)
 
 - **Comments & Communication:**
   - Public comments visible to ticket requester
@@ -108,7 +108,7 @@ A comprehensive internal support ticket management system for handling IT reques
 
 - **Email Notifications:**
   - Automated emails for ticket creation, replies, status updates, and resolution
-  - Customizable email templates (Product Owner managed)
+  - Customizable email templates (Technical Support managed)
   - Notifications sent to requesters and assigned departments
 
 - **Department Inbox:**
@@ -117,7 +117,7 @@ A comprehensive internal support ticket management system for handling IT reques
   - Quick access to all tickets requiring attention
 
 - **Manager Dashboard:**
-  - Product Owner and Admin overview of all tickets
+  - Technical Support and Admin overview of all tickets
   - Statistics: Total, Open, In Progress, Resolved, Closed tickets
   - Critical and high-priority ticket tracking
   - Advanced filtering capabilities
@@ -168,7 +168,7 @@ Added a complete internal support ticket management system to streamline IT supp
 - **Employee Ticket Submission:** Easy-to-use form for submitting support requests with priority levels and file attachments
 - **Smart Routing:** Automatic ticket routing to appropriate departments based on category
 - **Department Inbox:** Dedicated inbox for IT/Web departments to manage assigned tickets
-- **Manager Dashboard:** Comprehensive overview for Product Owners and Admins with statistics and filtering
+- **Manager Dashboard:** Comprehensive overview for Technical Support and Admins with statistics and filtering
 - **Email Integration:** Automated email notifications for all ticket activities with customizable templates
 - **Internal Notes:** Support for internal comments visible only to support staff
 - **File Attachments:** Secure file upload and download system for tickets and comments

@@ -53,7 +53,7 @@ def role_required(*roles):
     return decorator
 
 def admin_required(f):
-    """Decorator that checks if the current user is an admin or product owner."""
+    """Decorator that checks if the current user is an admin or technical support."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
@@ -162,7 +162,7 @@ def get_user_managers(user):
                     managers['direct_manager'] = manager
                     break
     
-    # Get all admin and product owner users
+    # Get all admin and technical support users
     all_admins = User.query.filter(User.role.in_(['admin', 'product_owner']), User.status == 'active').all()
     managers['admin_managers'] = all_admins
     
@@ -190,7 +190,7 @@ def get_employees_for_manager(manager_id):
     
     employees = []
     
-    # Special case for admin and product owner users - they should see all employees
+    # Special case for admin and technical support users - they should see all employees
     if manager.role in ['admin', 'product_owner']:
         # Return all active employees in the system
         return User.query.filter(User.status == 'active', User.id != manager_id).all()
@@ -1186,10 +1186,10 @@ def get_tickets_for_user(user, show_own_only=False):
         return Ticket.query.filter_by(user_id=user.id).order_by(Ticket.created_at.desc()).all()
     
     if user.role == 'product_owner':
-        # Product Owner sees all tickets
+        # Technical Support sees all tickets
         return Ticket.query.order_by(Ticket.created_at.desc()).all()
     elif user.role in ['admin', 'director']:
-        # Admin/Director sees all tickets (same as Product Owner for now)
+        # Admin/Director sees all tickets (same as Technical Support for now)
         return Ticket.query.order_by(Ticket.created_at.desc()).all()
     elif user.department_id:
         # Check if user's department is in ticket department mappings (IT/Web)
@@ -1288,7 +1288,7 @@ def can_user_reply_to_ticket(user, ticket):
     if not can_user_view_ticket(user, ticket):
         return False
     
-    # Product Owner, Admin, Director can always reply
+    # Technical Support, Admin, Director can always reply
     if user.role in ['product_owner', 'admin', 'director']:
         return True
     

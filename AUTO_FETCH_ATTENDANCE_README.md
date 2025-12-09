@@ -17,9 +17,9 @@ The EverLast ERP system now includes an **automatic data fetching system** that 
 - **Console Logging**: Detailed logs in browser console for debugging
 
 ### ✅ Role-Based Access
-- Works for all user roles: Admin, Product Owner, Manager, Director, Employee
+- Works for all user roles: Admin, Technical Support, Manager, Director, Employee
 - Each role sees only their authorized attendance data
-- Automatic sync with fingerprint devices (for Admin/Product Owner roles)
+- Automatic sync with fingerprint devices (for Admin/Technical Support roles)
 
 ## How It Works
 
@@ -50,7 +50,7 @@ The system only reloads when:
 
 ## User Experience
 
-### For Admins/Product Owners
+### For Admins/Technical Support
 - Attendance data stays fresh automatically
 - No need to click "Sync Attendance Now" repeatedly
 - Manual sync button still available for immediate updates

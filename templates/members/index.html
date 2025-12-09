@@ -217,6 +217,7 @@ table thead th * {
     font-size: 0.9rem;
     min-width: 180px;
     background: white;
+    color: #374151;
     transition: all 0.3s ease;
 }
 
@@ -224,6 +225,12 @@ table thead th * {
     border-color: #667eea;
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
     outline: none;
+    color: #374151;
+}
+
+.members-filter-select option {
+    color: #374151;
+    background: white;
 }
 
 .members-table {
@@ -625,6 +632,7 @@ table thead th * {
         border: 2px solid #e9ecef !important;
         border-radius: 10px !important;
         background: #ffffff !important;
+        color: #374151 !important;
         -webkit-appearance: none !important;
         -moz-appearance: none !important;
         appearance: none !important;
@@ -640,6 +648,7 @@ table thead th * {
         border-color: #667eea !important;
         box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15) !important;
         outline: none !important;
+        color: #374151 !important;
     }
     
     .members-search-group {
@@ -1227,6 +1236,7 @@ table thead th * {
         border: 2px solid #667eea !important;
         border-radius: 10px !important;
         box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2) !important;
+        color: #374151 !important;
     }
     
     .members-filter-select:focus,
@@ -1234,6 +1244,7 @@ table thead th * {
         border-color: #5a67d8 !important;
         box-shadow: 0 0 0 0.3rem rgba(102, 126, 234, 0.25) !important;
         outline: none !important;
+        color: #374151 !important;
     }
     
     .members-search-icon {
@@ -1880,7 +1891,7 @@ table thead th * {
                 </div>
             `;
             
-            // Admin/Product Owner only fields
+            // Admin/Technical Support only fields
             if (isAdminOrOwner) {
                 // Full Name (editable for admin/owner)
                 html += `

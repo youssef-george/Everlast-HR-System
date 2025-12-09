@@ -59,12 +59,12 @@ def index():
                    user.last_name and user.last_name.lower() == 'george')
         
         return sorted(user_list, key=lambda user: (
-            # 1. Product Owner first (priority 0)
+            # 1. Technical Support first (priority 0)
             0 if user.role == 'product_owner' else (
                 # 2. Directors second (priority 1)
                 1 if user.role == 'director' else 2
             ),
-            # 3. Department order (product owners and directors already sorted, so this applies to others)
+            # 3. Department order (technical support and directors already sorted, so this applies to others)
             get_department_priority(user) if user.role not in ['product_owner', 'director'] else 0,
             # 4. Manager first within department (0 = manager, 1 = employee)
             0 if is_manager(user) else 1,
@@ -146,7 +146,7 @@ def member_details(user_id):
     """Get employee details for popup view (API endpoint - kept for backward compatibility)"""
     user = User.query.get_or_404(user_id)
     
-    # Check if current user is admin or product owner
+    # Check if current user is admin or technical support
     is_admin_or_owner = current_user.role in ['admin', 'product_owner']
     
     return jsonify({
@@ -216,7 +216,7 @@ def member_profile(slug):
         # No suffix means it's the first user with this name
         user = matching_users[0]
     
-    # Check if current user is admin or product owner
+    # Check if current user is admin or technical support
     is_admin_or_owner = current_user.role in ['admin', 'product_owner']
     
     return render_template('members/profile.html',

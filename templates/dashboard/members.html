@@ -212,6 +212,7 @@ table thead th * {
     font-size: 0.9rem;
     min-width: 180px;
     background: white;
+    color: #374151;
     transition: all 0.3s ease;
 }
 
@@ -219,6 +220,12 @@ table thead th * {
     border-color: #667eea;
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
     outline: none;
+    color: #374151;
+}
+
+.members-filter-select option {
+    color: #374151;
+    background: white;
 }
 
 .members-table {
@@ -591,6 +598,7 @@ table thead th * {
         border: 2px solid #667eea !important;
         border-radius: 10px !important;
         box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2) !important;
+        color: #374151 !important;
     }
     
     .members-filter-select:focus,
@@ -598,6 +606,7 @@ table thead th * {
         border-color: #5a67d8 !important;
         box-shadow: 0 0 0 0.3rem rgba(102, 126, 234, 0.25) !important;
         outline: none !important;
+        color: #374151 !important;
     }
     
     .members-search-icon {
@@ -738,7 +747,7 @@ table thead th * {
                                         </span>
                                         {% elif user.role == 'product_owner' %}
                                         <span class="member-badge member-badge-admin" style="background-color: #6c757d; color: white;">
-                                            <i class="fas fa-shield-alt me-1"></i>Product Owner
+                                            <i class="fas fa-shield-alt me-1"></i>Technical Support
                                         </span>
                                         {% elif user.role == 'director' %}
                                         <span class="member-badge member-badge-director" style="background-color: #6c757d; color: white;">
@@ -1087,7 +1096,7 @@ table thead th * {
                 </div>
             `;
             
-            // Admin/Product Owner only fields
+            // Admin/Technical Support only fields
             if (isAdminOrOwner) {
                 // Full Name (editable for admin/owner)
                 html += `

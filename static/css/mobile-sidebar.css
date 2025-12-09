@@ -142,9 +142,11 @@
         font-size: 0.75rem !important;
         font-weight: 700 !important;
         text-transform: uppercase !important;
-        letter-spacing: 0.5px !important;
-        color: #9ca3af !important;
+        letter-spacing: 0.1em !important;
+        color: #000000 !important;
         margin-top: 1rem !important;
+        text-align: left !important;
+        display: block !important;
     }
     
     /* ===== Dropdown Toggle ===== */

@@ -272,25 +272,28 @@ body {
 }
 
 .nav-section-header {
-    display: flex;
-    align-items: center;
+    display: block;
     padding: 1rem 1.5rem 0.5rem;
-    color: var(--text-muted);
-    font-weight: 600;
-    font-size: 0.85rem;
+    color: #000000;
+    font-weight: 700;
+    font-size: 0.75rem;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.1em;
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     margin-top: 0.5rem;
+    text-align: left;
+    line-height: 1.2;
 }
 
 .nav-section-title {
-    margin-left: 10px;
+    /* Deprecated - kept for backward compatibility */
+    margin-left: 0;
 }
 
 .sidebar.collapsed .nav-text, 
 .sidebar.collapsed .logo-text,
-.sidebar.collapsed .nav-section-title {
+.sidebar.collapsed .nav-section-title,
+.sidebar.collapsed .nav-section-header {
     display: none;
 }
 
@@ -307,10 +310,15 @@ body {
 /* Hide large logo block when collapsed so only the toggle remains centered */
 .sidebar.collapsed .logo { display: none; }
 
-.sidebar.collapsed .nav-link,
-.sidebar.collapsed .nav-section-header {
+.sidebar.collapsed .nav-link {
     padding: 0.75rem;
     justify-content: center;
+}
+
+.sidebar.collapsed .nav-section-header {
+    padding: 0.75rem;
+    text-align: center;
+    font-size: 0.6rem;
 }
 
 /* Improve collapsed sidebar visuals */
@@ -874,7 +882,11 @@ body {
     .sidebar .nav-section-header {
         padding: 0.5rem 1rem;
         margin: 0.5rem 0.5rem 0.25rem 0.5rem;
-        font-size: 0.8rem;
+        font-size: 0.75rem;
+        text-align: left;
+        display: block;
+        color: #000000;
+        font-weight: 700;
     }
     
     /* Mobile content improvements */

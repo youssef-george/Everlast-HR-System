@@ -6,7 +6,7 @@
     <div class="content-header-actions">
         {% if (leave_request.user_id == current_user.id and leave_request.status == 'pending') or current_user.role == 'product_owner' %}
             {% if current_user.role == 'product_owner' %}
-                <!-- Product Owner uses admin edit route -->
+                <!-- Technical Support uses admin edit route -->
                 <a href="{{ url_for('leave.edit_leave', leave_id=leave_request.id) }}" class="btn btn-light-primary me-2">
                     <i class="fas fa-edit me-1"></i> Edit
                 </a>

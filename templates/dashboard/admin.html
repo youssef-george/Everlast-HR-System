@@ -2162,14 +2162,14 @@ document.addEventListener('DOMContentLoaded', function() {
             <h1 class="dashboard-title">
                 <i class="fas fa-tachometer-alt me-3"></i>
                 {% if current_user.role == 'product_owner' %}
-                    Product Owner Dashboard
+                    Technical Support Dashboard
                 {% else %}
                     Admin Dashboard
                 {% endif %}
             </h1>
             <p class="welcome-text">
                 {% if current_user.role == 'product_owner' %}
-                    Manage your organization and monitor system performance as Product Owner
+                    Manage your organization and monitor system performance as Technical Support
                 {% else %}
                     Manage your organization and monitor system performance
                 {% endif %}
@@ -2236,7 +2236,7 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
     </div>
     
-    <!-- Additional Stats for Admin/Product Owner -->
+    <!-- Additional Stats for Admin/Technical Support -->
     <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
         <div class="stat-card">
             <div class="stat-icon" style="background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%); color: #be185d;">
@@ -2295,7 +2295,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </h3>
                 <p class="text-muted mb-0 mt-2" style="font-size: 0.9rem;">
                     {% if current_user.role == 'product_owner' %}
-                        Essential product owner tools for system management
+                        Essential technical support tools for system management
                     {% else %}
                         Essential administrative tools for system management
                     {% endif %}

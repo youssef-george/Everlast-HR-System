@@ -38,7 +38,7 @@ def index():
                 ).order_by(PermissionRequest.created_at.desc()).all()
     
     elif user_role == 'product_owner':
-        # Product Owners see all permission requests regardless of department assignments
+        # Technical Support see all permission requests regardless of department assignments
         page_title = 'All Permission Requests'
         permission_requests = PermissionRequest.query.order_by(PermissionRequest.created_at.desc()).all()
     
@@ -355,7 +355,7 @@ def view(id):
                     entity_id=permission_request.id,
                     before_values=before_status,
                     after_values=after_status,
-                    description=f'Admin/Product Owner {current_user.get_full_name()} {approval_status} permission request #{permission_request.id} ({duration_hours:.1f} hour(s) on {start_date_str}) by {requester.get_full_name()}'
+                    description=f'Admin/Technical Support {current_user.get_full_name()} {approval_status} permission request #{permission_request.id} ({duration_hours:.1f} hour(s) on {start_date_str}) by {requester.get_full_name()}'
                 )
                 
                 # Send email notification (after commit to ensure data is saved)

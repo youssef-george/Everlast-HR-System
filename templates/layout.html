@@ -423,10 +423,7 @@
                 {% if current_user.role == 'manager' %}
                 <!-- Special navigation for managers with My Requests and Team Requests -->
                 <li class="nav-item">
-                    <div class="nav-section-header">
-                        <i class="fas fa-file-alt nav-icon"></i>
-                        <span class="nav-section-title">My Requests</span>
-                    </div>
+                    <div class="nav-section-header">MY REQUESTS</div>
                 </li>
                 <li class="nav-item">
                     <a href="{{ url_for('leave.index') }}?view=my" class="nav-link {{ 'active' if request.path.startswith('/leave') and request.args.get('view') == 'my' }}">
@@ -442,10 +439,7 @@
                 </li>
                 
                 <li class="nav-item">
-                    <div class="nav-section-header">
-                        <i class="fas fa-users-cog nav-icon"></i>
-                        <span class="nav-section-title">Team Requests</span>
-                    </div>
+                    <div class="nav-section-header">TEAM REQUESTS</div>
                 </li>
                 <li class="nav-item">
                     <a href="{{ url_for('leave.index') }}?view=team" class="nav-link {{ 'active' if request.path.startswith('/leave') and request.args.get('view') == 'team' or (request.path.startswith('/leave') and not request.args.get('view')) }}">
@@ -461,6 +455,9 @@
                 </li>
                 {% else %}
                 <!-- Regular navigation for other roles -->
+                <li class="nav-item">
+                    <div class="nav-section-header">LEAVE & PERMISSIONS</div>
+                </li>
                 <li class="nav-item">
                     <a href="{{ url_for('leave.index') }}" class="nav-link {{ 'active' if request.path.startswith('/leave') }}">
                         <i class="fas fa-umbrella-beach nav-icon"></i>
@@ -485,10 +482,7 @@
                 {% endif %}
                 
                 <li class="nav-item">
-                    <div class="nav-section-header">
-                        <i class="fas fa-headset nav-icon"></i>
-                        <span class="nav-section-title">Support / Tickets</span>
-                    </div>
+                    <div class="nav-section-header">SUPPORT / TICKETS</div>
                 </li>
                 <li class="nav-item">
                     <a href="{{ url_for('tickets.index') }}" class="nav-link {{ 'active' if request.path.startswith('/tickets') and not request.path.startswith('/tickets/inbox') and not request.path.startswith('/tickets/manager') and not request.path.startswith('/tickets/categories') and not request.path.startswith('/tickets/email-templates') }}">
@@ -532,6 +526,9 @@
                 
                 {% if current_user.role == 'product_owner' %}
                 <li class="nav-item">
+                    <div class="nav-section-header">SYSTEM LOGS</div>
+                </li>
+                <li class="nav-item">
                     <a href="{{ url_for('dashboard.activity_log') }}" class="nav-link {{ 'active' if request.path == '/dashboard/activity-log' }}">
                         <i class="fas fa-history nav-icon"></i>
                         <span class="nav-text">Activity Log</span>
@@ -540,6 +537,9 @@
                 {% endif %}
                 
                 <li class="nav-item">
+                    <div class="nav-section-header">COMPANY / MEMBERS</div>
+                </li>
+                <li class="nav-item">
                     <a href="{{ url_for('members.index') }}" class="nav-link {{ 'active' if request.path.startswith('/members') }}">
                         <i class="fas fa-users nav-icon"></i>
                         <span class="nav-text">Company Members</span>
@@ -547,10 +547,7 @@
                 </li>
                 
                 <li class="nav-item">
-                    <div class="nav-section-header">
-                        <i class="fas fa-fingerprint nav-icon"></i>
-                        <span class="nav-section-title">Attendance System</span>
-                    </div>
+                    <div class="nav-section-header">ATTENDANCE SYSTEM</div>
                 </li>
         <li class="nav-item">
             <a href="{{ url_for('attendance.index') }}" class="nav-link {{ 'active' if request.path.startswith('/attendance') and not request.path.startswith('/attendance/breaks') }}">
@@ -575,7 +572,7 @@
             </a>
         </li>
         {% endif %}
-        {% if current_user.role in ['admin', 'director', 'support', 'product_owner'] %}
+        {% if current_user.role in ['admin', 'director', 'support', 'product_owner', 'manager'] %}
         <li class="nav-item">
             <a href="{{ url_for('final_report.detailed_attendance_report') }}" class="nav-link {{ 'active' if request.path.startswith('/detailed-attendance-report') }}">
                 <i class="fas fa-list-alt nav-icon"></i>
@@ -584,6 +581,9 @@
         </li>
         {% endif %}
                 {% if current_user.role in ['admin', 'product_owner', 'director'] %}
+                <li class="nav-item">
+                    <div class="nav-section-header">ADMINISTRATION</div>
+                </li>
                 <li class="nav-item">
                     <a href="{{ url_for('dashboard.users') }}" class="nav-link {{ 'active' if request.path == '/dashboard/users' }}">
                         <i class="fas fa-user-cog nav-icon"></i>
@@ -659,6 +659,9 @@
                     </a>
                 </li>
                 {% endif %}
+                <li class="nav-item">
+                    <div class="nav-section-header">SETTINGS</div>
+                </li>
                 <li class="nav-item">
                     <a href="{{ url_for('profile.index') }}" class="nav-link {{ 'active' if request.path.startswith('/profile') }}">
                         <i class="fas fa-user-cog nav-icon"></i>
@@ -886,7 +889,7 @@
     <script src="{{ url_for('static', filename='js/auto-sync.js') }}"></script>
     {% endif %}
     
-    <!-- Sidebar Dropdown CSS Fix for Admin, Product Owner and Director Roles -->
+    <!-- Sidebar Dropdown CSS Fix for Admin, Technical Support and Director Roles -->
     {% if current_user.role in ['admin', 'product_owner', 'director'] %}
     <style>
         /* CSS Reset for dropdown items to prevent conflicts */

@@ -110,7 +110,7 @@ table thead th * {
                                                     <span class="badge bg-primary">Admin</span>
                                                     {% elif user.role == 'product_owner' %}
                                                     <span class="badge bg-primary">
-                                                        <i class="fas fa-shield-alt me-1"></i>Product Owner
+                                                        <i class="fas fa-shield-alt me-1"></i>Technical Support
                                                     </span>
                                                     {% elif user.role == 'director' %}
                                                     <span class="badge bg-info">Director</span>
@@ -133,7 +133,7 @@ table thead th * {
                                                         {% endif %}
                                                         
                                                         {% if current_user.role in ['admin', 'product_owner'] and current_user.id != user.id %}
-                                                        <!-- Admin and Product Owner can deactivate/delete ANY account -->
+                                                        <!-- Admin and Technical Support can deactivate/delete ANY account -->
                                                         <form method="POST" action="{{ url_for('dashboard.toggle_user_status', user_id=user.id) }}" class="d-inline">
                                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                             <button type="submit" onclick="return confirm('Are you sure you want to deactivate this user?');" class="btn btn-sm btn-warning">
@@ -202,7 +202,7 @@ table thead th * {
                                                     <span class="badge bg-primary">Admin</span>
                                                     {% elif user.role == 'product_owner' %}
                                                     <span class="badge bg-primary">
-                                                        <i class="fas fa-shield-alt me-1"></i>Product Owner
+                                                        <i class="fas fa-shield-alt me-1"></i>Technical Support
                                                     </span>
                                                     {% elif user.role == 'director' %}
                                                     <span class="badge bg-info">Director</span>
@@ -228,7 +228,7 @@ table thead th * {
                                                         {% endif %}
                                                         
                                                         {% if current_user.role in ['admin', 'product_owner'] and current_user.id != user.id %}
-                                                        <!-- Admin and Product Owner can activate/delete ANY account -->
+                                                        <!-- Admin and Technical Support can activate/delete ANY account -->
                                                         <form method="POST" action="{{ url_for('dashboard.toggle_user_status', user_id=user.id) }}" class="d-inline">
                                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                             <button type="submit" onclick="return confirm('Are you sure you want to activate this user?');" class="btn btn-sm btn-success">
@@ -514,11 +514,11 @@ table thead th * {
 
     // Sync users from devices function
     function syncUsersFromDevices() {
-        // Check if user has permission (Product Owner only)
+        // Check if user has permission (Technical Support only)
         const currentUserRole = '{{ current_user.role }}';
         if (currentUserRole !== 'product_owner') {
-            console.warn('Access denied: Only Product Owner can sync users from devices');
-            toastr.error('Access denied: Only Product Owner can sync users from devices');
+            console.warn('Access denied: Only Technical Support can sync users from devices');
+            toastr.error('Access denied: Only Technical Support can sync users from devices');
             return;
         }
         

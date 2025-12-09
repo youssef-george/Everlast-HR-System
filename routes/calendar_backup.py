@@ -95,7 +95,7 @@ def events():
                     logging.debug("Manager trying to view unauthorized user's data. Returning empty.")
                     return jsonify([])
             elif user_role in ['admin', 'product_owner', 'director']:
-                # Admins/Product Owners/Directors can view any user's data, but we still set user_id for specific filtering
+                # Admins/Technical Support/Directors can view any user's data, but we still set user_id for specific filtering
                 pass
         else:
             # No specific user filter - show data based on role
@@ -121,9 +121,9 @@ def events():
                 users = [emp for emp in employees if emp.status == 'active'] + [current_user]
                 logging.info(f"Manager view - showing {len(users)} users")
             elif user_role in ['admin', 'product_owner', 'director']:
-                # Admin/Product Owner/Director sees all active users
+                # Admin/Technical Support/Director sees all active users
                 users = User.query.filter_by(status='active').all()
-                logging.info(f"Admin/Product Owner/Director view - showing {len(users)} users")
+                logging.info(f"Admin/Technical Support/Director view - showing {len(users)} users")
             else:
                 # Employee sees only themselves
                 users = [current_user] if current_user.status == 'active' else []
@@ -450,7 +450,7 @@ def attendance_report():
         employees = get_employees_for_manager(current_user.id)
         users = [emp for emp in employees if emp.status == 'active'] + [current_user]
     elif current_user.role in ['admin', 'product_owner', 'director']:
-        # Admin/Product Owner/Director sees all active users
+        # Admin/Technical Support/Director sees all active users
         users = User.query.filter_by(status='active').all()
     else:
         # Employee sees only themselves

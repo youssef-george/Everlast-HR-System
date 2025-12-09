@@ -692,7 +692,7 @@ table thead th * {
                                                     </form>
                                                 {% endif %}
                                                 
-                                                <!-- Admin and Product Owner can edit/delete any request -->
+                                                <!-- Admin and Technical Support can edit/delete any request -->
                                                 {% if current_user.role in ['admin', 'product_owner', 'director'] %}
                                                     <a href="{{ url_for('leave.edit_leave', leave_id=leave.id) }}" class="btn btn-sm btn-icon btn-light-warning" data-bs-toggle="tooltip" title="Edit">
                                                         <i class="fas fa-edit"></i>

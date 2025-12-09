@@ -113,7 +113,7 @@ class User(UserMixin, db.Model):
     def get_manageable_employees(self):
         """Get list of employees this user can manage (submit requests for)"""
         if self.role in ['admin', 'product_owner']:
-            # Admin and product owners can manage all active employees
+            # Admin and technical support can manage all active employees
             return User.query.filter(
                 User.status == 'active',
                 User.id != self.id
@@ -353,7 +353,7 @@ class SMTPConfiguration(db.Model):
         if self.notify_admin_only and self.leave_notification_emails:
             return [email.strip() for email in self.leave_notification_emails.split(',') if email.strip()]
         elif not self.notify_admin_only:
-            # Return all admin and product owner user emails
+            # Return all admin and technical support user emails
             admin_emails = [user.email for user in User.query.filter(User.role.in_(['admin', 'product_owner']), User.status == 'active').all()]
             if self.leave_notification_emails:
                 custom_emails = [email.strip() for email in self.leave_notification_emails.split(',') if email.strip()]
@@ -366,7 +366,7 @@ class SMTPConfiguration(db.Model):
         if self.notify_admin_only and self.permission_notification_emails:
             return [email.strip() for email in self.permission_notification_emails.split(',') if email.strip()]
         elif not self.notify_admin_only:
-            # Return all admin and product owner user emails
+            # Return all admin and technical support user emails
             admin_emails = [user.email for user in User.query.filter(User.role.in_(['admin', 'product_owner']), User.status == 'active').all()]
             if self.permission_notification_emails:
                 custom_emails = [email.strip() for email in self.permission_notification_emails.split(',') if email.strip()]
@@ -765,7 +765,7 @@ class DocumentationPage(db.Model):
         """Check if this page is visible to a specific user"""
         if not user or not user.is_authenticated:
             return False
-        # Product Owner can see everything
+        # Technical Support can see everything
         if user.role == 'product_owner':
             return True
         return self.is_visible_to_role(user.role)
@@ -815,7 +815,7 @@ class EmailTemplate(db.Model):
 # ============================================================================
 
 class TicketCategory(db.Model):
-    """Model for ticket categories managed by Product Owner"""
+    """Model for ticket categories managed by Technical Support"""
     __tablename__ = 'ticket_categories'
     
     id = db.Column(db.Integer, primary_key=True)
