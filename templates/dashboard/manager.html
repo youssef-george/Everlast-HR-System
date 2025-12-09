@@ -1197,7 +1197,6 @@
                                         <th>End Date</th>
                                         <th>Duration</th>
                                         <th>Reason</th>
-                                        <th>Delegate Employee</th>
                                         <th>Status</th>
                                         <th>Actions</th>
                                     </tr>
@@ -1210,7 +1209,6 @@
                                             <td>{{ leave.end_date.strftime('%d/%m/%Y') }}</td>
                                             <td>{{ (leave.end_date - leave.start_date).days + 1 }} days</td>
                                             <td>{{ leave.reason|truncate(30) }}</td>
-                                            <td>{{ leave.delegate_employee.full_name if leave.delegate_employee else '-' }}</td>
                                             <td>
                                                 {% if leave.status == 'pending' %}
                                                     <span class="badge badge-light-warning">Pending</span>
@@ -1486,7 +1484,7 @@
                                         {% elif employee.role == 'admin' %}
                                             <span class="badge badge-light-danger">Admin</span>
                                         {% elif employee.role == 'product_owner' %}
-                                            <span class="badge badge-light-danger">Product Owner</span>
+                                            <span class="badge badge-light-danger">Technical Support</span>
                                         {% elif employee.role == 'director' %}
                                             <span class="badge badge-light-info">Director</span>
                                         {% endif %}

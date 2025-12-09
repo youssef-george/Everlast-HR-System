@@ -73,6 +73,41 @@
             allowClear: true,
             width: '100%'
         });
+        
+        // Initialize Flatpickr for date inputs to show calendar picker
+        const startDateInput = document.getElementById('start_date');
+        const endDateInput = document.getElementById('end_date');
+        
+        if (startDateInput && typeof flatpickr !== 'undefined') {
+            flatpickr(startDateInput, {
+                dateFormat: "Y-m-d",
+                allowInput: true,
+                clickOpens: true,
+                onChange: function(selectedDates, dateStr, instance) {
+                    // Update end date minimum to start date
+                    if (endDateInput && selectedDates.length > 0) {
+                        if (endDateInput._flatpickr) {
+                            endDateInput._flatpickr.set('minDate', selectedDates[0]);
+                        }
+                        endDateInput.min = dateStr;
+                        if (endDateInput.value && endDateInput.value < dateStr) {
+                            endDateInput.value = dateStr;
+                            if (endDateInput._flatpickr) {
+                                endDateInput._flatpickr.setDate(dateStr);
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        if (endDateInput && typeof flatpickr !== 'undefined') {
+            flatpickr(endDateInput, {
+                dateFormat: "Y-m-d",
+                allowInput: true,
+                clickOpens: true
+            });
+        }
     });
 </script>
 {% endblock %}

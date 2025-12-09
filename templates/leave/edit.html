@@ -99,22 +99,10 @@
                         {% endif %}
                     </div>
                     
-                    <!-- Delegate Employee -->
-                    <div class="mb-3">
-                        {{ form.delegate_employee_id.label(class="form-label") }}
-                        {{ form.delegate_employee_id(class="form-select") }}
-                        {% if form.delegate_employee_id.errors %}
-                            <div class="text-danger">
-                                {% for error in form.delegate_employee_id.errors %}
-                                    <small>{{ error }}</small>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                    </div>
-                    
                     <!-- Current Status Info -->
                     <div class="alert alert-info">
                         <h6 class="alert-heading">Current Status</h6>
+                        <p class="mb-1"><strong>Leave Request ID:</strong> #{{ leave_request.id }}</p>
                         <p class="mb-1"><strong>Employee:</strong> {{ leave_request.user.get_full_name() }}</p>
                         <p class="mb-1"><strong>Original Dates:</strong> {{ leave_request.start_date.strftime('%Y-%m-%d') }} to {{ leave_request.end_date.strftime('%Y-%m-%d') }}</p>
                         <p class="mb-0"><strong>Status:</strong> 

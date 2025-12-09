@@ -1729,7 +1729,6 @@
                                     <th class="min-w-150px">Dates</th>
                                     <th class="min-w-120px">Duration</th>
                                     <th class="min-w-200px">Reason</th>
-                                    <th class="min-w-150px">Delegate Employee</th>
                                     <th class="min-w-100px">Status</th>
                                     <th class="min-w-100px">Created</th>
                                     <th class="min-w-100px text-end">Actions</th>
@@ -1751,9 +1750,6 @@
                                         </td>
                                         <td>
                                             <span class="text-dark fw-bolder text-hover-primary d-block fs-6">{{ leave.reason|truncate(40) }}</span>
-                                        </td>
-                                        <td>
-                                            <span class="text-dark fw-bolder text-hover-primary d-block fs-6">{{ leave.delegate_employee.full_name if leave.delegate_employee else '-' }}</span>
                                         </td>
                                         <td>
                                             {% if leave.status == 'pending' %}

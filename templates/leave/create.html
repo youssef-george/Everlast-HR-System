@@ -123,11 +123,52 @@
             }
         }
 
+        // Initialize Flatpickr for date inputs to show calendar picker
+        if (startDateInput && typeof flatpickr !== 'undefined') {
+            flatpickr(startDateInput, {
+                dateFormat: "Y-m-d",
+                allowInput: true,
+                clickOpens: true,
+                onChange: function(selectedDates, dateStr, instance) {
+                    // Update end date minimum to start date
+                    if (endDateInput && selectedDates.length > 0) {
+                        if (endDateInput._flatpickr) {
+                            endDateInput._flatpickr.set('minDate', selectedDates[0]);
+                        }
+                        // Also update native min attribute
+                        endDateInput.min = dateStr;
+                        if (endDateInput.value && endDateInput.value < dateStr) {
+                            endDateInput.value = dateStr;
+                            if (endDateInput._flatpickr) {
+                                endDateInput._flatpickr.setDate(dateStr);
+                            }
+                        }
+                    }
+                    calculateDays();
+                }
+            });
+        }
+        
+        if (endDateInput && typeof flatpickr !== 'undefined') {
+            flatpickr(endDateInput, {
+                dateFormat: "Y-m-d",
+                allowInput: true,
+                clickOpens: true,
+                onChange: function(selectedDates, dateStr, instance) {
+                    calculateDays();
+                }
+            });
+        }
+
         if (startDateInput && endDateInput) {
+            // Also keep native change listeners for compatibility
             startDateInput.addEventListener('change', function() {
                 endDateInput.min = this.value;
                 if (endDateInput.value && endDateInput.value < this.value) {
                     endDateInput.value = this.value;
+                    if (endDateInput._flatpickr) {
+                        endDateInput._flatpickr.setDate(this.value);
+                    }
                 }
                 calculateDays();
             });
@@ -140,4 +181,4 @@
     });
 </script>
 {% endblock %}
-
+

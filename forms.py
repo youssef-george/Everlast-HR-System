@@ -37,7 +37,7 @@ class RegistrationForm(FlaskForm):
         ('employee', 'Employee'),
         ('manager', 'Direct Manager'),
         ('admin', 'Account Manager (Admin)'),
-        ('product_owner', 'Product Owner'),
+        ('product_owner', 'Technical Support'),
         ('director', 'Company Director')
     ], validators=[DataRequired()])
     joining_date = DateField('Joining Date', validators=[Optional()], format='%Y-%m-%d')
@@ -75,7 +75,7 @@ class UserEditForm(FlaskForm):
         ('employee', 'Employee'),
         ('manager', 'Direct Manager'),
         ('admin', 'Account Manager (Admin)'),
-        ('product_owner', 'Product Owner'),
+        ('product_owner', 'Technical Support'),
         ('director', 'Company Director')
     ], validators=[DataRequired()])
     status = SelectField('Status', choices=[
@@ -135,7 +135,6 @@ class LeaveRequestForm(FlaskForm):
     start_date = DateField('Start Date', validators=[DataRequired()], format='%Y-%m-%d')
     end_date = DateField('End Date', validators=[DataRequired()], format='%Y-%m-%d')
     reason = TextAreaField('Reason', validators=[DataRequired(), Length(min=5, max=500)])
-    delegate_employee_id = SelectField('Delegate Employee', coerce=int, validators=[Optional()])
     submit = SubmitField('Submit Leave Request')
     
     def validate_end_date(self, end_date):
@@ -168,7 +167,6 @@ class ApprovalForm(FlaskForm):
 class AdminLeaveRequestForm(LeaveRequestForm):
     """Form for admin to create leave requests on behalf of employees"""
     employee_id = SelectField('Employee', coerce=int, validators=[DataRequired()])
-    delegate_employee_id = SelectField('Delegate Employee', coerce=int, validators=[Optional()])
     submit = SubmitField('Submit Leave Request for Employee')
 
 class UpdateLeaveRequestForm(FlaskForm):
@@ -178,7 +176,6 @@ class UpdateLeaveRequestForm(FlaskForm):
     start_date = DateField('Start Date', validators=[DataRequired()], format='%Y-%m-%d')
     end_date = DateField('End Date', validators=[DataRequired()], format='%Y-%m-%d')
     reason = TextAreaField('Reason', validators=[DataRequired(), Length(min=5, max=500)])
-    delegate_employee_id = SelectField('Delegate Employee', coerce=int, validators=[Optional()])
     status = SelectField('Status', choices=[
         ('pending', 'Pending'),
         ('approved', 'Approved'),
@@ -336,7 +333,7 @@ class DocumentationPageForm(FlaskForm):
                                            ('employee', 'Employee'),
                                            ('manager', 'Manager'),
                                            ('admin', 'Admin'),
-                                           ('product_owner', 'Product Owner'),
+                                           ('product_owner', 'Technical Support'),
                                            ('director', 'Director')
                                        ],
                                        validators=[Optional()],
@@ -394,7 +391,7 @@ class TicketCommentForm(FlaskForm):
 
 
 class TicketCategoryForm(FlaskForm):
-    """Form for Product Owner to manage ticket categories"""
+    """Form for Technical Support to manage ticket categories"""
     name = StringField('Category Name', validators=[DataRequired(), Length(min=2, max=100)],
                      render_kw={'placeholder': 'e.g., Hardware Issue, Software Bug'})
     description = TextAreaField('Description', validators=[Optional(), Length(max=500)],

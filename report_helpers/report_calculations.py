@@ -440,16 +440,40 @@ def calculate_unified_report_data(user, start_date, end_date):
     today = date.today()
     
     while current_date <= end_date:
-        # Only count working days (Monday to Thursday) - exclude weekends
-        if current_date.weekday() < 4:  # Monday = 0, Thursday = 3
+        # Count working days: Monday to Thursday (0-3) and Sunday (6)
+        # Friday (4) and Saturday (5) are day off and not counted as absent
+        if current_date.weekday() < 4 or current_date.weekday() == 6:  # Monday-Thursday (0-3) or Sunday (6)
             # Only count if date is on or after joining date and not in the future
             if (not user.joining_date or current_date >= user.joining_date) and current_date <= today:
-                # Check if there's any record for this date
-                has_attendance = any(record.date == current_date for record in attendance_records)
+                # Check if there's any attendance record for this date (with actual attendance data)
+                # A day is considered to have attendance if:
+                # 1. There's a DailyAttendance record with check-in/check-out OR status indicating presence
+                # 2. OR there are raw attendance logs for that day
+                has_attendance = False
                 
-                # Check for leave requests on this date
+                # First check DailyAttendance records
+                for record in attendance_records:
+                    if record.date == current_date:
+                        # Check if record has actual attendance data (not just an empty record)
+                        if (record.first_check_in or record.last_check_out or 
+                            record.status in ['present', 'half-day', 'partial', 'in_office', 'Day Off / Present']):
+                            has_attendance = True
+                            break
+                
+                # If no DailyAttendance record found, check for raw attendance logs
+                if not has_attendance:
+                    start_datetime = datetime.combine(current_date, datetime.min.time())
+                    end_datetime = datetime.combine(current_date, datetime.max.time())
+                    today_logs_count = AttendanceLog.query.filter(
+                        AttendanceLog.user_id == user.id,
+                        AttendanceLog.timestamp.between(start_datetime, end_datetime)
+                    ).count()
+                    if today_logs_count > 0:
+                        has_attendance = True
+                
+                # Check for leave requests on this date (both approved and pending should exclude from absent)
                 has_leave = any(
-                    lr.start_date <= current_date <= lr.end_date and lr.status == 'approved'
+                    lr.start_date <= current_date <= lr.end_date and lr.status in ['approved', 'pending']
                     for lr in leave_requests
                 )
                 
@@ -460,9 +484,9 @@ def calculate_unified_report_data(user, start_date, end_date):
                     for ph in paid_holidays
                 )
                 
-                # Check for permission requests on this date
+                # Check for permission requests on this date (both approved and pending should exclude from absent)
                 has_permission = any(
-                    pr.start_time.date() <= current_date <= pr.end_time.date() and pr.status == 'approved'
+                    pr.start_time.date() <= current_date <= pr.end_time.date() and pr.status in ['approved', 'pending']
                     for pr in permission_requests
                 )
                 

@@ -6,6 +6,7 @@ from forms import LeaveRequestForm, ApprovalForm, AdminLeaveRequestForm, UpdateL
 from models import db, LeaveRequest, User, LeaveType, LeaveBalance, PaidHoliday
 from sqlalchemy import or_, and_
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.orm.attributes import flag_modified
 from helpers import role_required, get_user_managers, get_employees_for_manager, send_admin_email_notification, log_activity
 import logging
 import time
@@ -66,7 +67,7 @@ def index():
                 ).order_by(LeaveRequest.created_at.desc()).all()
     
     elif user_role == 'product_owner':
-        # Product Owners see all leave requests by default
+        # Technical Support see all leave requests by default
         if view_type == 'my':
             page_title = 'My Leave Requests'
             leave_requests = LeaveRequest.query.filter_by(
@@ -74,7 +75,7 @@ def index():
             ).order_by(LeaveRequest.created_at.desc()).all()
         else:
             page_title = 'All Leave Requests'
-            # Product Owners see all requests regardless of department assignments
+            # Technical Support see all requests regardless of department assignments
             leave_requests = LeaveRequest.query.order_by(LeaveRequest.created_at.desc()).all()
     
     elif user_role == 'admin':
@@ -160,11 +161,6 @@ def create():
     # Set leave type choices (PostgreSQL boolean comparison)
     leave_types = LeaveType.query.filter(LeaveType.is_active == True).all()
     form.leave_type_id.choices = [(lt.id, lt.name) for lt in leave_types] if leave_types else []
-
-    # Set delegate employee choices
-    employees = User.query.filter_by(status='active').order_by(User.first_name).all()
-    delegate_choices = [(0, 'Select Delegate Employee')] + [(e.id, e.get_full_name()) for e in employees] if employees else [(0, 'Select Delegate Employee')]
-    form.delegate_employee_id.choices = delegate_choices
     
     if form.validate_on_submit():
         # Check for paid holidays overlapping with the requested dates
@@ -257,7 +253,7 @@ def create():
         # Send confirmation email to employee first
         try:
             from helpers import send_email_to_employee
-            from flask import url_for
+            # url_for is already imported at the top of the file
             
             leave_type_obj = LeaveType.query.get(form.leave_type_id.data)
             leave_type_name = leave_type_obj.name if leave_type_obj else "Leave"
@@ -304,7 +300,7 @@ def create():
         # Send email notification to manager (or admin if no manager)
         try:
             from helpers import send_email_to_manager
-            from flask import url_for
+            # url_for is already imported at the top of the file
             
             leave_type_obj = LeaveType.query.get(form.leave_type_id.data)
             leave_type_name = leave_type_obj.name if leave_type_obj else "Leave"
@@ -384,7 +380,7 @@ def view(id):
             approval_form = ApprovalForm()
     
     elif user_role in ['admin', 'product_owner']:
-        # Admin/Product Owner can approve if:
+        # Admin/Technical Support can approve if:
         # 1. Request has manager approval and is pending admin approval (normal flow)
         # 2. OR if requester is manager, admin/product_owner can approve directly (manager requests skip manager approval)
         if ((leave_request.manager_status == 'approved' and leave_request.admin_status == 'pending') or
@@ -413,7 +409,7 @@ def view(id):
                 # Send email notification
                 try:
                     from helpers import send_email_to_admin, send_email_to_employee
-                    from flask import url_for
+                    # url_for is already imported at the top of the file
                     
                     leave_type_obj = LeaveType.query.get(leave_request.leave_type_id)
                     leave_type_name = leave_type_obj.name if leave_type_obj else "Leave"
@@ -462,6 +458,32 @@ def view(id):
                 leave_request.admin_comment = comment
                 leave_request.admin_updated_at = datetime.utcnow()
                 
+                # If requester is a manager and admin is approving, ensure manager_status is also approved
+                # (Manager requests skip manager approval, so manager_status should already be approved,
+                # but we ensure it's set correctly here)
+                if approval_status == 'approved' and requester_is_manager and leave_request.manager_status != 'approved':
+                    leave_request.manager_status = 'approved'
+                    leave_request.manager_updated_at = datetime.utcnow()
+                
+                # Update overall status immediately after setting admin_status
+                # This ensures the status is correctly updated before commit
+                old_status = leave_request.status
+                leave_request.update_overall_status()
+                
+                # Explicitly set the status field to ensure SQLAlchemy tracks the change
+                # This is a backup in case update_overall_status() doesn't trigger tracking
+                new_status = leave_request.status
+                leave_request.status = new_status
+                
+                # Explicitly mark the status field as modified to ensure SQLAlchemy tracks the change
+                flag_modified(leave_request, 'status')
+                
+                # Log the status update for debugging
+                logging.info(f"Admin approval: Updated leave request #{leave_request.id} status from '{old_status}' to '{new_status}' (manager_status: {leave_request.manager_status}, admin_status: {leave_request.admin_status})")
+                
+                # Explicitly mark the object as modified to ensure SQLAlchemy tracks the change
+                db.session.add(leave_request)
+                
                 # Send email notification
                 try:
                     from helpers import send_email_to_employee
@@ -502,28 +524,34 @@ def view(id):
                 except Exception as e:
                     logging.error(f"Failed to send email notification: {str(e)}")
         
-            # Update overall status
-            try:
-                leave_request.update_overall_status()
-            except Exception as status_error:
-                logging.error(f"Error updating overall status: {str(status_error)}", exc_info=True)
-                # Continue even if status update fails
+            # Update overall status (if not already updated in admin approval section)
+            if user_role not in ['admin', 'product_owner']:
+                try:
+                    old_status = leave_request.status
+                    leave_request.update_overall_status()
+                    # Explicitly mark the status field as modified to ensure SQLAlchemy tracks the change
+                    flag_modified(leave_request, 'status')
+                    # Explicitly mark the object as modified to ensure SQLAlchemy tracks the change
+                    db.session.add(leave_request)
+                    logging.info(f"Manager approval: Updated leave request #{leave_request.id} status from '{old_status}' to '{leave_request.status}'")
+                except Exception as status_error:
+                    logging.error(f"Error updating overall status: {str(status_error)}", exc_info=True)
+                    # Continue even if status update fails
             
             # Log leave request approval/rejection (after status update)
             leave_type_obj = LeaveType.query.get(leave_request.leave_type_id)
             leave_type_name = leave_type_obj.name if leave_type_obj else "Leave"
             duration = (leave_request.end_date - leave_request.start_date).days + 1
             
-            # Get the status after update (need to refresh)
-            db.session.refresh(leave_request)
-            
+            # Get the status after update (don't refresh before commit to avoid stale data)
+            # The status should already be updated by update_overall_status()
             after_status = {
                 'manager_status': leave_request.manager_status,
                 'admin_status': leave_request.admin_status,
                 'overall_status': leave_request.status
             }
             
-            approver_role = 'Manager' if user_role == 'manager' else 'Admin/Product Owner'
+            approver_role = 'Manager' if user_role == 'manager' else 'Admin/Technical Support'
             action_name = f'{user_role}_approve_leave_request' if approval_status == 'approved' else f'{user_role}_reject_leave_request'
             log_activity(
                 user=current_user,
@@ -547,7 +575,28 @@ def view(id):
                 logging.error(f"Error updating attendance/balance: {str(attendance_error)}", exc_info=True)
                 # Continue even if attendance update fails
             
+            # Flush changes to database before commit to ensure status is saved
+            db.session.flush()
+            
+            # Verify the status was updated correctly before commit
+            if approval_status == 'approved':
+                # Ensure status is updated one more time before commit
+                leave_request.update_overall_status()
+                # Explicitly set and flag the status to ensure it's saved
+                final_status = leave_request.status
+                leave_request.status = final_status
+                flag_modified(leave_request, 'status')
+                db.session.add(leave_request)
+                logging.info(f"Before commit - Leave request #{leave_request.id} status: {final_status}, manager_status: {leave_request.manager_status}, admin_status: {leave_request.admin_status}")
+            
+            # Commit all changes including status update
             db.session.commit()
+            
+            # Verify after commit by re-querying from database
+            db.session.expire(leave_request)
+            verified_request = LeaveRequest.query.get(leave_request.id)
+            logging.info(f"After commit (verified from DB) - Leave request #{leave_request.id} status: {verified_request.status}, manager_status: {verified_request.manager_status}, admin_status: {verified_request.admin_status}")
+            
             flash(f'Leave request has been {approval_status}.', 'success')
             return redirect(url_for('leave.index'))
         
@@ -555,6 +604,7 @@ def view(id):
             db.session.rollback()
             logging.error(f"Error processing leave request approval: {str(e)}", exc_info=True)
             flash(f'An error occurred while processing the approval: {str(e)}. Please try again.', 'danger')
+            # url_for is already imported at the top of the file, use it directly
             return redirect(url_for('leave.view', id=leave_request.id))
     
     return render_template('leave/view.html',
@@ -567,7 +617,7 @@ def view(id):
 @leave_bp.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit(id):
-    """Edit a leave request. Product Owner can edit any request regardless of status. Admins/Directors can edit any request. Employees can only edit their own pending requests."""
+    """Edit a leave request. Technical Support can edit any request regardless of status. Admins/Directors can edit any request. Employees can only edit their own pending requests."""
     leave_request = LeaveRequest.query.get_or_404(id)
     
     # Check if user can edit this request
@@ -575,7 +625,7 @@ def edit(id):
         flash('You can only edit your own leave requests.', 'danger')
         return redirect(url_for('leave.index'))
     
-    # Product Owner can edit any request regardless of status
+    # Technical Support can edit any request regardless of status
     if leave_request.status != 'pending' and current_user.role not in ['admin', 'product_owner', 'director']:
         flash('You can only edit pending leave requests.', 'danger')
         return redirect(url_for('leave.index'))
@@ -586,16 +636,10 @@ def edit(id):
     leave_types = LeaveType.query.filter(LeaveType.is_active == True).all()
     form.leave_type_id.choices = [(lt.id, lt.name) for lt in leave_types] if leave_types else []
 
-    # Set delegate employee choices
-    employees = User.query.filter_by(status='active').order_by(User.first_name).all()
-    delegate_choices = [(0, 'Select Delegate Employee')] + [(e.id, e.get_full_name()) for e in employees] if employees else [(0, 'Select Delegate Employee')]
-    form.delegate_employee_id.choices = delegate_choices
-
     if form.validate_on_submit():
         leave_request.start_date = form.start_date.data
         leave_request.end_date = form.end_date.data
         leave_request.reason = form.reason.data
-        leave_request.delegate_employee_id = form.delegate_employee_id.data if form.delegate_employee_id.data != 0 else None
         
         db.session.commit()
         
@@ -611,13 +655,13 @@ def edit(id):
 @leave_bp.route('/delete/<int:id>', methods=['POST'])
 @login_required
 def delete(id):
-    """Delete a leave request. Product Owner can delete any request regardless of status. Admins can delete pending requests. Employees can only delete their own pending requests."""
+    """Delete a leave request. Technical Support can delete any request regardless of status. Admins can delete pending requests. Employees can only delete their own pending requests."""
     leave_request = LeaveRequest.query.get_or_404(id)
     
     # Check if user can delete this request
     if current_user.role == 'product_owner':
-        # Product Owner can delete any leave request regardless of status
-        pass  # No restrictions for Product Owner
+        # Technical Support can delete any leave request regardless of status
+        pass  # No restrictions for Technical Support
     elif current_user.role == 'admin':
         # Admins can delete any pending leave request
         if leave_request.status != 'pending':
@@ -686,7 +730,6 @@ def admin_create():
     # Initialize choices to empty lists immediately to prevent None errors
     form.employee_id.choices = []
     form.leave_type_id.choices = []
-    form.delegate_employee_id.choices = []
     
     # Populate employee dropdown with active employees (excluding test users)
     current_app.logger.debug(f"Current user role: {current_user.role}")
@@ -782,11 +825,6 @@ def admin_create():
     form.employee_id.choices = employee_choices if employee_choices else []
     form.leave_type_id.choices = leave_type_choices if leave_type_choices else []
     
-    # Also set delegate employee choices
-    delegate_employees = User.query.filter_by(status='active').order_by(User.first_name).all()
-    delegate_choices = [(0, 'Select Delegate Employee')] + [(e.id, e.get_full_name()) for e in delegate_employees] if delegate_employees else [(0, 'Select Delegate Employee')]
-    form.delegate_employee_id.choices = delegate_choices
-    
     if form.validate_on_submit():
         # Get the selected employee
         employee = User.query.get(form.employee_id.data)
@@ -849,8 +887,21 @@ def edit_leave(leave_id):
     """Edit a leave request (admin only) with last updated tracking"""
     leave_request = LeaveRequest.query.get_or_404(leave_id)
     
+    # Log which leave request is being edited for debugging
+    logging.info(f"Admin {current_user.id} ({current_user.get_full_name()}) editing leave request #{leave_id} (Employee: {leave_request.user.get_full_name() if leave_request.user else 'Unknown'})")
+    
     # Create form and populate with existing data
     form = UpdateLeaveRequestForm(obj=leave_request)
+    
+    # Explicitly populate form fields that don't match model attributes
+    # This ensures the form shows the correct data for the selected leave request
+    form.employee_id.data = leave_request.user_id
+    form.leave_type_id.data = leave_request.leave_type_id
+    form.start_date.data = leave_request.start_date
+    form.end_date.data = leave_request.end_date
+    form.reason.data = leave_request.reason
+    form.status.data = leave_request.status
+    form.admin_notes.data = leave_request.admin_comment if leave_request.admin_comment else ''
     
     # Populate employee choices
     employees = User.query.filter_by(status='active').all()
@@ -888,11 +939,6 @@ def edit_leave(leave_id):
     # Set choices for all fields - always set even if empty
     form.employee_id.choices = employee_choices
     form.leave_type_id.choices = leave_type_choices
-    
-    # Also set delegate employee choices
-    delegate_employees = User.query.filter_by(status='active').order_by(User.first_name).all()
-    delegate_choices = [(0, 'Select Delegate Employee')] + [(e.id, e.get_full_name()) for e in delegate_employees] if delegate_employees else [(0, 'Select Delegate Employee')]
-    form.delegate_employee_id.choices = delegate_choices
     
     if form.validate_on_submit():
         try:

@@ -356,16 +356,32 @@ def _legacy_calculate_user_report_data(user, start_date, end_date):
     today = date.today()
     
     while current_date <= end_date:
-        # Only count working days (Monday to Thursday) - exclude weekends
-        if current_date.weekday() < 4:  # Monday = 0, Thursday = 3
+        # Count working days: Monday to Thursday (0-3) and Sunday (6)
+        # Friday (4) and Saturday (5) are day off and not counted as absent
+        if current_date.weekday() < 4 or current_date.weekday() == 6:  # Monday-Thursday (0-3) or Sunday (6)
             # Only count if date is on or after joining date and not in the future
             if (not user.joining_date or current_date >= user.joining_date) and current_date <= today:
-                # Check if there's any record for this date
-                has_attendance = any(record.date == current_date for record in attendance_records)
+                # Check if there's any attendance record for this date (with actual attendance data)
+                has_attendance = any(
+                    record.date == current_date and 
+                    (record.first_check_in or record.last_check_out or record.status in ['present', 'half-day', 'partial', 'in_office'])
+                    for record in attendance_records
+                )
                 
-                # Check for leave requests on this date
+                # Also check for raw attendance logs (in case DailyAttendance record doesn't exist yet)
+                if not has_attendance:
+                    start_datetime = datetime.combine(current_date, datetime.min.time())
+                    end_datetime = datetime.combine(current_date, datetime.max.time())
+                    today_logs = AttendanceLog.query.filter(
+                        AttendanceLog.user_id == user.id,
+                        AttendanceLog.timestamp.between(start_datetime, end_datetime)
+                    ).count()
+                    if today_logs > 0:
+                        has_attendance = True
+                
+                # Check for leave requests on this date (both approved and pending should exclude from absent)
                 has_leave = any(
-                    lr.start_date <= current_date <= lr.end_date and lr.status == 'approved'
+                    lr.start_date <= current_date <= lr.end_date and lr.status in ['approved', 'pending']
                     for lr in leave_requests
                 )
                 
@@ -376,9 +392,9 @@ def _legacy_calculate_user_report_data(user, start_date, end_date):
                     for ph in paid_holidays
                 )
                 
-                # Check for permission requests on this date
+                # Check for permission requests on this date (both approved and pending should exclude from absent)
                 has_permission = any(
-                    pr.start_time.date() <= current_date <= pr.end_time.date() and pr.status == 'approved'
+                    pr.start_time.date() <= current_date <= pr.end_time.date() and pr.status in ['approved', 'pending']
                     for pr in permission_requests
                 )
                 
@@ -528,9 +544,11 @@ def final_report():
         # Employees can only see their own data
         users = [current_user] if current_user.status == 'active' else []
     elif current_user.role == 'manager':
-        # Managers see only their employees
+        # Managers see their employees AND themselves
         from helpers import get_employees_for_manager
-        users = get_employees_for_manager(current_user.id)
+        team_members = get_employees_for_manager(current_user.id)
+        # Include manager themselves
+        users = [current_user] + list(team_members)
         # Filter to active users only
         users = [u for u in users if u.status == 'active' and 
                  not u.first_name.startswith('User') and 
@@ -591,9 +609,12 @@ def final_report():
         # For employees, ensure they can only view themselves
         if current_user.role == 'employee':
             user_ids = [current_user.id] if current_user.id in user_ids else []
-        # For managers, ensure they can only view their own employees
+        # For managers, ensure they can only view their own employees and themselves
         elif current_user.role == 'manager':
             manager_employee_ids = [u.id for u in users]
+            # Always allow manager to view themselves
+            if current_user.id not in manager_employee_ids:
+                manager_employee_ids.append(current_user.id)
             user_ids = [uid for uid in user_ids if uid in manager_employee_ids]
         users = [user for user in users if user.id in user_ids]
     
@@ -739,9 +760,11 @@ def export_final_report():
         # Employees can only export their own data
         users = [current_user] if current_user.status == 'active' else []
     elif current_user.role == 'manager':
-        # Managers can only export their employees
+        # Managers can export their employees AND themselves
         from helpers import get_employees_for_manager
-        users = get_employees_for_manager(current_user.id)
+        team_members = get_employees_for_manager(current_user.id)
+        # Include manager themselves
+        users = [current_user] + list(team_members)
         # Filter to active users only
         users = [u for u in users if u.status == 'active' and 
                  not u.first_name.startswith('User') and 
@@ -762,9 +785,12 @@ def export_final_report():
         # For employees, ensure they can only export themselves
         if current_user.role == 'employee':
             user_ids = [current_user.id] if current_user.id in user_ids else []
-        # For managers, ensure they can only export their own employees
+        # For managers, ensure they can only export their own employees and themselves
         elif current_user.role == 'manager':
             manager_employee_ids = [u.id for u in users]
+            # Always allow manager to export themselves
+            if current_user.id not in manager_employee_ids:
+                manager_employee_ids.append(current_user.id)
             user_ids = [uid for uid in user_ids if uid in manager_employee_ids]
         users = [user for user in users if user.id in user_ids]
     
@@ -904,7 +930,7 @@ def role_required(roles):
 
 @final_report_bp.route('/detailed-attendance-report')
 @login_required
-@role_required(['admin', 'director', 'support', 'product_owner'])
+@role_required(['admin', 'director', 'support', 'product_owner', 'manager'])
 def detailed_attendance_report():
     """Detailed Attendance Report - Admin, Director, Support, and Product Owner attendance report with expandable employee logs"""
     
@@ -934,14 +960,27 @@ def detailed_attendance_report():
     else:
         logging.info('Skipping sync on detailed attendance report page load - another sync is already running')
     
-    # Get all active users (admin only) - needed for both empty and populated states
-    users = User.query.filter(
-        User.status == 'active',
-        ~User.first_name.like('User%'),  # Exclude generic test users
-        ~User.first_name.like('NN-%'),   # Exclude numbered test users
-        User.first_name != '',           # Exclude empty names
-        User.last_name != ''             # Exclude users without last names
-    ).all()
+    # Get users based on role
+    if current_user.role == 'manager':
+        # Managers see their employees AND themselves
+        from helpers import get_employees_for_manager
+        team_members = get_employees_for_manager(current_user.id)
+        # Include manager themselves
+        users = [current_user] + list(team_members)
+        # Filter to active users only
+        users = [u for u in users if u.status == 'active' and 
+                 not u.first_name.startswith('User') and 
+                 not u.first_name.startswith('NN-') and
+                 u.first_name != '' and u.last_name != '']
+    else:
+        # Admin, Director, Support, Product Owner see all active users
+        users = User.query.filter(
+            User.status == 'active',
+            ~User.first_name.like('User%'),  # Exclude generic test users
+            ~User.first_name.like('NN-%'),   # Exclude numbered test users
+            User.first_name != '',           # Exclude empty names
+            User.last_name != ''             # Exclude users without last names
+        ).all()
     
     # Sort users by fingerprint number: Not Assigned (None/empty) first, then numeric low to high
     def get_fingerprint_sort_key(user):
@@ -985,6 +1024,13 @@ def detailed_attendance_report():
     
     # Filter users if specific users are selected
     if user_ids:
+        # For managers, ensure they can only view their own employees and themselves
+        if current_user.role == 'manager':
+            manager_employee_ids = [u.id for u in users]
+            # Always allow manager to view themselves
+            if current_user.id not in manager_employee_ids:
+                manager_employee_ids.append(current_user.id)
+            user_ids = [uid for uid in user_ids if uid in manager_employee_ids]
         users = [user for user in users if user.id in user_ids]
     
     # Generate report data with duplicate removal - using exact same logic as final_report
@@ -1017,7 +1063,7 @@ def detailed_attendance_report():
 
 @final_report_bp.route('/detailed-attendance-report/employee-logs/<int:user_id>', methods=['GET'])
 @login_required
-@role_required(['admin', 'director', 'support', 'product_owner'])
+@role_required(['admin', 'director', 'support', 'product_owner', 'manager'])
 def get_employee_logs(user_id):
     """API endpoint to fetch detailed attendance data for a specific employee for all days in date range"""
     logging.info(f"User {user_id} requested detailed report from {request.args.get('start_date')} to {request.args.get('end_date')}")
@@ -1034,6 +1080,15 @@ def get_employee_logs(user_id):
 
         # Get user
         user = User.query.get_or_404(user_id)
+        
+        # For managers, ensure they can only view their own employees and themselves
+        if current_user.role == 'manager':
+            from helpers import get_employees_for_manager
+            team_members = get_employees_for_manager(current_user.id)
+            manager_employee_ids = [u.id for u in team_members] + [current_user.id]
+            if user_id not in manager_employee_ids:
+                return jsonify({'error': 'Access denied. You can only view reports for yourself and your team members.'}), 403
+        
         logging.info(f"Processing report for user: {user.get_full_name()} (ID: {user.id})")
 
         # Use the unified calculation logic to get comprehensive data
@@ -1196,7 +1251,8 @@ def get_employee_logs(user_id):
                         status = 'Present (Logs Found)'
                     else:
                         # No attendance record or logs
-                        if current_date.weekday() in [4, 5]:  # Friday/Saturday
+                        # Check for day off: Friday (4) and Saturday (5) only
+                        if current_date.weekday() in [4, 5]:  # Friday/Saturday only
                             status = 'Day Off'
                         elif leave_request:
                             # FIX: Show leave type instead of Absent for approved leave days
@@ -1205,7 +1261,12 @@ def get_employee_logs(user_id):
                             else:
                                 status = 'Annual Leave'  # Default if no type specified
                         else:
-                            status = 'Absent'
+                            # Sunday (6) and Monday-Thursday (0-3) are working days and can be absent
+                            # Only Friday (4) and Saturday (5) are day off
+                            if current_date.weekday() in [0, 1, 2, 3, 6]:  # Monday-Thursday and Sunday
+                                status = 'Absent'
+                            else:
+                                status = 'Day Off'  # Friday/Saturday fallback
                         hours_worked = 0.0
                         extra_time = 0.0
 
@@ -1297,7 +1358,7 @@ def get_employee_logs(user_id):
 
 @final_report_bp.route('/detailed-attendance-report/export')
 @login_required
-@role_required(['admin', 'director', 'support', 'product_owner'])
+@role_required(['admin', 'director', 'support', 'product_owner', 'manager'])
 def export_detailed_attendance_report():
     """Export detailed attendance report to Excel"""
     
@@ -1315,17 +1376,37 @@ def export_detailed_attendance_report():
     except ValueError:
         return jsonify({'error': 'Invalid date format'}), 400
     
-    # Get users for export (admin, director, support only)
-    users = User.query.filter(
-        User.status == 'active',
-        ~User.first_name.like('User%'),  # Exclude generic test users
-        ~User.first_name.like('NN-%'),   # Exclude numbered test users
-        User.first_name != '',           # Exclude empty names
-        User.last_name != ''             # Exclude users without last names
-    ).all()
+    # Get users for export based on role
+    if current_user.role == 'manager':
+        # Managers can export their employees AND themselves
+        from helpers import get_employees_for_manager
+        team_members = get_employees_for_manager(current_user.id)
+        # Include manager themselves
+        users = [current_user] + list(team_members)
+        # Filter to active users only
+        users = [u for u in users if u.status == 'active' and 
+                 not u.first_name.startswith('User') and 
+                 not u.first_name.startswith('NN-') and
+                 u.first_name != '' and u.last_name != '']
+    else:
+        # Admin, Director, Support, Product Owner can export all users
+        users = User.query.filter(
+            User.status == 'active',
+            ~User.first_name.like('User%'),  # Exclude generic test users
+            ~User.first_name.like('NN-%'),   # Exclude numbered test users
+            User.first_name != '',           # Exclude empty names
+            User.last_name != ''             # Exclude users without last names
+        ).all()
     
     # Filter users if specific users are selected
     if user_ids:
+        # For managers, ensure they can only export their own employees and themselves
+        if current_user.role == 'manager':
+            manager_employee_ids = [u.id for u in users]
+            # Always allow manager to export themselves
+            if current_user.id not in manager_employee_ids:
+                manager_employee_ids.append(current_user.id)
+            user_ids = [uid for uid in user_ids if uid in manager_employee_ids]
         users = [user for user in users if user.id in user_ids]
     
     # Sort users by fingerprint number: Not Assigned (None/empty) first, then numeric low to high
