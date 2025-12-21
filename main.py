@@ -28,10 +28,11 @@ except Exception as e:
     sys.exit(1)
 
 # Determine config based on environment
-config_name = 'production' if os.environ.get('FLASK_ENV') == 'production' else 'default'
+# Default to 'production' in containerized environments
+config_name = 'production' if (os.environ.get('FLASK_ENV') == 'production' or os.environ.get('COOLIFY_RESOURCE_UUID')) else 'default'
 logger.info(f"Using config: {config_name}")
 
-# Create the Flask application
+# Create the Flask application (must be at module level for gunicorn)
 try:
     logger.info("Creating Flask app...")
     app = create_app(config_name=config_name)
@@ -39,7 +40,8 @@ try:
 except Exception as e:
     logger.error(f'Failed to create Flask app: {str(e)}', exc_info=True)
     traceback.print_exc()
-    sys.exit(1)
+    # Don't exit here - let gunicorn handle it, but log the error
+    raise
 
 # Health check endpoint for container orchestration
 @app.route('/health')

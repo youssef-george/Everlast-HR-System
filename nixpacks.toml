@@ -14,7 +14,7 @@ cacheDirectories = ["/root/.cache/pip"]
 paths = ["/opt/venv/bin"]
 
 [start]
-cmd = "python main.py"
+cmd = "/opt/venv/bin/gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 2 --threads 2 --timeout 120 --access-logfile - --error-logfile - --log-level info main:app"
 
 [variables]
 PYTHONUNBUFFERED = "1"
