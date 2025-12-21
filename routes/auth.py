@@ -140,6 +140,11 @@ def register():
     departments = Department.query.all()
     form.department_id.choices = [(0, 'No Department')] + [(d.id, d.department_name) for d in departments]
     
+    # Filter role choices: Admins cannot assign product_owner role
+    if current_user.role == 'admin':
+        # Remove product_owner from role choices for admins
+        form.role.choices = [choice for choice in form.role.choices if choice[0] != 'product_owner']
+    
     if form.validate_on_submit():
         # Verify Turnstile if enabled
         if current_app.config.get('TURNSTILE_ENABLED'):
@@ -154,6 +159,11 @@ def register():
                 return render_template('auth/register.html', form=form, title='Register New User', departments=departments)
         
         try:
+            # Prevent admins from creating users with product_owner role
+            if form.role.data == 'product_owner' and current_user.role == 'admin':
+                flash('❌ Access Denied: Only Technical Support can create users with Technical Support role.', 'danger')
+                return render_template('auth/register.html', form=form, title='Register New User', departments=departments)
+            
             # Check if user with this email already exists
             existing_user = User.query.filter_by(email=form.email.data).first()
             if existing_user:

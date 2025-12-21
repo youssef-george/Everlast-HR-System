@@ -795,6 +795,11 @@ def edit_user(user_id):
     # Set department choices BEFORE validation
     department_choices = [(0, 'No Department')] + [(d.id, d.department_name) for d in departments]
     form.department_id.choices = department_choices
+    
+    # Filter role choices: Admins cannot assign product_owner role
+    if current_user.role == 'admin':
+        # Remove product_owner from role choices for admins
+        form.role.choices = [choice for choice in form.role.choices if choice[0] != 'product_owner']
 
     # Attachment form is separate (do not nest forms in template)
     attachment_form = EmployeeAttachmentForm()
@@ -830,9 +835,16 @@ def edit_user(user_id):
             user.avaya_number = form.avaya_number.data or None
             user.fingerprint_number = form.fingerprint_number.data or None
             
-            # ROLE ASSIGNMENT: Admin and Technical Support can assign any role
+            # ROLE ASSIGNMENT: Only Technical Support can assign product_owner role
             original_role = user.role
             new_role = form.role.data
+            
+            # Prevent admins from assigning product_owner role
+            if new_role == 'product_owner' and current_user.role == 'admin':
+                flash('❌ Access Denied: Only Technical Support can assign the Technical Support role.', 'danger')
+                return render_template('dashboard/edit_user.html', title='Edit User',
+                                        form=form, attachment_form=attachment_form, user=user,
+                                        is_editing_product_owner=is_editing_product_owner)
             
             # Log role changes for audit trail
             if original_role != new_role:
