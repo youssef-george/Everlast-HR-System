@@ -35,7 +35,8 @@ def index():
             'marketing': 5,          # Marketing
             'finance': 6,            # Finance
             'call center': 7,        # Call Center
-            'housekeeping': 8         # Housekeeping
+            'business development': 8,  # Business Development
+            'housekeeping': 9         # Housekeeping
         }
         
         def get_department_priority(user):
@@ -43,7 +44,8 @@ def index():
             if not user.department:
                 return 999  # No department goes last
             dept_name = user.department.department_name.lower()
-            return custom_department_order.get(dept_name, 999)
+            # If department not in list, assign priority 8.5 (after call center, before housekeeping)
+            return custom_department_order.get(dept_name, 8.5)
         
         def is_manager(user):
             """Check if user is a manager (has managed_department or role is manager)"""
