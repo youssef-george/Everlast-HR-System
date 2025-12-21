@@ -1,0 +1,83 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# Test files
+test_*.py
+*_test.py
+tests/
+
+# Temporary files
+*.tmp
+*.bak
+*.cache
+server_startup.log
+
+# Large assets (keep only necessary images)
+assets/
+*.png
+*.jpg
+*.jpeg
+*.gif
+!static/images/favicon.png
+!static/images/login-logo.png
+
+# Development files
+*.bat
+*.sh
+deploy_*.py
+get_network_info.py
+fix_env_config.py
+setup_devices.py
+example_usage.py
+test_*.py
+sync_now.py
+
+# Sync agent (not needed in main app)
+sync_agent/
+
+# Migrations cache
+migrations/versions/__pycache__/
+
+# Large test HTML files
+test_*.html
+debug_*.html
+auto_fetch_*.html
+
+# Lock files (not needed for build)
+uv.lock
