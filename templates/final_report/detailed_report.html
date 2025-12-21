@@ -2419,17 +2419,62 @@ function loadEmployeeLogs(userId, startDate, endDate, expandableRow) {
     console.log('🌐 Making AJAX request to:', apiUrl);
     
     // Make AJAX request
-    fetch(apiUrl)
+    fetch(apiUrl, {
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+    })
         .then(response => {
             console.log('📡 Response received:', response.status, response.statusText);
+            console.log('📡 Content-Type:', response.headers.get('content-type'));
+            
+            // Check if response is JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                // If not JSON, read as text to see what we got
+                return response.text().then(text => {
+                    console.error('❌ Non-JSON response received:', text.substring(0, 200));
+                    throw new Error(`Server returned HTML instead of JSON. This usually means an authentication or permission error. Status: ${response.status}`);
+                });
+            }
+            
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                // For error responses, try to parse JSON error message
+                return response.json().then(errorData => {
+                    // Create error with detailed message from server
+                    const errorMessage = errorData.message || errorData.error || `HTTP ${response.status}: ${response.statusText}`;
+                    const error = new Error(errorMessage);
+                    error.status = response.status;
+                    error.errorData = errorData; // Attach full error data
+                    throw error;
+                }).catch(parseError => {
+                    // If JSON parsing fails, throw generic error
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                });
             }
             return response.json();
         })
         .then(data => {
             console.log('📊 Data received:', data);
             loadingSpinner.style.display = 'none';
+            
+            // Check if request was successful
+            if (data.success === false) {
+                console.error('❌ API returned error:', data.error || data.message);
+                noLogsMessage.innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="fas fa-exclamation-triangle text-danger mb-2"></i>
+                        <p class="text-danger mb-0">Error loading attendance logs.</p>
+                        <small class="text-muted">${data.error || data.message || 'Unknown error'}</small><br>
+                        <button class="btn btn-sm btn-outline-primary mt-2" onclick="loadEmployeeLogs('${userId}', '${startDate}', '${endDate}', this.closest('tr'))">
+                            <i class="fas fa-redo me-1"></i> Retry
+                        </button>
+                    </div>
+                `;
+                noLogsMessage.style.display = 'block';
+                return;
+            }
             
             if (data.success && data.daily_data && data.daily_data.length > 0) {
                 console.log('✅ Found', data.daily_data.length, 'days for user', userId);
@@ -2732,6 +2777,8 @@ function loadEmployeeLogs(userId, startDate, endDate, expandableRow) {
             console.error('❌ AJAX Error loading employee logs:', error);
             console.error('   Error details:', {
                 message: error.message,
+                status: error.status,
+                errorData: error.errorData,
                 stack: error.stack,
                 userId: userId,
                 dateRange: `${startDate} to ${endDate}`,
@@ -2739,14 +2786,26 @@ function loadEmployeeLogs(userId, startDate, endDate, expandableRow) {
             });
             
             loadingSpinner.style.display = 'none';
+            
+            // Extract error message - prefer server message if available
+            let errorMessage = error.message;
+            if (error.errorData) {
+                errorMessage = error.errorData.message || error.errorData.error || errorMessage;
+            }
+            
+            // Special handling for 403 Forbidden
+            if (error.status === 403) {
+                errorMessage = error.errorData?.message || error.errorData?.error || 'You do not have permission to view this employee\'s attendance logs.';
+            }
+            
             noLogsMessage.innerHTML = `
                 <div class="text-center py-4">
                     <i class="fas fa-exclamation-triangle text-danger mb-2"></i>
                     <p class="text-danger mb-0">Error loading attendance logs.</p>
-                    <small class="text-muted">Error: ${error.message}</small><br>
-                    <button class="btn btn-sm btn-outline-primary mt-2" onclick="loadEmployeeLogs('${userId}', '${startDate}', '${endDate}', this.closest('tr'))">
+                    <small class="text-muted">${errorMessage}</small><br>
+                    ${error.status !== 403 ? `<button class="btn btn-sm btn-outline-primary mt-2" onclick="loadEmployeeLogs('${userId}', '${startDate}', '${endDate}', this.closest('tr'))">
                         <i class="fas fa-redo me-1"></i> Retry
-                    </button>
+                    </button>` : ''}
                 </div>
             `;
             noLogsMessage.style.display = 'block';

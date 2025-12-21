@@ -1066,9 +1066,18 @@ def detailed_attendance_report():
 
 @final_report_bp.route('/detailed-attendance-report/employee-logs/<int:user_id>', methods=['GET'])
 @login_required
-@role_required(['admin', 'director', 'support', 'product_owner', 'manager'])
 def get_employee_logs(user_id):
     """API endpoint to fetch detailed attendance data for a specific employee for all days in date range"""
+    # Check role and permissions manually to return JSON error instead of HTML
+    allowed_roles = ['admin', 'director', 'support', 'product_owner', 'manager', 'employee']
+    
+    if current_user.role not in allowed_roles:
+        return jsonify({'success': False, 'error': 'Access denied', 'message': 'You do not have permission to access this page.'}), 403
+    
+    # Employees can only view their own logs
+    if current_user.role == 'employee' and current_user.id != user_id:
+        return jsonify({'success': False, 'error': 'Access denied', 'message': 'You can only view your own attendance logs.'}), 403
+    
     logging.info(f"User {user_id} requested detailed report from {request.args.get('start_date')} to {request.args.get('end_date')}")
 
     try:
@@ -1076,7 +1085,7 @@ def get_employee_logs(user_id):
         end_date_str = request.args.get('end_date')
 
         if not start_date_str or not end_date_str:
-            return jsonify({'error': 'Start date and end date are required'}), 400
+            return jsonify({'success': False, 'error': 'Start date and end date are required'}), 400
 
         start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
         end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
@@ -1090,7 +1099,7 @@ def get_employee_logs(user_id):
             team_members = get_employees_for_manager(current_user.id)
             manager_employee_ids = [u.id for u in team_members] + [current_user.id]
             if user_id not in manager_employee_ids:
-                return jsonify({'error': 'Access denied. You can only view reports for yourself and your team members.'}), 403
+                return jsonify({'success': False, 'error': 'Access denied', 'message': 'You can only view reports for yourself and your team members.'}), 403
         
         logging.info(f"Processing report for user: {user.get_full_name()} (ID: {user.id})")
 
@@ -1353,11 +1362,7 @@ def get_employee_logs(user_id):
 
     except Exception as e:
         logging.error(f"Unhandled error in get_employee_logs for user {user_id}: {e}", exc_info=True)
-        return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
-    
-    except Exception as e:
-        logging.error(f"Critical error in get_employee_logs for user {user_id}: {e}", exc_info=True)
-        return jsonify({'error': 'Failed to fetch employee logs'}), 500
+        return jsonify({'success': False, 'error': 'Internal Server Error', 'message': str(e)}), 500
 
 @final_report_bp.route('/detailed-attendance-report/export')
 @login_required
