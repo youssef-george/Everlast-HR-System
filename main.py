@@ -43,18 +43,8 @@ except Exception as e:
     # Don't exit here - let gunicorn handle it, but log the error
     raise
 
-# Health check endpoint for container orchestration
-@app.route('/health')
-def health_check():
-    """Health check endpoint for container orchestration"""
-    try:
-        # Simple health check - just return OK
-        return {'status': 'healthy', 'service': 'Everlast ERP'}, 200
-    except Exception as e:
-        logger.error(f"Health check failed: {str(e)}")
-        return {'status': 'unhealthy', 'error': str(e)}, 500
-
 # Root route to redirect to login page
+# Note: /health endpoint is already defined in app.py
 @app.route('/')
 def index():
     return redirect(url_for('auth.login'))
