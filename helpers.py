@@ -360,10 +360,9 @@ def get_dashboard_stats(user):
         # All rejected permission requests
         stats['rejected_permission_requests'] = PermissionRequest.query.filter_by(status='rejected').count()
         
-        # Count all employees (excluding admins) with fingerprint numbers
+        # Count all employees with fingerprint numbers (including all roles)
         stats['total_employees'] = User.query.filter(
             User.status == 'active', 
-            User.role.notin_(['admin', 'product_owner']),
             User.fingerprint_number != None,
             User.fingerprint_number != ''
         ).count()
@@ -626,6 +625,31 @@ def sync_users_from_device(ip="192.168.11.2", port=4370):
     finally:
         if conn:
             conn.disconnect()
+
+def get_fingerprint_filter():
+    """
+    Returns filter conditions for users with fingerprint numbers.
+    Returns a tuple that can be unpacked with * in query filters.
+    """
+    from models import User
+    return (
+        User.fingerprint_number != None,
+        User.fingerprint_number != ''
+    )
+
+def has_valid_fingerprint(user):
+    """
+    Check if a user has a valid fingerprint number.
+    
+    Args:
+        user: User object to check
+        
+    Returns:
+        bool: True if user has a valid fingerprint number, False otherwise
+    """
+    if not user:
+        return False
+    return user.fingerprint_number is not None and user.fingerprint_number != ''
 
 def format_hours_minutes(hours):
     """Convert decimal hours to 'Xh Ym' format."""
@@ -1629,7 +1653,18 @@ def log_activity(user, action, entity_type=None, entity_id=None, before_values=N
         
         # Get IP address from request if not provided
         if ip_address is None:
-            ip_address = request.remote_addr if request else None
+            if request:
+                # Check for real client IP behind proxy/load balancer
+                # X-Forwarded-For can contain multiple IPs (client, proxy1, proxy2), take the first one
+                forwarded_for = request.headers.get('X-Forwarded-For', '')
+                if forwarded_for:
+                    # Split by comma and take the first IP, strip whitespace
+                    ip_address = forwarded_for.split(',')[0].strip()
+                else:
+                    # Fall back to X-Real-IP header
+                    ip_address = request.headers.get('X-Real-IP') or request.remote_addr
+            else:
+                ip_address = None
         
         # Serialize before_values and after_values to JSON strings
         before_json = json.dumps(before_values) if before_values else None

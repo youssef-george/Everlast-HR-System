@@ -3,7 +3,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from models import db, User, AttendanceLog, DailyAttendance, LeaveRequest, PermissionRequest, FingerPrintFailure, DeviceSettings, DeviceUser
 from sqlalchemy import or_, and_, func
-from helpers import role_required, sync_users_from_device
+from helpers import role_required, sync_users_from_device, get_fingerprint_filter, has_valid_fingerprint
 from forms import DeviceSettingsForm
 from datetime import datetime, timedelta, date
 from zk import ZK
@@ -1300,172 +1300,194 @@ def clear_sync_lock():
 @role_required(['admin', 'product_owner'])
 def manual_sync():
     """Manually trigger attendance synchronization"""
-    if not current_app.config.get('IS_ADMIN_INSTANCE', False):
-        return jsonify({'status': 'error', 'message': 'This feature is only available on the admin portal.'}), 403
-
-    # Check if sync is already running using connection manager
-    from connection_manager import is_sync_running, clear_all_sync_operations
-    if is_sync_running():
-        # For Admin and Technical Support, allow force clearing stuck syncs after a timeout
-        if current_user.role in ['admin', 'product_owner']:
-            import time
-            # Check if we should clear stuck operations (after 5 minutes)
-            sync_timeout = 300  # 5 minutes
-            try:
-                # Clear stuck operations for admin users
-                cleared_count = clear_all_sync_operations()
-                if cleared_count > 0:
-                    logging.warning(f"Admin {current_user.get_full_name()} cleared {cleared_count} stuck sync operations")
-                    # Continue with sync after clearing
-                else:
-                    return jsonify({'status': 'info', 'message': 'Another sync operation is already running. Please wait.'}), 200
-            except Exception as e:
-                logging.error(f"Error clearing sync operations: {str(e)}")
-                return jsonify({'status': 'info', 'message': 'Another sync operation is already running. Please wait.'}), 200
-        else:
-            return jsonify({'status': 'info', 'message': 'Another sync operation is already running. Please wait.'}), 200
-
-    # Check scheduler status - removed job state check as it's not reliable
-    # The connection manager already handles sync conflicts
-
-    # Check if there are any active devices
-    active_devices = safe_db_query(
-        lambda: DeviceSettings.query.filter_by(is_active=True).all(),
-        default=[]
-    )
-    if not active_devices:
-        return jsonify({
-            'status': 'error',
-            'message': 'No active devices found. Please add and activate devices in Device Settings.'
-        }), 400
-    
-    # Log the devices that will be synced
-    device_names = [device.get_display_name() for device in active_devices]
-    logging.info(f'Manual sync requested for {len(active_devices)} active devices: {", ".join(device_names)}')
-
-    # Run sync synchronously but with proper error handling
     try:
-        # Store user role for use in cleanup
-        user_role = current_user.role
-        
-        # Run cleanup first for admin users
-        if user_role in ['admin', 'director']:
-            try:
-                cleanup_orphaned_attendance_records()
-                cleanup_duplicate_attendance_records()
-                logging.info('Cleanup completed during manual sync')
-            except Exception as e:
-                logging.error(f'Error during cleanup in manual sync: {str(e)}')
-                # Continue with sync even if cleanup fails
-        
-        # Run sync with timeout protection
-        logging.info(f'Starting manual sync for {len(active_devices)} devices')
-        
-        sync_results = None
+        if not current_app.config.get('IS_ADMIN_INSTANCE', False):
+            return jsonify({'status': 'error', 'message': 'This feature is only available on the admin portal.'}), 403
+
+        # Check if sync is already running using connection manager
         try:
-            # Ensure we have a clean session before sync
-            db.session.rollback()
-            
-            # Call sync with explicit error handling and timeout protection
-            try:
-                # Use a signal or timeout wrapper if needed (for very long operations)
-                # For now, we rely on proper error handling and logging
-                sync_results = sync_attendance_task(full_sync=True)
-                
-                # Log completion
-                if sync_results:
-                    logging.info(f'Manual sync completed: status={sync_results.get("status")}, records_added={sync_results.get("records_added", 0)}')
-                else:
-                    logging.warning('Manual sync returned None')
-                
-                # Ensure session is clean after sync
+            from connection_manager import is_sync_running, clear_all_sync_operations
+        except ImportError as import_err:
+            logging.error(f"Failed to import connection_manager: {str(import_err)}", exc_info=True)
+            return jsonify({
+                'status': 'error',
+                'message': 'Sync system is not available. Please contact the administrator.'
+            }), 500
+        except Exception as import_err:
+            logging.error(f"Error importing connection_manager: {str(import_err)}", exc_info=True)
+            return jsonify({
+                'status': 'error',
+                'message': 'Sync system initialization failed. Please try again later.'
+            }), 500
+        
+        if is_sync_running():
+            # For Admin and Technical Support, allow force clearing stuck syncs after a timeout
+            if current_user.role in ['admin', 'product_owner']:
+                import time
+                # Check if we should clear stuck operations (after 5 minutes)
+                sync_timeout = 300  # 5 minutes
                 try:
-                    db.session.commit()
-                except Exception as commit_err:
+                    # Clear stuck operations for admin users
+                    cleared_count = clear_all_sync_operations()
+                    if cleared_count > 0:
+                        logging.warning(f"Admin {current_user.get_full_name()} cleared {cleared_count} stuck sync operations")
+                        # Continue with sync after clearing
+                    else:
+                        return jsonify({'status': 'info', 'message': 'Another sync operation is already running. Please wait.'}), 200
+                except Exception as e:
+                    logging.error(f"Error clearing sync operations: {str(e)}")
+                    return jsonify({'status': 'info', 'message': 'Another sync operation is already running. Please wait.'}), 200
+            else:
+                return jsonify({'status': 'info', 'message': 'Another sync operation is already running. Please wait.'}), 200
+
+        # Check scheduler status - removed job state check as it's not reliable
+        # The connection manager already handles sync conflicts
+
+        # Check if there are any active devices
+        active_devices = safe_db_query(
+            lambda: DeviceSettings.query.filter_by(is_active=True).all(),
+            default=[]
+        )
+        if not active_devices:
+            return jsonify({
+                'status': 'error',
+                'message': 'No active devices found. Please add and activate devices in Device Settings.'
+            }), 400
+        
+        # Log the devices that will be synced
+        device_names = [device.get_display_name() for device in active_devices]
+        logging.info(f'Manual sync requested for {len(active_devices)} active devices: {", ".join(device_names)}')
+
+        # Run sync synchronously but with proper error handling
+        try:
+            # Store user role for use in cleanup
+            user_role = current_user.role
+            
+            # Run cleanup first for admin users
+            if user_role in ['admin', 'director']:
+                try:
+                    cleanup_orphaned_attendance_records()
+                    cleanup_duplicate_attendance_records()
+                    logging.info('Cleanup completed during manual sync')
+                except Exception as e:
+                    logging.error(f'Error during cleanup in manual sync: {str(e)}')
+                    # Continue with sync even if cleanup fails
+            
+            # Run sync with timeout protection
+            logging.info(f'Starting manual sync for {len(active_devices)} devices')
+            
+            sync_results = None
+            try:
+                # Ensure we have a clean session before sync
+                db.session.rollback()
+                
+                # Call sync with explicit error handling and timeout protection
+                try:
+                    # Use a signal or timeout wrapper if needed (for very long operations)
+                    # For now, we rely on proper error handling and logging
+                    sync_results = sync_attendance_task(full_sync=True)
+                    
+                    # Log completion
+                    if sync_results:
+                        logging.info(f'Manual sync completed: status={sync_results.get("status")}, records_added={sync_results.get("records_added", 0)}')
+                    else:
+                        logging.warning('Manual sync returned None')
+                    
+                    # Ensure session is clean after sync
+                    try:
+                        db.session.commit()
+                    except Exception as commit_err:
+                        db.session.rollback()
+                        logging.warning(f'Session commit warning after sync: {commit_err}')
+                except KeyboardInterrupt:
+                    # Handle user interruption
+                    logging.warning('Sync interrupted by user')
                     db.session.rollback()
-                    logging.warning(f'Session commit warning after sync: {commit_err}')
-            except KeyboardInterrupt:
-                # Handle user interruption
-                logging.warning('Sync interrupted by user')
-                db.session.rollback()
+                    sync_results = {
+                        'status': 'error',
+                        'message': 'Sync was interrupted. Please try again.'
+                    }
+                except Exception as sync_inner_error:
+                    logging.error(f'Error in sync_attendance_task: {str(sync_inner_error)}', exc_info=True)
+                    db.session.rollback()
+                    # Create a proper error response
+                    error_msg = str(sync_inner_error)[:200]
+                    sync_results = {
+                        'status': 'error',
+                        'message': f'Sync failed: {error_msg}'
+                    }
+            except Exception as sync_error:
+                logging.error(f'Error calling sync_attendance_task: {str(sync_error)}', exc_info=True)
+                # Rollback any failed transaction
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+                # Return error response - ensure it's a valid JSON response
+                try:
+                    return jsonify({
+                        'status': 'error',
+                        'message': f'Sync task failed: {str(sync_error)[:200]}'
+                    }), 500
+                except Exception as json_error:
+                    logging.error(f'Error creating JSON response: {str(json_error)}')
+                    # Fallback: return simple text response
+                    from flask import Response
+                    return Response(
+                        f'{{"status":"error","message":"Sync task failed: {str(sync_error)[:200]}"}}',
+                        status=500,
+                        mimetype='application/json'
+                    )
+            
+            # Validate sync_results - ensure we always have a response
+            if not sync_results:
+                logging.error('sync_attendance_task returned None - creating fallback response')
                 sync_results = {
                     'status': 'error',
-                    'message': 'Sync was interrupted. Please try again.'
+                    'message': 'Sync failed: No response from sync task. The sync may have timed out or encountered an error. Check server logs for details.'
                 }
-            except Exception as sync_inner_error:
-                logging.error(f'Error in sync_attendance_task: {str(sync_inner_error)}', exc_info=True)
-                db.session.rollback()
-                # Create a proper error response
-                error_msg = str(sync_inner_error)[:200]
-                sync_results = {
-                    'status': 'error',
-                    'message': f'Sync failed: {error_msg}'
-                }
-        except Exception as sync_error:
-            logging.error(f'Error calling sync_attendance_task: {str(sync_error)}', exc_info=True)
-            # Rollback any failed transaction
-            try:
-                db.session.rollback()
-            except Exception:
-                pass
-            # Return error response - ensure it's a valid JSON response
-            try:
+            
+            if not isinstance(sync_results, dict):
+                logging.error(f'sync_attendance_task returned invalid type: {type(sync_results)}')
                 return jsonify({
                     'status': 'error',
-                    'message': f'Sync task failed: {str(sync_error)[:200]}'
+                    'message': f'Sync failed: Invalid response from sync task. Check server logs for details.'
                 }), 500
-            except Exception as json_error:
-                logging.error(f'Error creating JSON response: {str(json_error)}')
-                # Fallback: return simple text response
-                from flask import Response
-                return Response(
-                    f'{{"status":"error","message":"Sync task failed: {str(sync_error)[:200]}"}}',
-                    status=500,
-                    mimetype='application/json'
-                )
-        
-        # Validate sync_results - ensure we always have a response
-        if not sync_results:
-            logging.error('sync_attendance_task returned None - creating fallback response')
-            sync_results = {
-                'status': 'error',
-                'message': 'Sync failed: No response from sync task. The sync may have timed out or encountered an error. Check server logs for details.'
-            }
-        
-        if not isinstance(sync_results, dict):
-            logging.error(f'sync_attendance_task returned invalid type: {type(sync_results)}')
-            return jsonify({
-                'status': 'error',
-                'message': f'Sync failed: Invalid response from sync task. Check server logs for details.'
-            }), 500
-        
-        if 'status' not in sync_results:
-            logging.error(f'sync_attendance_task returned invalid response: {sync_results}')
-            return jsonify({
-                'status': 'error',
-                'message': 'Sync failed: Invalid response format from sync task. Check server logs for details.'
-            }), 500
-        
-        # Return results based on sync status
-        if sync_results['status'] == 'success':
-            return jsonify({
-                'status': 'success',
-                'message': sync_results.get('message', 'Sync completed successfully'),
-                'records_added': sync_results.get('records_added', 0),
-                'records_updated': sync_results.get('records_updated', 0),
-                'devices_count': len(active_devices)
-            })
-        elif sync_results['status'] == 'skipped':
-            return jsonify({
-                'status': 'info',
-                'message': sync_results.get('message', 'Sync was skipped')
-            }), 200
-        else:
-            return jsonify({
-                'status': 'error',
-                'message': sync_results.get('message', 'Sync failed with unknown error')
-            }), 500
             
+            if 'status' not in sync_results:
+                logging.error(f'sync_attendance_task returned invalid response: {sync_results}')
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Sync failed: Invalid response format from sync task. Check server logs for details.'
+                }), 500
+            
+            # Return results based on sync status
+            if sync_results['status'] == 'success':
+                return jsonify({
+                    'status': 'success',
+                    'message': sync_results.get('message', 'Sync completed successfully'),
+                    'records_added': sync_results.get('records_added', 0),
+                    'records_updated': sync_results.get('records_updated', 0),
+                    'devices_count': len(active_devices)
+                })
+            elif sync_results['status'] == 'skipped':
+                return jsonify({
+                    'status': 'info',
+                    'message': sync_results.get('message', 'Sync was skipped')
+                }), 200
+            else:
+                return jsonify({
+                    'status': 'error',
+                    'message': sync_results.get('message', 'Sync failed with unknown error')
+                }), 500
+        except Exception as sync_exec_error:
+            logging.error(f'Error in sync execution: {str(sync_exec_error)}', exc_info=True)
+            db.session.rollback()
+            return jsonify({
+                'status': 'error',
+                'message': f'Sync execution failed: {str(sync_exec_error)[:200]}'
+            }), 500
+                
     except Exception as e:
         logging.error(f'Error in manual sync: {str(e)}', exc_info=True)
         # Rollback any failed transaction
@@ -1657,8 +1679,7 @@ def index():
         if current_user.role in ['admin', 'product_owner', 'director']:
             # Admins, Technical Support, and directors can see all users
             user_query = User.query.filter_by(status='active').filter(
-                User.fingerprint_number != None,
-                User.fingerprint_number != '',
+                *get_fingerprint_filter(),
                 User.first_name != None,
                 User.first_name != '',
                 User.last_name != None,
@@ -1675,8 +1696,7 @@ def index():
             # Managers can see all employees in their department
             if current_user.department_id:
                 user_query = User.query.filter_by(status='active', department_id=current_user.department_id).filter(
-                    User.fingerprint_number != None,
-                    User.fingerprint_number != '',
+                    *get_fingerprint_filter(),
                     User.first_name != None,
                     User.first_name != '',
                     User.last_name != None,
@@ -1693,8 +1713,7 @@ def index():
                 # If manager has no department assigned, they can only see themselves
                 all_active_users = safe_db_query(
                     lambda: User.query.filter_by(id=current_user.id, status='active').filter(
-                    User.fingerprint_number != None,
-                    User.fingerprint_number != '',
+                    *get_fingerprint_filter(),
                     User.first_name != None,
                     User.first_name != '',
                     User.last_name != None,
@@ -1704,11 +1723,10 @@ def index():
                 )
         else:
             # Employees can only see their own attendance
-            all_active_users = safe_db_query(
-                lambda: User.query.filter_by(id=current_user.id, status='active').filter(
-                User.fingerprint_number != None,
-                User.fingerprint_number != '',
-                User.first_name != None,
+                all_active_users = safe_db_query(
+                    lambda: User.query.filter_by(id=current_user.id, status='active').filter(
+                    *get_fingerprint_filter(),
+                    User.first_name != None,
                 User.first_name != '',
                 User.last_name != None,
                 User.last_name != ''

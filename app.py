@@ -14,6 +14,7 @@ from extensions import db, scheduler
 from routes.attendance import sync_attendance_task
 from flask_apscheduler import APScheduler
 from datetime import datetime
+from pytz import timezone as pytz_timezone, utc
 
 # Load environment variables
 load_dotenv()
@@ -256,6 +257,36 @@ def create_app(config_name='default'):
         if value is None:
             return ''
         return str(value).replace('\n', '<br>')
+    
+    @app.template_filter('egypt_time')
+    def egypt_time_filter(value):
+        """Template filter to convert UTC datetime to Egypt timezone with AM/PM format."""
+        if value is None:
+            return ''
+        try:
+            # If datetime is naive, assume it's UTC
+            if hasattr(value, 'tzinfo') and value.tzinfo is None:
+                dt = utc.localize(value)
+            elif hasattr(value, 'tzinfo'):
+                dt = value
+            else:
+                # If it's a string, try to parse it
+                if isinstance(value, str):
+                    try:
+                        dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+                    except:
+                        return str(value)
+                else:
+                    return str(value)
+            
+            # Convert to Egypt timezone (Africa/Cairo)
+            egypt_tz = pytz_timezone('Africa/Cairo')
+            egypt_dt = dt.astimezone(egypt_tz) if hasattr(dt, 'astimezone') else utc.localize(dt).astimezone(egypt_tz)
+            # Format with AM/PM
+            return egypt_dt.strftime('%Y-%m-%d %I:%M:%S %p')
+        except Exception as e:
+            # Fallback to original value if conversion fails
+            return str(value)
     
     # Add template context processor for datetime
     @app.context_processor
@@ -1392,7 +1423,7 @@ if __name__ == '__main__':
     
     try:
         print("\n" + "=" * 70)
-        print("Everlast HR System Server Starting")
+        print("Everlast ERP Server Starting")
         print("=" * 70)
         print(f"\nServer Configuration:")
         print(f"   - Host: 0.0.0.0 (Listening on all network interfaces)")
@@ -1414,7 +1445,7 @@ if __name__ == '__main__':
     except UnicodeEncodeError:
         # Fallback without emojis if encoding still fails
         print("\n" + "=" * 70)
-        print("Everlast HR System Server Starting")
+        print("Everlast ERP Server Starting")
         print("=" * 70)
         print(f"\nServer Configuration:")
         print(f"   - Host: 0.0.0.0 (Listening on all network interfaces)")

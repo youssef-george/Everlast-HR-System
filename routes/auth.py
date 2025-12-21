@@ -76,11 +76,11 @@ def login():
                         
                         login_user(user, remember=form.remember.data)
                         
-                        # Log successful login
+                        # Log successful login (IP will be detected from proxy headers if available)
                         log_activity(
                             user=user,
                             action='login',
-                            ip_address=request.remote_addr,
+                            ip_address=None,  # Let log_activity detect real IP from headers
                             description=f'User {user.get_full_name()} logged in successfully'
                         )
                         
@@ -113,12 +113,12 @@ def login():
 @auth_bp.route('/logout')
 @login_required
 def logout():
-    # Log logout before logging out the user
+    # Log logout before logging out the user (IP will be detected from proxy headers if available)
     user = current_user
     log_activity(
         user=user,
         action='logout',
-        ip_address=request.remote_addr,
+        ip_address=None,  # Let log_activity detect real IP from headers
         description=f'User {user.get_full_name()} logged out'
     )
     

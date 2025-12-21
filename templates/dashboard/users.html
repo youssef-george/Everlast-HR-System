@@ -125,15 +125,15 @@ table thead th * {
                                                         <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#viewUserModal{{ user.id }}">
                                                             <i class="fas fa-eye me-1"></i>View
                                                         </button>
-                                                        {% if current_user.role in ['admin', 'product_owner'] or current_user.id == user.id %}
+                                                        {% if (current_user.role in ['admin', 'product_owner'] or current_user.id == user.id) and user.role != 'product_owner' %}
                                                         <a href="{{ url_for('dashboard.edit_user', user_id=user.id) }}" class="btn btn-sm btn-primary">
                                                             <i class="fas fa-edit me-1"></i>Edit
-                                                        </a>
+</a>
 
                                                         {% endif %}
                                                         
-                                                        {% if current_user.role in ['admin', 'product_owner'] and current_user.id != user.id %}
-                                                        <!-- Admin and Technical Support can deactivate/delete ANY account -->
+                                                        {% if current_user.role in ['admin', 'product_owner'] and current_user.id != user.id and user.role != 'product_owner' %}
+                                                        <!-- Admin and Technical Support can deactivate/delete ANY account except Technical Support -->
                                                         <form method="POST" action="{{ url_for('dashboard.toggle_user_status', user_id=user.id) }}" class="d-inline">
                                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                             <button type="submit" onclick="return confirm('Are you sure you want to deactivate this user?');" class="btn btn-sm btn-warning">
@@ -217,7 +217,7 @@ table thead th * {
                                                         <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#viewUserModal{{ user.id }}">
                                                             <i class="fas fa-eye me-1"></i>View
                                                         </button>
-                                                        {% if current_user.role in ['admin', 'product_owner'] or current_user.id == user.id %}
+                                                        {% if (current_user.role in ['admin', 'product_owner'] or current_user.id == user.id) and user.role != 'product_owner' %}
                                                         <a href="{{ url_for('dashboard.edit_user', user_id=user.id) }}" class="btn btn-sm btn-primary">
                                                             <i class="fas fa-edit me-1"></i>Edit
                                                         </a>
@@ -227,8 +227,8 @@ table thead th * {
                                                         </a>
                                                         {% endif %}
                                                         
-                                                        {% if current_user.role in ['admin', 'product_owner'] and current_user.id != user.id %}
-                                                        <!-- Admin and Technical Support can activate/delete ANY account -->
+                                                        {% if current_user.role in ['admin', 'product_owner'] and current_user.id != user.id and user.role != 'product_owner' %}
+                                                        <!-- Admin and Technical Support can activate/delete ANY account except Technical Support -->
                                                         <form method="POST" action="{{ url_for('dashboard.toggle_user_status', user_id=user.id) }}" class="d-inline">
                                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                             <button type="submit" onclick="return confirm('Are you sure you want to activate this user?');" class="btn btn-sm btn-success">
@@ -789,6 +789,7 @@ table thead th * {
                                 {% endif %}
                             </p>
                         </div>
+                        {% if current_user.role == 'admin' %}
                         <div class="mb-3">
                             <label class="form-label fw-bold">Monthly Salary:</label>
                             <p class="mb-0">
@@ -799,6 +800,7 @@ table thead th * {
                                 {% endif %}
                             </p>
                         </div>
+                        {% endif %}
                         <div class="mb-3">
                             <label class="form-label fw-bold">Joining Date:</label>
                             <p class="mb-0">{{ user.joining_date|safe_datetime('%Y-%m-%d') if user.joining_date else '-' }}</p>
@@ -968,7 +970,7 @@ table thead th * {
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                {% if current_user.role in ['admin', 'product_owner'] or current_user.id == user.id %}
+                {% if (current_user.role in ['admin', 'product_owner'] or current_user.id == user.id) and user.role != 'product_owner' %}
                 <a href="{{ url_for('dashboard.edit_user', user_id=user.id) }}" class="btn btn-primary">
                     <i class="fas fa-edit me-1"></i>Edit User
                 </a>

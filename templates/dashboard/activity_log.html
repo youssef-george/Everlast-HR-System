@@ -114,7 +114,7 @@
                             {% if logs.items %}
                                 {% for log in logs.items %}
                                 <tr>
-                                    <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                    <td>{{ log.created_at|egypt_time }}</td>
                                     <td>
                                         {% if log.user %}
                                             {{ log.user.get_full_name() }}
@@ -158,33 +158,20 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if log.before_values or log.after_values %}
+                                        {% if log.after_values %}
                                             <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#changes-{{ log.id }}" aria-expanded="false">
                                                 <i class="fas fa-eye"></i> View Changes
                                             </button>
                                             <div class="collapse mt-2" id="changes-{{ log.id }}">
-                                                <div class="before-after-container">
-                                                    {% if log.before_values_parsed %}
-                                                    <div class="before-values">
-                                                        <strong>Before:</strong>
-                                                        {% for key, value in log.before_values_parsed.items() %}
-                                                        <div class="value-item">
-                                                            <span class="value-label">{{ key }}:</span>
-                                                            <span class="value-content">{{ value or '-' }}</span>
-                                                        </div>
-                                                        {% endfor %}
-                                                    </div>
-                                                    {% endif %}
+                                                <div class="after-values">
+                                                    <strong>New Values:</strong>
                                                     {% if log.after_values_parsed %}
-                                                    <div class="after-values">
-                                                        <strong>After:</strong>
                                                         {% for key, value in log.after_values_parsed.items() %}
                                                         <div class="value-item">
                                                             <span class="value-label">{{ key }}:</span>
                                                             <span class="value-content">{{ value or '-' }}</span>
                                                         </div>
                                                         {% endfor %}
-                                                    </div>
                                                     {% endif %}
                                                 </div>
                                             </div>
@@ -331,7 +318,8 @@
         
         let html = '';
         logs.forEach(log => {
-            const timestamp = new Date(log.created_at).toLocaleString();
+            // Use server-formatted timestamp (already in Egypt timezone with AM/PM)
+            const timestamp = log.created_at;
             const userDisplay = log.user_name ? 
                 `${log.user_name}<br><small class="text-muted">${log.user_email || ''}</small>` : 
                 '<span class="text-muted">System</span>';
@@ -341,21 +329,12 @@
                 '<span class="text-muted">-</span>';
             
             let changesHtml = '<span class="text-muted">-</span>';
-            if (log.before_values || log.after_values) {
+            if (log.after_values) {
                 const changesId = `changes-${log.id}`;
-                let beforeHtml = '';
                 let afterHtml = '';
                 
-                if (log.before_values) {
-                    beforeHtml = '<div class="before-values"><strong>Before:</strong>';
-                    for (const [key, value] of Object.entries(log.before_values)) {
-                        beforeHtml += `<div class="value-item"><span class="value-label">${key}:</span> <span class="value-content">${value || '-'}</span></div>`;
-                    }
-                    beforeHtml += '</div>';
-                }
-                
                 if (log.after_values) {
-                    afterHtml = '<div class="after-values"><strong>After:</strong>';
+                    afterHtml = '<div class="after-values"><strong>New Values:</strong>';
                     for (const [key, value] of Object.entries(log.after_values)) {
                         afterHtml += `<div class="value-item"><span class="value-label">${key}:</span> <span class="value-content">${value || '-'}</span></div>`;
                     }
@@ -367,10 +346,7 @@
                         <i class="fas fa-eye"></i> View Changes
                     </button>
                     <div class="collapse mt-2" id="${changesId}">
-                        <div class="before-after-container">
-                            ${beforeHtml}
-                            ${afterHtml}
-                        </div>
+                        ${afterHtml}
                     </div>
                 `;
             }

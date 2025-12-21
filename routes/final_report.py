@@ -509,7 +509,7 @@ def ensure_attendance_logs_processed(start_date, end_date):
 
 @final_report_bp.route('/final-report')
 @login_required
-@role_required(['admin', 'product_owner', 'manager', 'employee'])
+@role_required(['admin', 'product_owner', 'manager'])
 def final_report():
     """Final Report - Admin, Product Owner, Manager, and Employee attendance report with auto-fetch and duplicate removal"""
     
@@ -930,7 +930,7 @@ def role_required(roles):
 
 @final_report_bp.route('/detailed-attendance-report')
 @login_required
-@role_required(['admin', 'director', 'support', 'product_owner', 'manager'])
+@role_required(['admin', 'director', 'support', 'product_owner', 'manager', 'employee'])
 def detailed_attendance_report():
     """Detailed Attendance Report - Admin, Director, Support, and Product Owner attendance report with expandable employee logs"""
     
@@ -961,7 +961,10 @@ def detailed_attendance_report():
         logging.info('Skipping sync on detailed attendance report page load - another sync is already running')
     
     # Get users based on role
-    if current_user.role == 'manager':
+    if current_user.role == 'employee':
+        # Employees can only see their own data
+        users = [current_user] if current_user.status == 'active' else []
+    elif current_user.role == 'manager':
         # Managers see their employees AND themselves
         from helpers import get_employees_for_manager
         team_members = get_employees_for_manager(current_user.id)

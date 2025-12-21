@@ -5,6 +5,7 @@ from flask_login import login_required, current_user
 from datetime import datetime, timedelta, date
 from sqlalchemy import cast
 from sqlalchemy.dialects.postgresql import DATE as PostgresDate, TIMESTAMP as PostgresTimestamp, BOOLEAN as PostgresBoolean
+from pytz import timezone, utc
 from app import db
 from models import User, LeaveRequest, PermissionRequest, DailyAttendance, Department, SMTPConfiguration, LeaveBalance, PaidHoliday, LeaveType
 from helpers import role_required, get_dashboard_stats, log_activity
@@ -26,6 +27,19 @@ def cast_date_column(column):
         # This allows the code to work even if called outside app context
         pass
     return column
+
+def format_egypt_time(dt):
+    """Convert UTC datetime to Egypt timezone and format with AM/PM"""
+    if dt is None:
+        return None
+    # If datetime is naive, assume it's UTC
+    if dt.tzinfo is None:
+        dt = utc.localize(dt)
+    # Convert to Egypt timezone (Africa/Cairo)
+    egypt_tz = timezone('Africa/Cairo')
+    egypt_dt = dt.astimezone(egypt_tz)
+    # Format with AM/PM
+    return egypt_dt.strftime('%Y-%m-%d %I:%M:%S %p')
 
 def cast_timestamp_column(column):
     """Cast a timestamp/datetime column for PostgreSQL compatibility if needed.
@@ -591,10 +605,18 @@ def users():
 @role_required(['admin', 'product_owner'])
 def toggle_user_status(user_id):
     """Toggle a user's active/inactive status"""
-    if current_user.role == 'director':
-        flash('❌ Access Denied: Directors cannot deactivate user accounts.', 'danger')
-        return redirect(url_for('dashboard.users'))
     user = User.query.get_or_404(user_id)
+    
+    # Prevent admins from deactivating Technical Support accounts
+    if current_user.role == 'admin' and user.role == 'product_owner':
+        flash('❌ Access Denied: Admins cannot deactivate Technical Support accounts.', 'danger')
+        return redirect(url_for('dashboard.users'))
+    
+    # Directors can only toggle their own status
+    if current_user.role == 'director':
+        if user.id != current_user.id:
+            flash('❌ Access Denied: Directors can only modify their own account.', 'danger')
+            return redirect(url_for('dashboard.users'))
     
     # Don't allow deactivating yourself
     if user.id == current_user.id:
@@ -627,10 +649,18 @@ def toggle_user_status(user_id):
 @role_required(['admin', 'product_owner'])
 def delete_member(user_id):
     """Delete a user from the system"""
-    if current_user.role == 'director':
-        flash('❌ Access Denied: Directors cannot delete user accounts.', 'danger')
-        return redirect(url_for('dashboard.users'))
     user = User.query.get_or_404(user_id)
+    
+    # Prevent admins from deleting Technical Support accounts
+    if current_user.role == 'admin' and user.role == 'product_owner':
+        flash('❌ Access Denied: Admins cannot delete Technical Support accounts.', 'danger')
+        return redirect(url_for('dashboard.users'))
+    
+    # Directors can only delete their own account
+    if current_user.role == 'director':
+        if user.id != current_user.id:
+            flash('❌ Access Denied: Directors can only delete their own account.', 'danger')
+            return redirect(url_for('dashboard.users'))
     
     # Don't allow deleting yourself
     if user.id == current_user.id:
@@ -731,10 +761,19 @@ def delete_member(user_id):
 @role_required(['admin', 'product_owner'])
 def edit_user(user_id):
     """Edit user information"""
-    if current_user.role == 'director':
-        flash('❌ Access Denied: Directors cannot edit user accounts.', 'danger')
-        return redirect(url_for('dashboard.users'))
     user = User.query.get_or_404(user_id)
+    
+    # Prevent admins from editing Technical Support accounts
+    if current_user.role == 'admin' and user.role == 'product_owner':
+        flash('❌ Access Denied: Admins cannot edit Technical Support accounts.', 'danger')
+        return redirect(url_for('dashboard.users'))
+    
+    # Directors can only edit their own account
+    if current_user.role == 'director':
+        if user.id != current_user.id:
+            flash('❌ Access Denied: Directors can only edit their own account.', 'danger')
+            return redirect(url_for('dashboard.users'))
+    
     departments = Department.query.all()
 
     # Check if the user being edited is a Technical Support
@@ -2691,9 +2730,9 @@ def allocate_default_leave():
 
 @dashboard_bp.route('/activity-log')
 @login_required
-@role_required(['product_owner'])
+@role_required(['admin', 'product_owner'])
 def activity_log():
-    """Display activity log - only accessible to technical support"""
+    """Display activity log - accessible to admin and technical support"""
     from models import ActivityLog
     
     # Get filter parameters
@@ -2788,7 +2827,7 @@ def activity_log():
 
 @dashboard_bp.route('/activity-log/search')
 @login_required
-@role_required(['product_owner'])
+@role_required(['admin', 'product_owner'])
 def activity_log_search():
     """AJAX endpoint for searching activity logs"""
     from models import ActivityLog
@@ -2908,7 +2947,7 @@ def activity_log_search():
             'after_values': after_vals,
             'ip_address': log.ip_address,
             'description': log.description,
-            'created_at': log.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'created_at': format_egypt_time(log.created_at),
             'page_link': page_link
         })
     

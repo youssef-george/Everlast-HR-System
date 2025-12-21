@@ -465,13 +465,13 @@ table thead th * {
                         </div>
                     </div>
                     
-                    <!-- Auto-configuration for Everlast Wellness -->
+                    <!-- Auto-configuration for Everlast ERP -->
                     <div class="row mt-3">
                         <div class="col-12">
                             {% if current_user.role == 'product_owner' %}
                                 <button type="button" class="btn btn-outline-success btn-sm" onclick="setEverlastConfig()">
                                     <i class="fas fa-magic me-1"></i>
-                                    Auto-Configure for Everlast Wellness
+                                    Auto-Configure for Everlast ERP
                                 </button>
                             {% else %}
                                 <button type="button" class="btn btn-outline-secondary btn-sm" disabled>
@@ -680,12 +680,12 @@ function setEverlastConfig() {
     alert('Only Technical Support can use auto-configuration');
     return;
     {% endif %}
-    // Auto-fill Everlast Wellness SMTP settings
+    // Auto-fill Everlast ERP SMTP settings
     document.getElementById('smtp_server').value = 'mail.everlastwellness.com';
     document.getElementById('smtp_port').value = '465';
     document.getElementById('smtp_username').value = 'erp@everlastwellness.com';
     document.getElementById('smtp_password').value = 'L$^F3HmP~HVx';
-    document.getElementById('sender_name').value = 'Everlast HR System';
+    document.getElementById('sender_name').value = 'Everlast ERP';
     document.getElementById('sender_email').value = 'erp@everlastwellness.com';
     
     // Set correct encryption for port 465
@@ -703,7 +703,7 @@ function showAutoConfigMessage() {
     alertDiv.className = 'alert alert-success alert-dismissible fade show mt-3';
     alertDiv.innerHTML = `
         <i class="fas fa-check-circle me-2"></i>
-        <strong>Auto-configured!</strong> Your Everlast Wellness SMTP settings have been applied.
+        <strong>Auto-configured!</strong> Your Everlast ERP SMTP settings have been applied.
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
     
