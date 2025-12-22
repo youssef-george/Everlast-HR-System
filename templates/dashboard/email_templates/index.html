@@ -37,83 +37,109 @@
 
 <!-- Email Templates List -->
 <div class="row">
-    <div class="col-lg-12">
+    <div class="col-12">
         <div class="card">
             <div class="card-header">
                 <h3 class="card-title">Email Templates</h3>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Template Name</th>
-                                <th>Type</th>
-                                <th>Subject Preview</th>
-                                <th>Status</th>
-                                <th>Last Updated</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% if templates %}
-                                {% for template in templates %}
-                                <tr>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="symbol symbol-35px me-2">
-                                                <span class="symbol-label bg-light-primary text-primary">
-                                                    <i class="fas fa-envelope"></i>
-                                                </span>
-                                            </div>
-                                            <div>
-                                                <strong>{{ template.template_name.replace('_', ' ').title() }}</strong>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-info">{{ template.template_type.split('_')[0].title() }}</span>
-                                    </td>
-                                    <td>
-                                        <small class="text-muted">{{ template.subject[:60] }}{% if template.subject|length > 60 %}...{% endif %}</small>
-                                    </td>
-                                    <td>
+            <div class="card-body">
+                {% if templates %}
+                <div class="row g-4">
+                    {% for template in templates %}
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <div class="card h-100 shadow-sm border-0 email-template-card" style="transition: all 0.3s ease;">
+                            <div class="card-body">
+                                <div class="d-flex align-items-start mb-3">
+                                    <div class="symbol symbol-50px me-3">
+                                        <span class="symbol-label bg-light-primary text-primary rounded">
+                                            <i class="fas fa-envelope fs-3"></i>
+                                        </span>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h5 class="card-title mb-1 fw-bold">
+                                            {{ template.template_name.replace('_', ' ').title() }}
+                                        </h5>
+                                        <span class="badge bg-info mb-2">{{ template.template_type.split('_')[0].title() }}</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <p class="text-muted mb-1 small">
+                                        <i class="fas fa-tag me-1"></i><strong>Subject:</strong>
+                                    </p>
+                                    <p class="mb-0 small">{{ template.subject[:80] }}{% if template.subject|length > 80 %}...{% endif %}</p>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div>
                                         {% if template.is_active %}
-                                        <span class="badge bg-success">Active</span>
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check-circle me-1"></i>Active
+                                        </span>
                                         {% else %}
-                                        <span class="badge bg-secondary">Inactive</span>
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-times-circle me-1"></i>Inactive
+                                        </span>
                                         {% endif %}
-                                    </td>
-                                    <td>{{ template.updated_at|safe_datetime('%Y-%m-%d %H:%M') if template.updated_at else template.created_at|safe_datetime('%Y-%m-%d %H:%M') }}</td>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <a href="{{ url_for('email_templates.preview', template_id=template.id) }}" 
-                                               class="btn btn-sm btn-icon btn-light" 
-                                               data-bs-toggle="tooltip" title="Preview">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            <a href="{{ url_for('email_templates.edit', template_id=template.id) }}" 
-                                               class="btn btn-sm btn-icon btn-light" 
-                                               data-bs-toggle="tooltip" title="Edit">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            {% else %}
-                                <tr>
-                                    <td colspan="6" class="text-center p-4">
-                                        No email templates found. Default templates should be created automatically.
-                                    </td>
-                                </tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
+                                    </div>
+                                    <div>
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock me-1"></i>
+                                            {{ template.updated_at|safe_datetime('%Y-%m-%d %H:%M') if template.updated_at else template.created_at|safe_datetime('%Y-%m-%d %H:%M') }}
+                                        </small>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex gap-2">
+                                    <a href="{{ url_for('email_templates.preview', template_id=template.id) }}" 
+                                       class="btn btn-sm btn-light-primary flex-fill">
+                                        <i class="fas fa-eye me-1"></i>Preview
+                                    </a>
+                                    <a href="{{ url_for('email_templates.edit', template_id=template.id) }}" 
+                                       class="btn btn-sm btn-primary flex-fill">
+                                        <i class="fas fa-edit me-1"></i>Edit
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
                 </div>
+                {% else %}
+                <div class="text-center p-5">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No email templates found. Default templates should be created automatically.</p>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
+
+<style>
+.email-template-card {
+    border: 1px solid #e4e6ef !important;
+}
+
+.email-template-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+    border-color: #b5b5c3 !important;
+}
+
+.email-template-card .symbol-label {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (max-width: 768px) {
+    .email-template-card {
+        margin-bottom: 1rem;
+    }
+}
+</style>
 {% endblock %}
 

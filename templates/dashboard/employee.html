@@ -1768,11 +1768,6 @@
                                                 <a href="{{ url_for('leave.view', id=leave.id) }}" class="btn btn-sm btn-icon btn-light-primary" data-bs-toggle="tooltip" title="View Details">
                                                     <i class="fas fa-eye fs-7"></i>
                                                 </a>
-                                                {% if leave.status == 'pending' %}
-                                                    <a href="{{ url_for('leave.edit', id=leave.id) }}" class="btn btn-sm btn-icon btn-light-warning" data-bs-toggle="tooltip" title="Edit">
-                                                        <i class="fas fa-edit fs-7"></i>
-                                                    </a>
-                                                {% endif %}
                                             </div>
                                         </td>
                                     </tr>
@@ -1850,16 +1845,6 @@
                                                         </svg>
                                                     </span>
                                                 </a>
-                                                {% if permission.status == 'pending' %}
-                                                    <a href="{{ url_for('permission.edit', id=permission.id) }}" class="btn btn-icon btn-bg-light btn-active-color-primary btn-sm">
-                                                        <span class="svg-icon svg-icon-3">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
-                                                                <path d="M17.5 11H6.5C4.02944 11 2 12.0294 2 14.5C2 16.9706 4.02944 18 6.5 18H17.5C19.9706 18 22 16.9706 22 14.5C22 12.0294 19.9706 11 17.5 11Z" fill="currentColor"/>
-                                                                <path opacity="0.3" d="M17.5 11H6.5C4.02944 11 2 12.0294 2 14.5C2 16.9706 4.02944 18 6.5 18H17.5C19.9706 18 22 16.9706 22 14.5C22 12.0294 19.9706 11 17.5 11Z" fill="currentColor"/>
-                                                            </svg>
-                                                        </span>
-                                                    </a>
-                                                {% endif %}
                                             </td>
                                         </tr>
                                         {% endfor %}

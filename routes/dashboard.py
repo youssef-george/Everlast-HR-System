@@ -2742,9 +2742,9 @@ def allocate_default_leave():
 
 @dashboard_bp.route('/activity-log')
 @login_required
-@role_required(['admin', 'product_owner'])
+@role_required('product_owner')
 def activity_log():
-    """Display activity log - accessible to admin and technical support"""
+    """Display activity log - accessible to product owner only"""
     from models import ActivityLog
     
     # Get filter parameters
@@ -2839,7 +2839,7 @@ def activity_log():
 
 @dashboard_bp.route('/activity-log/search')
 @login_required
-@role_required(['admin', 'product_owner'])
+@role_required('product_owner')
 def activity_log_search():
     """AJAX endpoint for searching activity logs"""
     from models import ActivityLog

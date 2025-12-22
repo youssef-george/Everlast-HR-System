@@ -525,7 +525,7 @@
                 </li>
                 {% endif %}
                 
-                {% if current_user.role in ['admin', 'product_owner'] %}
+                {% if current_user.role == 'product_owner' %}
                 <li class="nav-item">
                     <div class="nav-section-header">SYSTEM LOGS</div>
                 </li>
