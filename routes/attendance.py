@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app, abort
 # from flask_apscheduler import STATE_PAUSED, STATE_RUNNING, STATE_STOPPED  # Not needed anymore
 from flask_login import login_required, current_user
-from models import db, User, AttendanceLog, DailyAttendance, LeaveRequest, PermissionRequest, FingerPrintFailure, DeviceSettings, DeviceUser
+from models import db, User, AttendanceLog, DailyAttendance, LeaveRequest, PermissionRequest, FingerPrintFailure, DeviceSettings, DeviceUser, Note
 from sqlalchemy import or_, and_, func
 from helpers import role_required, sync_users_from_device, get_fingerprint_filter, has_valid_fingerprint
 from forms import DeviceSettingsForm
@@ -1810,6 +1810,16 @@ def index():
                     ).first(),
                     default=None
                 )
+                # Query notes for this user and date
+                notes = safe_db_query(
+                    lambda: Note.query.filter(
+                        Note.user_id == user.id,
+                        Note.start_date <= today,
+                        Note.end_date >= today
+                    ).all(),
+                    default=[]
+                )
+                
                 absent_users[user.id] = {
                     'user': user,
                     'check_in': None,
@@ -1818,7 +1828,8 @@ def index():
                     'status': status,
                     'leave_request': leave_request,
                     'leave_type_name': daily_record.leave_type_name,
-                    'leave_type_id': daily_record.leave_type_id
+                    'leave_type_id': daily_record.leave_type_id,
+                    'notes': notes
                 }
             elif daily_record.status == 'permission':
                 # For permission requests, show attendance logs if they exist
@@ -1840,13 +1851,24 @@ def index():
                     PermissionRequest.status == 'approved',
                     func.date(PermissionRequest.start_time) == today
                 ).first()
+                # Query notes for this user and date
+                notes = safe_db_query(
+                    lambda: Note.query.filter(
+                        Note.user_id == user.id,
+                        Note.start_date <= today,
+                        Note.end_date >= today
+                    ).all(),
+                    default=[]
+                )
+                
                 absent_users[user.id] = {
                     'user': user,
                     'check_in': None,
                     'check_out': None,
                     'duration': None,
                     'status': status,
-                    'permission_request': permission_request
+                    'permission_request': permission_request,
+                    'notes': notes
                     }
             elif daily_record.status == 'paid_holiday':
                 # Check if the paid holiday still exists in the database
@@ -1865,6 +1887,16 @@ def index():
                     else:
                         # No attendance logs - show as paid holiday only
                         status = daily_record.holiday_name  # Show the holiday name as status
+                        # Query notes for this user and date
+                        notes = safe_db_query(
+                            lambda: Note.query.filter(
+                                Note.user_id == user.id,
+                                Note.start_date <= today,
+                                Note.end_date >= today
+                            ).all(),
+                            default=[]
+                        )
+                        
                         absent_users[user.id] = {
                             'user': user,
                             'check_in': None,
@@ -1872,7 +1904,8 @@ def index():
                             'duration': None,
                             'status': status,
                             'holiday_name': daily_record.holiday_name,
-                            'paid_holiday_id': daily_record.paid_holiday_id
+                            'paid_holiday_id': daily_record.paid_holiday_id,
+                            'notes': notes
                         }
                 else:
                     # Paid holiday no longer exists - clean up the record and show normal attendance
@@ -1915,11 +1948,33 @@ def index():
                 user_data['status'] = 'present'  # Show as present with holiday info
                 user_data['holiday_name'] = daily_record.holiday_name
                 user_data['paid_holiday_id'] = daily_record.paid_holiday_id
+            
+            # Query notes for this user and date
+            notes = safe_db_query(
+                lambda: Note.query.filter(
+                    Note.user_id == user.id,
+                    Note.start_date <= today,
+                    Note.end_date >= today
+                ).all(),
+                default=[]
+            )
+            user_data['notes'] = notes
+            
             present_users[user.id] = user_data
         else:
             # User has no attendance logs for today
             if is_on_leave:
                 status = 'leave'
+                # Query notes for this user and date
+                notes = safe_db_query(
+                    lambda: Note.query.filter(
+                        Note.user_id == user.id,
+                        Note.start_date <= today,
+                        Note.end_date >= today
+                    ).all(),
+                    default=[]
+                )
+                
                 absent_users[user.id] = {
                     'user': user,
                     'check_in': None,
@@ -1928,20 +1983,42 @@ def index():
                     'status': status,
                     'leave_request': leave_request,
                     'leave_type_name': daily_record.leave_type_name if daily_record else None,
-                    'leave_type_id': daily_record.leave_type_id if daily_record else None
+                    'leave_type_id': daily_record.leave_type_id if daily_record else None,
+                    'notes': notes
                 }
             elif has_permission:
                 status = 'permission'
+                # Query notes for this user and date
+                notes = safe_db_query(
+                    lambda: Note.query.filter(
+                        Note.user_id == user.id,
+                        Note.start_date <= today,
+                        Note.end_date >= today
+                    ).all(),
+                    default=[]
+                )
+                
                 absent_users[user.id] = {
                     'user': user,
                     'check_in': None,
                     'check_out': None,
                     'duration': None,
                     'status': status,
-                    'permission_request': permission_request
+                    'permission_request': permission_request,
+                    'notes': notes
                 }
             elif daily_record and daily_record.status == 'paid_holiday':
                 status = 'paid_holiday'
+                # Query notes for this user and date
+                notes = safe_db_query(
+                    lambda: Note.query.filter(
+                        Note.user_id == user.id,
+                        Note.start_date <= today,
+                        Note.end_date >= today
+                    ).all(),
+                    default=[]
+                )
+                
                 absent_users[user.id] = {
                     'user': user,
                     'check_in': None,
@@ -1949,7 +2026,8 @@ def index():
                     'duration': None,
                     'status': status,
                     'holiday_name': daily_record.holiday_name,
-                    'paid_holiday_id': daily_record.paid_holiday_id
+                    'paid_holiday_id': daily_record.paid_holiday_id,
+                    'notes': notes
                 }
             else:
                 status = 'DayOff' if is_weekend else 'Absent'
@@ -2147,13 +2225,24 @@ def index():
                     ).first()
                     has_permission = permission_request is not None
                     
+                    # Query notes for this user and date
+                    notes = safe_db_query(
+                        lambda: Note.query.filter(
+                            Note.user_id == user.id,
+                            Note.start_date <= date_obj,
+                            Note.end_date >= date_obj
+                        ).all(),
+                        default=[]
+                    )
+                    
                     # Initialize user data
                     user_data = {
                                 'user': user,
                                 'check_in': None,
                                 'check_out': None,
                                 'duration': None,
-                        'status': 'Absent'  # Default status
+                        'status': 'Absent',  # Default status
+                        'notes': notes
                     }
                     
                     # Check if user has attendance logs for this date
@@ -2163,6 +2252,7 @@ def index():
                         # User has attendance logs - get the processed data
                         user_data = processed_historical_logs[user.id].copy()
                         user_data['user'] = user  # Ensure user object is set
+                        user_data['notes'] = notes  # Ensure notes are included
                         
                         # Handle various status combinations
                         if is_on_leave:
@@ -2190,17 +2280,21 @@ def index():
                                 db.session.delete(daily_record)
                                 db.session.commit()
                                 user_data['status'] = 'Present'
+                            user_data['notes'] = notes  # Ensure notes are included
                         elif is_historical_weekend and user_data['status'] == 'present':
                             user_data['status'] = 'DayOff / Present'
+                            user_data['notes'] = notes  # Ensure notes are included
                         # If user has logs but no special status, keep as 'present'
                         elif user_data['status'] == 'present':
                             user_data['status'] = 'Present'
+                            user_data['notes'] = notes  # Ensure notes are included
                     else:
                         # User has no attendance logs - determine status based on other factors
                         if is_on_leave:
                             # User is on leave but no logs
                             user_data['status'] = daily_record.leave_type_name if daily_record and daily_record.leave_type_name else 'Leave Request'
                             user_data['leave_request'] = leave_request
+                            user_data['notes'] = notes  # Ensure notes are included
                             if daily_record:
                                 user_data['leave_type_name'] = daily_record.leave_type_name
                                 user_data['leave_type_id'] = daily_record.leave_type_id
@@ -2208,6 +2302,7 @@ def index():
                             # User has permission but no logs
                             user_data['status'] = 'Permission'
                             user_data['permission_request'] = permission_request
+                            user_data['notes'] = notes  # Ensure notes are included
                         elif daily_record and daily_record.status == 'paid_holiday' and daily_record.paid_holiday_id:
                             # It's a paid holiday but user has no logs - check if holiday still exists
                             from models import PaidHoliday
@@ -2222,9 +2317,11 @@ def index():
                                 db.session.delete(daily_record)
                                 db.session.commit()
                                 user_data['status'] = 'DayOff' if is_historical_weekend else 'Absent'
+                            user_data['notes'] = notes  # Ensure notes are included
                         else:
                             # No special status - determine based on weekend
                             user_data['status'] = 'DayOff' if is_historical_weekend else 'Absent'
+                            user_data['notes'] = notes  # Ensure notes are included even for absent users
                     
                     all_users[user.id] = user_data
 

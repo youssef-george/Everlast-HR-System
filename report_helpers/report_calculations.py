@@ -4,7 +4,7 @@ This ensures all reports use identical calculation logic based on the Final Repo
 """
 
 from datetime import datetime, timedelta, date
-from models import DailyAttendance, LeaveRequest, PermissionRequest, AttendanceLog, PaidHoliday, db
+from models import DailyAttendance, LeaveRequest, PermissionRequest, AttendanceLog, PaidHoliday, Note, db
 from sqlalchemy import or_, and_, func
 from collections import namedtuple
 import logging
@@ -94,6 +94,14 @@ def calculate_unified_report_data(user, start_date, end_date):
                 'scan_type': log.scan_type
             } for log in raw_logs
         ]
+        
+        # Attach notes for this date to the record
+        notes = Note.query.filter(
+            Note.user_id == user.id,
+            Note.start_date <= record.date,
+            Note.end_date >= record.date
+        ).all()
+        record.notes = notes
         
         # FIX: Count incomplete days only if there is exactly 1 log (not based on database flag)
         if len(raw_logs) == 1:

@@ -679,6 +679,7 @@ def create_app(config_name='default'):
         from routes.departments import departments_bp
         from routes.leave import leave_bp
         from routes.permission import permission_bp
+        from routes.notes import notes_bp
         from routes.calendar import calendar_bp
         from routes.profile import profile_bp
         from routes.attendance import attendance_bp
@@ -696,6 +697,7 @@ def create_app(config_name='default'):
         app.register_blueprint(departments_bp)
         app.register_blueprint(leave_bp)
         app.register_blueprint(permission_bp)
+        app.register_blueprint(notes_bp)
         app.register_blueprint(calendar_bp)
         app.register_blueprint(profile_bp)
         app.register_blueprint(attendance_bp)

@@ -322,11 +322,11 @@ def manager():
                 manager_status='pending'
             ).order_by(LeaveRequest.created_at.desc()).all()
             
-            # Get permission requests needing admin approval
+            # Get permission requests needing manager approval
             permission_requests = PermissionRequest.query.filter_by(
                 user_id=employee.id,
                 status='pending',
-                admin_status='pending'
+                manager_status='pending'
             ).order_by(PermissionRequest.created_at.desc()).all()
             
             pending_leave_requests.extend(leave_requests)

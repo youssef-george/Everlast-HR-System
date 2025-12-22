@@ -193,6 +193,17 @@ class AdminPermissionRequestForm(PermissionRequestForm):
     employee_id = SelectField('Employee', coerce=int, validators=[DataRequired()])
     submit = SubmitField('Submit Permission Request for Employee')
 
+class NoteForm(FlaskForm):
+    employee_id = SelectField('Employee', coerce=int, validators=[Optional()])
+    start_date = DateField('Start Date', validators=[DataRequired()], format='%Y-%m-%d')
+    end_date = DateField('End Date', validators=[DataRequired()], format='%Y-%m-%d')
+    comment = TextAreaField('Comment', validators=[DataRequired(), Length(min=1, max=1000)])
+    submit = SubmitField('Submit Note')
+    
+    def validate_end_date(self, end_date):
+        if end_date.data < self.start_date.data:
+            raise ValidationError('End date must be on or after start date')
+
 class DeviceSettingsForm(FlaskForm):
     """Form for managing fingerprint device settings"""
     device_ip = StringField('Device IP', validators=[

@@ -297,7 +297,11 @@ class PermissionRequest(db.Model):
     reason = db.Column(db.Text, nullable=False)
     comment = db.Column(db.Text, nullable=True)
     
-    # Approval fields - only admin approval required
+    # Updated approval fields - manager and admin approval required
+    manager_status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
+    manager_comment = db.Column(db.Text, nullable=True)
+    manager_updated_at = db.Column(db.DateTime, nullable=True)
+    
     admin_status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
     admin_comment = db.Column(db.Text, nullable=True)
     admin_updated_at = db.Column(db.DateTime, nullable=True)
@@ -309,16 +313,44 @@ class PermissionRequest(db.Model):
         return self.status == 'pending'
     
     def update_overall_status(self):
-        """Update the overall status based on admin approval only"""
-        if self.admin_status == 'rejected':
+        """Update the overall status based on manager and admin approval"""
+        if self.manager_status == 'rejected' or self.admin_status == 'rejected':
             self.status = 'rejected'
-        elif self.admin_status == 'approved':
+        elif self.manager_status == 'approved' and self.admin_status == 'approved':
             self.status = 'approved'
         else:
             self.status = 'pending'
     
     def __repr__(self):
         return f"<PermissionRequest {self.id} - {self.status}>"
+
+
+class Note(db.Model):
+    __tablename__ = 'notes'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=False)
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=False)
+    comment = db.Column(db.Text, nullable=False)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('notes', lazy=True))
+    created_by = db.relationship('User', foreign_keys=[created_by_id], backref=db.backref('notes_created', lazy=True))
+    
+    # Indexes for better query performance
+    __table_args__ = (
+        Index('idx_note_user', 'user_id'),
+        Index('idx_note_dates', 'start_date', 'end_date'),
+        Index('idx_note_created_by', 'created_by_id'),
+    )
+    
+    def __repr__(self):
+        return f"<Note {self.id} - User {self.user_id}>"
 
 
 class SMTPConfiguration(db.Model):

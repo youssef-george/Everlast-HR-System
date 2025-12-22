@@ -1,0 +1,286 @@
+{% extends "layout.html" %}
+
+{% block extra_css %}
+<style>
+    /* Fix for action buttons in notes table */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .table td {
+        vertical-align: middle;
+    }
+    
+    /* Actions column styling */
+    .table th:last-child,
+    .table td:last-child {
+        padding-right: 1rem;
+        min-width: 150px;
+        white-space: nowrap;
+    }
+    
+    /* Action buttons container */
+    .table td .d-flex {
+        display: flex !important;
+        gap: 0.5rem !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+    }
+    
+    /* Individual button styling */
+    .table td .btn {
+        min-width: 40px;
+        width: 40px;
+        height: 40px;
+        padding: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 6px !important;
+        border: 1px solid transparent !important;
+        transition: all 0.2s ease !important;
+        flex-shrink: 0 !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    }
+    
+    .table td .btn i {
+        font-size: 0.875rem;
+        margin: 0 !important;
+    }
+    
+    /* Button color overrides to ensure proper display */
+    .table td .btn-info {
+        background-color: #0dcaf0 !important;
+        border-color: #0dcaf0 !important;
+        color: #000 !important;
+    }
+    
+    .table td .btn-info:hover {
+        background-color: #0aa2c0 !important;
+        border-color: #0aa2c0 !important;
+        color: #000 !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px rgba(13, 202, 240, 0.3) !important;
+    }
+    
+    .table td .btn-warning {
+        background-color: #ffc107 !important;
+        border-color: #ffc107 !important;
+        color: #000 !important;
+    }
+    
+    .table td .btn-warning:hover {
+        background-color: #ffb300 !important;
+        border-color: #ffb300 !important;
+        color: #000 !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px rgba(255, 193, 7, 0.3) !important;
+    }
+    
+    .table td .btn-danger {
+        background-color: #dc3545 !important;
+        border-color: #dc3545 !important;
+        color: #fff !important;
+    }
+    
+    .table td .btn-danger:hover {
+        background-color: #bb2d3b !important;
+        border-color: #bb2d3b !important;
+        color: #fff !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px rgba(220, 53, 69, 0.3) !important;
+    }
+    
+    /* Form styling for delete button */
+    .table td form {
+        display: inline-block !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        vertical-align: middle !important;
+    }
+    
+    .table td form button {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    /* Remove any background bleed */
+    .table td .d-flex > * {
+        background: transparent !important;
+    }
+    
+    .table td .d-flex .btn {
+        background-clip: padding-box !important;
+        -webkit-background-clip: padding-box !important;
+    }
+    
+    /* Mobile responsive adjustments */
+    @media (max-width: 768px) {
+        .table td .d-flex {
+            flex-direction: row !important;
+            gap: 0.5rem !important;
+            flex-wrap: wrap !important;
+        }
+        
+        .table td .btn {
+            width: 40px;
+            min-width: 40px;
+            height: 40px;
+        }
+        
+        .table th:last-child,
+        .table td:last-child {
+            min-width: auto;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h1 class="page-title">{{ title }}</h1>
+        <a href="{{ url_for('notes.create') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Create Note
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <h3>Notes</h3>
+                </div>
+                {% if current_user.role in ['manager', 'admin', 'product_owner', 'director'] %}
+                <div class="card-toolbar">
+                    <div class="btn-group" role="group">
+                        <a href="{{ url_for('notes.index', view='my') }}" 
+                           class="btn btn-sm {{ 'btn-primary' if view_type == 'my' else 'btn-secondary' }}">
+                            My Notes
+                        </a>
+                        {% if current_user.role in ['admin', 'product_owner', 'director'] %}
+                        <a href="{{ url_for('notes.index', view='all') }}" 
+                           class="btn btn-sm {{ 'btn-primary' if view_type == 'all' else 'btn-secondary' }}">
+                            All Notes
+                        </a>
+                        {% endif %}
+                        {% if current_user.role == 'manager' %}
+                        <a href="{{ url_for('notes.index') }}" 
+                           class="btn btn-sm {{ 'btn-primary' if not view_type else 'btn-secondary' }}">
+                            Team Notes
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if notes %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Date Range</th>
+                                <th>Comment</th>
+                                <th>Created By</th>
+                                <th>Created At</th>
+                                <th style="min-width: 140px; white-space: nowrap;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for note in notes %}
+                            <tr>
+                                <td>
+                                    <strong>{{ note.user.get_full_name() if note.user else 'Unknown' }}</strong>
+                                    {% if note.user and note.user.department %}
+                                    <br><small class="text-muted">{{ note.user.department.department_name }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if note.start_date == note.end_date %}
+                                        {{ note.start_date.strftime('%B %d, %Y') }}
+                                    {% else %}
+                                        {{ note.start_date.strftime('%B %d, %Y') }} - {{ note.end_date.strftime('%B %d, %Y') }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div style="max-width: 300px;">
+                                        {{ note.comment[:100] }}{% if note.comment|length > 100 %}...{% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    {{ note.created_by.get_full_name() if note.created_by else 'Unknown' }}
+                                </td>
+                                <td>
+                                    {{ note.created_at|egypt_time }}
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-1 flex-wrap" style="min-width: 120px;">
+                                        <a href="{{ url_for('notes.view', id=note.id) }}" 
+                                           class="btn btn-sm btn-info" title="View">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if current_user.role in ['admin', 'product_owner', 'director'] or note.created_by_id == current_user.id %}
+                                        <a href="{{ url_for('notes.edit', id=note.id) }}" 
+                                           class="btn btn-sm btn-warning" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        {% endif %}
+                                        {% if current_user.role in ['admin', 'product_owner', 'director'] or note.created_by_id == current_user.id %}
+                                        <form method="POST" action="{{ url_for('notes.delete', id=note.id) }}" 
+                                              style="display: inline-block; margin: 0;" 
+                                              onsubmit="return confirm('Are you sure you want to delete this note?');">
+                                            <button type="submit" class="btn btn-sm btn-danger" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                {% if total_pages > 1 %}
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center">
+                        {% if current_page > 1 %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('notes.index', page=current_page-1, view=view_type) }}">Previous</a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for page_num in range(1, total_pages + 1) %}
+                        <li class="page-item {{ 'active' if page_num == current_page else '' }}">
+                            <a class="page-link" href="{{ url_for('notes.index', page=page_num, view=view_type) }}">{{ page_num }}</a>
+                        </li>
+                        {% endfor %}
+                        
+                        {% if current_page < total_pages %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('notes.index', page=current_page+1, view=view_type) }}">Next</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+                
+                <div class="mt-3">
+                    <p class="text-muted">Total: {{ total_records }} note(s)</p>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>No notes found.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from flask_login import login_required, current_user
 from functools import wraps
 from datetime import datetime, date, timedelta
-from models import User, DailyAttendance, LeaveRequest, PermissionRequest, AttendanceLog, PaidHoliday, db
+from models import User, DailyAttendance, LeaveRequest, PermissionRequest, AttendanceLog, PaidHoliday, Note, db
 from connection_manager import is_sync_running
 from sqlalchemy import or_, and_, func
 import logging
@@ -1164,12 +1164,28 @@ def get_employee_logs(user_id):
 
                 # Find permission request for this date
                 permission_request = next(
-                    (perm_req for perm_req in user_report.permission_requests 
+                    (perm_req for perm_req in user_report.permission_requests
                      if perm_req.start_time and perm_req.end_time and \
-                        perm_req.start_time.date() <= current_date <= perm_req.end_time.date()), 
+                        perm_req.start_time.date() <= current_date <= perm_req.end_time.date()),
                     None
                 )
                 logging.debug(f"  Permission request found: {permission_request is not None}")
+                
+                # Find notes for this date
+                notes = Note.query.filter(
+                    Note.user_id == user.id,
+                    Note.start_date <= current_date,
+                    Note.end_date >= current_date
+                ).all()
+                notes_data = [{
+                    'id': note.id,
+                    'start_date': note.start_date.strftime('%Y-%m-%d'),
+                    'end_date': note.end_date.strftime('%Y-%m-%d'),
+                    'comment': note.comment,
+                    'created_by_name': note.created_by.get_full_name() if note.created_by else 'Unknown',
+                    'created_at': note.created_at.strftime('%Y-%m-%d %H:%M:%S')
+                } for note in notes]
+                logging.debug(f"  Notes found: {len(notes)}")
 
                 # Initialize variables
                 hours_worked = 0.0
@@ -1317,7 +1333,8 @@ def get_employee_logs(user_id):
                     'logs': daily_logs,  # Send logs with correct structure (has 'time' and 'scan_type')
                     'all_logs': daily_logs,  # Keep for backward compatibility
                     'logs_count': len(daily_logs),
-                    'permission_request': permission_info
+                    'permission_request': permission_info,
+                    'notes': notes_data
                 })
                 logging.debug(f"  Appended daily data for {current_date}. Status: {status}, Hours: {hours_worked}")
 
@@ -1339,6 +1356,7 @@ def get_employee_logs(user_id):
                     'all_logs': [],  # Keep for backward compatibility
                     'logs_count': 0,
                     'permission_request': None,
+                    'notes': [],
                     'error_message': str(e)
                 })
                 current_date += timedelta(days=1) # Ensure loop progresses even on error

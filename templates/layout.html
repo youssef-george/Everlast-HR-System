@@ -438,6 +438,12 @@
                         <span class="nav-text">My Permission Requests</span>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('notes.index') }}?view=my" class="nav-link {{ 'active' if request.path.startswith('/notes') and request.args.get('view') == 'my' }}">
+                        <i class="fas fa-sticky-note nav-icon"></i>
+                        <span class="nav-text">My Notes</span>
+                    </a>
+                </li>
                 
                 <li class="nav-item">
                     <div class="nav-section-header">TEAM REQUESTS</div>
@@ -454,10 +460,16 @@
                         <span class="nav-text">Team Permission Requests</span>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('notes.index') }}" class="nav-link {{ 'active' if request.path.startswith('/notes') and not request.args.get('view') }}">
+                        <i class="fas fa-sticky-note nav-icon"></i>
+                        <span class="nav-text">Team Notes</span>
+                    </a>
+                </li>
                 {% else %}
                 <!-- Regular navigation for other roles -->
                 <li class="nav-item">
-                    <div class="nav-section-header">LEAVE & PERMISSIONS</div>
+                    <div class="nav-section-header">LEAVE, PERMISSIONS & NOTES</div>
                 </li>
                 <li class="nav-item">
                     <a href="{{ url_for('leave.index') }}" class="nav-link {{ 'active' if request.path.startswith('/leave') }}">
@@ -471,6 +483,14 @@
                         <span class="nav-text">Permission Requests</span>
                     </a>
                 </li>
+                {% if current_user.role != 'employee' %}
+                <li class="nav-item">
+                    <a href="{{ url_for('notes.index') }}" class="nav-link {{ 'active' if request.path.startswith('/notes') }}">
+                        <i class="fas fa-sticky-note nav-icon"></i>
+                        <span class="nav-text">Notes</span>
+                    </a>
+                </li>
+                {% endif %}
                 {% endif %}
                 
                 {% if current_user.role == 'employee' %}
@@ -478,6 +498,12 @@
                     <a href="{{ url_for('leave.my_balance') }}" class="nav-link {{ 'active' if request.path == '/leave/my-balance' }}">
                         <i class="fas fa-balance-scale nav-icon"></i>
                         <span class="nav-text">My Leave Balance</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('notes.index') }}" class="nav-link {{ 'active' if request.path.startswith('/notes') }}">
+                        <i class="fas fa-sticky-note nav-icon"></i>
+                        <span class="nav-text">My Notes</span>
                     </a>
                 </li>
                 {% endif %}

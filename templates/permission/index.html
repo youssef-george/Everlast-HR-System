@@ -480,11 +480,14 @@ table thead th * {
             {% if current_user.role in ['admin', 'product_owner'] %}
                 <!-- Admin view control -->
                 <div class="btn-group">
-                    <a href="{{ url_for('permission.index') }}" class="employee-btn employee-btn-secondary {{ 'active' if view_type == 'my' or not view_type else '' }}">
+                    <a href="{{ url_for('permission.index', view='my') }}" class="employee-btn employee-btn-secondary {{ 'active' if view_type == 'my' else '' }}">
                         <i class="fas fa-user"></i> My Requests
                     </a>
-                    <a href="{{ url_for('permission.index', view='team') }}" class="employee-btn employee-btn-secondary {{ 'active' if view_type == 'team' else '' }}">
-                        <i class="fas fa-users"></i> Team Requests
+                    <a href="{{ url_for('permission.index') }}" class="employee-btn employee-btn-secondary {{ 'active' if not view_type else '' }}">
+                        <i class="fas fa-clock"></i> For Approval
+                    </a>
+                    <a href="{{ url_for('permission.index', view='all') }}" class="employee-btn employee-btn-secondary {{ 'active' if view_type == 'all' else '' }}">
+                        <i class="fas fa-list"></i> All Requests
                     </a>
                 </div>
             {% elif current_user.role == 'director' %}

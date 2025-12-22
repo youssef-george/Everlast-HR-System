@@ -1245,12 +1245,7 @@ table thead th * {
                                         {% endif %}
                                 </td>
                                 <td>
-                                    {% if data.get('leave_type_name') or (data['status'] == 'DayOff' and data.get('leave_request')) %}
-                                        <span class="badge bg-warning">
-                                            <i class="fas fa-calendar-times me-1"></i>
-                                            {{ data.get('leave_type_name', 'Leave Request') }}
-                                        </span>
-                                    {% elif data.get('holiday_name') %}
+                                    {% if data.get('holiday_name') %}
                                         <span class="badge bg-info">
                                             <i class="fas fa-calendar-check me-1"></i>
                                             {{ data['holiday_name'] }}
@@ -1260,23 +1255,42 @@ table thead th * {
                                             <i class="fas fa-calendar-check me-1"></i>
                                             {{ data['status'].split(' / ')[1] }}
                                         </span>
-                                    {% elif data.get('permission_request') and data['status'] == 'present' %}
-                                        <span class="badge bg-info">
-                                            <i class="fas fa-clock me-1"></i>
-                                            {{ data['permission_request'].reason }}
-                                        </span>
-                                    {% elif data.get('leave_request') %}
+                                    {% elif data.get('leave_type_name') and not data.get('leave_request') %}
                                         <span class="badge bg-warning">
                                             <i class="fas fa-calendar-times me-1"></i>
-                                            {{ data['leave_request'].reason }}
+                                            {{ data.get('leave_type_name', 'Leave Request') }}
                                         </span>
-                                    {% elif data.get('permission_request') %}
-                                        <span class="badge bg-info">
-                                            <i class="fas fa-clock me-1"></i>
-                                            {{ data['permission_request'].reason }}
-                                        </span>
-                                    {% else %}
+                                    {% elif not data.get('leave_request') and not data.get('permission_request') and not (data.get('notes') and data['notes']|length > 0) %}
                                         <span class="badge bg-secondary">-</span>
+                                    {% endif %}
+                                    
+                                    {% if data.get('leave_request') %}
+                                        <button type="button" class="btn btn-sm btn-warning ms-1" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#leaveModal{{ data['leave_request'].id }}"
+                                                title="View Leave Request">
+                                            <i class="fas fa-umbrella-beach me-1"></i>Leave
+                                        </button>
+                                    {% endif %}
+                                    
+                                    {% if data.get('permission_request') %}
+                                        <button type="button" class="btn btn-sm btn-info ms-1" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#permissionModal{{ data['permission_request'].id }}"
+                                                title="View Permission Request">
+                                            <i class="fas fa-clock me-1"></i>Permission
+                                        </button>
+                                    {% endif %}
+                                    
+                                    {% if data.get('notes') and data['notes']|length > 0 %}
+                                        {% for note in data['notes'] %}
+                                        <button type="button" class="btn btn-sm btn-purple ms-1" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#noteModal{{ note.id }}"
+                                                title="View Note">
+                                            <i class="fas fa-sticky-note me-1"></i>Note
+                                        </button>
+                                        {% endfor %}
                                     {% endif %}
                                 </td>
                             </tr>
@@ -1419,12 +1433,7 @@ table thead th * {
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if data.get('leave_type_name') or (data['status'] == 'DayOff' and data.get('leave_request')) %}
-                                            <span class="badge bg-warning">
-                                                <i class="fas fa-calendar-times me-1"></i>
-                                                {{ data.get('leave_type_name', 'Leave Request') }}
-                                            </span>
-                                        {% elif data.get('holiday_name') %}
+                                        {% if data.get('holiday_name') %}
                                             <span class="badge bg-info">
                                                 <i class="fas fa-calendar-check me-1"></i>
                                                 {{ data['holiday_name'] }}
@@ -1434,18 +1443,42 @@ table thead th * {
                                                 <i class="fas fa-calendar-check me-1"></i>
                                                 {{ data['status'].split(' / ')[1] }}
                                             </span>
-                                        {% elif data.get('leave_request') %}
+                                        {% elif data.get('leave_type_name') and not data.get('leave_request') %}
                                             <span class="badge bg-warning">
                                                 <i class="fas fa-calendar-times me-1"></i>
-                                                {{ data['leave_request'].reason }}
+                                                {{ data.get('leave_type_name', 'Leave Request') }}
                                             </span>
-                                        {% elif data.get('permission_request') %}
-                                            <span class="badge bg-info">
-                                                <i class="fas fa-clock me-1"></i>
-                                                {{ data['permission_request'].reason }}
-                                            </span>
-                                        {% else %}
+                                        {% elif not data.get('leave_request') and not data.get('permission_request') and not (data.get('notes') and data['notes']|length > 0) %}
                                             <span class="badge bg-secondary">-</span>
+                                        {% endif %}
+                                        
+                                        {% if data.get('leave_request') %}
+                                            <button type="button" class="btn btn-sm btn-warning ms-1" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#leaveModal{{ date }}-{{ data['leave_request'].id }}"
+                                                    title="View Leave Request">
+                                                <i class="fas fa-umbrella-beach me-1"></i>Leave
+                                            </button>
+                                        {% endif %}
+                                        
+                                        {% if data.get('permission_request') %}
+                                            <button type="button" class="btn btn-sm btn-info ms-1" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#permissionModal{{ date }}-{{ data['permission_request'].id }}"
+                                                    title="View Permission Request">
+                                                <i class="fas fa-clock me-1"></i>Permission
+                                            </button>
+                                        {% endif %}
+                                        
+                                        {% if data.get('notes') and data['notes']|length > 0 %}
+                                            {% for note in data['notes'] %}
+                                            <button type="button" class="btn btn-sm btn-purple ms-1" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#noteModal{{ date }}-{{ note.id }}"
+                                                    title="View Note">
+                                                <i class="fas fa-sticky-note me-1"></i>Note
+                                            </button>
+                                            {% endfor %}
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -1893,4 +1926,390 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 2000);
 });
 </script>
+
+<!-- Leave Request Modals for Historical Attendance -->
+{% for date_key, date_data in historical_attendance.items() %}
+    {% for user_id, data in date_data.attendance_data.items() %}
+        {% if data.get('leave_request') %}
+            {% set leave = data['leave_request'] %}
+            <div class="modal fade" id="leaveModal{{ date_key }}-{{ leave.id }}" tabindex="-1" aria-labelledby="leaveModalLabel{{ date_key }}-{{ leave.id }}" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="leaveModalLabel{{ date_key }}-{{ leave.id }}">
+                                <i class="fas fa-umbrella-beach me-2"></i>Leave Request Details
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Employee</label>
+                                <div class="form-control-plaintext">
+                                    {{ leave.user.get_full_name() if leave.user else 'Unknown' }}
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Date Range</label>
+                                <div class="form-control-plaintext">
+                                    <i class="fas fa-calendar me-2"></i>
+                                    {% if leave.start_date == leave.end_date %}
+                                        {{ leave.start_date.strftime('%B %d, %Y') }}
+                                    {% else %}
+                                        {{ leave.start_date.strftime('%B %d, %Y') }} - {{ leave.end_date.strftime('%B %d, %Y') }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Leave Type</label>
+                                <div class="form-control-plaintext">
+                                    {{ leave.leave_type.name if leave.leave_type else 'N/A' }}
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Reason</label>
+                                <div class="form-control-plaintext" style="white-space: pre-wrap;">{{ leave.reason }}</div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">Status</label>
+                                    <div class="form-control-plaintext">
+                                        <span class="badge bg-success">{{ leave.status|title }}</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">Created At</label>
+                                    <div class="form-control-plaintext">
+                                        {{ leave.created_at.strftime('%Y-%m-%d %H:%M:%S') if leave.created_at else 'N/A' }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        
+        {% if data.get('permission_request') %}
+            {% set permission = data['permission_request'] %}
+            <div class="modal fade" id="permissionModal{{ date_key }}-{{ permission.id }}" tabindex="-1" aria-labelledby="permissionModalLabel{{ date_key }}-{{ permission.id }}" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="permissionModalLabel{{ date_key }}-{{ permission.id }}">
+                                <i class="fas fa-clock me-2"></i>Permission Request Details
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Employee</label>
+                                <div class="form-control-plaintext">
+                                    {{ permission.user.get_full_name() if permission.user else 'Unknown' }}
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Date</label>
+                                <div class="form-control-plaintext">
+                                    <i class="fas fa-calendar me-2"></i>{{ permission.start_time.strftime('%B %d, %Y') if permission.start_time else 'N/A' }}
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Time Range</label>
+                                <div class="form-control-plaintext">
+                                    <i class="fas fa-clock me-2"></i>
+                                    {% if permission.start_time and permission.end_time %}
+                                        {{ permission.start_time.strftime('%I:%M %p') }} - {{ permission.end_time.strftime('%I:%M %p') }}
+                                        {% set duration = (permission.end_time - permission.start_time).total_seconds() / 3600 %}
+                                        <span class="badge bg-info ms-2">{{ "%.1f"|format(duration) }} hours</span>
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Reason</label>
+                                <div class="form-control-plaintext" style="white-space: pre-wrap;">{{ permission.reason }}</div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">Status</label>
+                                    <div class="form-control-plaintext">
+                                        <span class="badge bg-success">{{ permission.status|title }}</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">Created At</label>
+                                    <div class="form-control-plaintext">
+                                        {{ permission.created_at.strftime('%Y-%m-%d %H:%M:%S') if permission.created_at else 'N/A' }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        
+        {% if data.get('notes') and data['notes']|length > 0 %}
+            {% for note in data['notes'] %}
+            <div class="modal fade" id="noteModal{{ date_key }}-{{ note.id }}" tabindex="-1" aria-labelledby="noteModalLabel{{ date_key }}-{{ note.id }}" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="noteModalLabel{{ date_key }}-{{ note.id }}">
+                                <i class="fas fa-sticky-note me-2"></i>Note Details
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Employee</label>
+                                <div class="form-control-plaintext">
+                                    {{ note.user.get_full_name() if note.user else 'Unknown' }}
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Date Range</label>
+                                <div class="form-control-plaintext">
+                                    {% if note.start_date == note.end_date %}
+                                        <i class="fas fa-calendar me-2"></i>{{ note.start_date.strftime('%B %d, %Y') }}
+                                    {% else %}
+                                        <i class="fas fa-calendar me-2"></i>{{ note.start_date.strftime('%B %d, %Y') }} - {{ note.end_date.strftime('%B %d, %Y') }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Comment</label>
+                                <div class="form-control-plaintext" style="white-space: pre-wrap;">{{ note.comment }}</div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">Created By</label>
+                                    <div class="form-control-plaintext">
+                                        {{ note.created_by.get_full_name() if note.created_by else 'Unknown' }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">Created At</label>
+                                    <div class="form-control-plaintext">
+                                        {{ note.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% endif %}
+    {% endfor %}
+{% endfor %}
+
+<!-- Leave Request Modals for Daily Attendance -->
+{% for user_id, data in daily_attendance.items() %}
+    {% if data.get('leave_request') %}
+        {% set leave = data['leave_request'] %}
+        <div class="modal fade" id="leaveModal{{ leave.id }}" tabindex="-1" aria-labelledby="leaveModalLabel{{ leave.id }}" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="leaveModalLabel{{ leave.id }}">
+                            <i class="fas fa-umbrella-beach me-2"></i>Leave Request Details
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Employee</label>
+                            <div class="form-control-plaintext">
+                                {{ leave.user.get_full_name() if leave.user else 'Unknown' }}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Date Range</label>
+                            <div class="form-control-plaintext">
+                                <i class="fas fa-calendar me-2"></i>
+                                {% if leave.start_date == leave.end_date %}
+                                    {{ leave.start_date.strftime('%B %d, %Y') }}
+                                {% else %}
+                                    {{ leave.start_date.strftime('%B %d, %Y') }} - {{ leave.end_date.strftime('%B %d, %Y') }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Leave Type</label>
+                            <div class="form-control-plaintext">
+                                {{ leave.leave_type.name if leave.leave_type else 'N/A' }}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Reason</label>
+                            <div class="form-control-plaintext" style="white-space: pre-wrap;">{{ leave.reason }}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Status</label>
+                                <div class="form-control-plaintext">
+                                    <span class="badge bg-success">{{ leave.status|title }}</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Created At</label>
+                                <div class="form-control-plaintext">
+                                    {{ leave.created_at.strftime('%Y-%m-%d %H:%M:%S') if leave.created_at else 'N/A' }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+    
+    {% if data.get('permission_request') %}
+        {% set permission = data['permission_request'] %}
+        <div class="modal fade" id="permissionModal{{ permission.id }}" tabindex="-1" aria-labelledby="permissionModalLabel{{ permission.id }}" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="permissionModalLabel{{ permission.id }}">
+                            <i class="fas fa-clock me-2"></i>Permission Request Details
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Employee</label>
+                            <div class="form-control-plaintext">
+                                {{ permission.user.get_full_name() if permission.user else 'Unknown' }}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Date</label>
+                            <div class="form-control-plaintext">
+                                <i class="fas fa-calendar me-2"></i>{{ permission.start_time.strftime('%B %d, %Y') if permission.start_time else 'N/A' }}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Time Range</label>
+                            <div class="form-control-plaintext">
+                                <i class="fas fa-clock me-2"></i>
+                                {% if permission.start_time and permission.end_time %}
+                                    {{ permission.start_time.strftime('%I:%M %p') }} - {{ permission.end_time.strftime('%I:%M %p') }}
+                                    {% set duration = (permission.end_time - permission.start_time).total_seconds() / 3600 %}
+                                    <span class="badge bg-info ms-2">{{ "%.1f"|format(duration) }} hours</span>
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Reason</label>
+                            <div class="form-control-plaintext" style="white-space: pre-wrap;">{{ permission.reason }}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Status</label>
+                                <div class="form-control-plaintext">
+                                    <span class="badge bg-success">{{ permission.status|title }}</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Created At</label>
+                                <div class="form-control-plaintext">
+                                    {{ permission.created_at.strftime('%Y-%m-%d %H:%M:%S') if permission.created_at else 'N/A' }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+    
+    {% if data.get('notes') and data['notes']|length > 0 %}
+        {% for note in data['notes'] %}
+        <div class="modal fade" id="noteModal{{ note.id }}" tabindex="-1" aria-labelledby="noteModalLabel{{ note.id }}" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="noteModalLabel{{ note.id }}">
+                            <i class="fas fa-sticky-note me-2"></i>Note Details
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Employee</label>
+                            <div class="form-control-plaintext">
+                                {{ note.user.get_full_name() if note.user else 'Unknown' }}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Date Range</label>
+                            <div class="form-control-plaintext">
+                                {% if note.start_date == note.end_date %}
+                                    <i class="fas fa-calendar me-2"></i>{{ note.start_date.strftime('%B %d, %Y') }}
+                                {% else %}
+                                    <i class="fas fa-calendar me-2"></i>{{ note.start_date.strftime('%B %d, %Y') }} - {{ note.end_date.strftime('%B %d, %Y') }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Comment</label>
+                            <div class="form-control-plaintext" style="white-space: pre-wrap;">{{ note.comment }}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Created By</label>
+                                <div class="form-control-plaintext">
+                                    {{ note.created_by.get_full_name() if note.created_by else 'Unknown' }}
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Created At</label>
+                                <div class="form-control-plaintext">
+                                    {{ note.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% endif %}
+{% endfor %}
+
+<style>
+.btn-purple {
+    background-color: #6f42c1;
+    border-color: #6f42c1;
+    color: white;
+}
+.btn-purple:hover {
+    background-color: #5a32a3;
+    border-color: #5a32a3;
+    color: white;
+}
+</style>
+
 {% endblock %}

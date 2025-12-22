@@ -43,18 +43,34 @@ def index():
         permission_requests = PermissionRequest.query.order_by(PermissionRequest.created_at.desc()).all()
     
     elif user_role == 'admin':
-        # Admins see permission requests from their departments, if assigned
-        if current_user.managed_department:
-            # If admin is assigned to specific departments, show only requests from those departments
-            admin_dept_ids = [dept.id for dept in current_user.managed_department]
-            permission_requests = PermissionRequest.query.join(
-                User, PermissionRequest.user_id == User.id
-            ).filter(
-                User.department_id.in_(admin_dept_ids)
+        if view_type == 'my':
+            page_title = 'My Permission Requests'
+            permission_requests = PermissionRequest.query.filter_by(
+                user_id=current_user.id
             ).order_by(PermissionRequest.created_at.desc()).all()
-        else:
-            # If admin is not assigned to specific departments, show all requests
+        elif view_type == 'all':
+            page_title = 'All Permission Requests'
+            # Show all requests if explicitly requested
             permission_requests = PermissionRequest.query.order_by(PermissionRequest.created_at.desc()).all()
+        else:
+            # Default: Show requests pending admin approval
+            page_title = 'Permission Requests for Approval'
+            # Get requests that need admin approval based on department assignments
+            if current_user.managed_department:
+                admin_dept_ids = [dept.id for dept in current_user.managed_department]
+                permission_requests = PermissionRequest.query.join(
+                    User, PermissionRequest.user_id == User.id
+                ).filter(
+                    PermissionRequest.manager_status == 'approved',
+                    PermissionRequest.admin_status == 'pending',
+                    User.department_id.in_(admin_dept_ids)
+                ).order_by(PermissionRequest.created_at.desc()).all()
+            else:
+                # If not assigned to specific departments, show all pending admin approvals
+                permission_requests = PermissionRequest.query.filter_by(
+                    manager_status='approved',
+                    admin_status='pending'
+                ).order_by(PermissionRequest.created_at.desc()).all()
     
     elif user_role == 'director':
         # Directors see all permission requests
@@ -94,6 +110,10 @@ def create():
             status='pending'
         )
         
+        # If the current user is a manager or director, automatically set manager_status to approved
+        if current_user.role in ['manager', 'director']:
+            permission_request.manager_status = 'approved'
+        
         db.session.add(permission_request)
         db.session.commit()
         
@@ -115,7 +135,8 @@ def create():
                 'end_time': end_time_str,
                 'duration_hours': round(duration_hours, 2),
                 'reason': form.reason.data[:100] if len(form.reason.data) > 100 else form.reason.data,
-                'status': 'pending'
+                'status': 'pending',
+                'manager_status': 'approved' if current_user.role in ['manager', 'director'] else 'pending'
             },
             description=f'User {current_user.get_full_name()} created a permission request for {duration_hours:.1f} hour(s) on {start_date_str}'
         )
@@ -154,29 +175,57 @@ def create():
         except Exception as e:
             logging.error(f"Exception while sending employee confirmation email: {str(e)}", exc_info=True)
         
-        # Send email notification to admin only (not to manager)
+        # Send email notification to manager (or admin if no manager)
+        manager_email_sent = False
         try:
-            from helpers import send_email_to_admin
+            from helpers import send_email_to_manager, send_email_to_admin
             
             start_date_str = form.start_date.data.strftime('%B %d, %Y')
             start_time_str = form.start_time.data.strftime('%I:%M %p')
             end_time_str = form.end_time.data.strftime('%I:%M %p')
             duration_hours = (permission_request.end_time - permission_request.start_time).total_seconds() / 3600
             
-            # Always send to admin, regardless of user role
-            approval_link = url_for('permission.view', id=permission_request.id, _external=True)
-            request_data = {
-                'request_type': 'Permission Request',
-                'start_date': f"{start_date_str}",
-                'end_date': f"{start_time_str} - {end_time_str}",
-                'duration': f"{duration_hours:.1f} hour(s)",
-                'reason': form.reason.data,
-                'request_id': str(permission_request.id),
-                'approval_link': approval_link
-            }
-            send_email_to_admin(current_user, 'permission_admin_notification', request_data)
+            # Only send to manager if employee is not a manager or director (managers and directors skip manager approval)
+            if current_user.role not in ['manager', 'director']:
+                approval_link = url_for('permission.view', id=permission_request.id, _external=True)
+                request_data = {
+                    'request_type': 'Permission Request',
+                    'start_date': start_date_str,
+                    'end_date': f"{start_time_str} - {end_time_str}",
+                    'duration': f"{duration_hours:.1f} hour(s)",
+                    'reason': form.reason.data,
+                    'request_id': str(permission_request.id),
+                    'approval_link': approval_link
+                }
+                logging.info(f"=== SENDING EMAIL TO MANAGER ===")
+                logging.info(f"Employee: {current_user.get_full_name()} ({current_user.email})")
+                logging.info(f"Request ID: {permission_request.id}")
+                manager_email_sent = send_email_to_manager(current_user, 'permission_manager_notification', request_data)
+                if manager_email_sent:
+                    logging.info(f"✅ Manager notification email sent successfully")
+                else:
+                    logging.error(f"❌ Manager notification email NOT sent - check logs above for details")
+            else:
+                # If manager or director submits, send directly to admin
+                request_data = {
+                    'request_type': 'Permission Request',
+                    'start_date': start_date_str,
+                    'end_date': f"{start_time_str} - {end_time_str}",
+                    'duration': f"{duration_hours:.1f} hour(s)",
+                    'reason': form.reason.data,
+                    'request_id': str(permission_request.id),
+                    'approval_link': url_for('permission.view', id=permission_request.id, _external=True)
+                }
+                logging.info(f"=== SENDING EMAIL TO ADMIN ===")
+                logging.info(f"Employee: {current_user.get_full_name()} ({current_user.email})")
+                logging.info(f"Request ID: {permission_request.id}")
+                manager_email_sent = send_email_to_admin(current_user, 'permission_admin_notification', request_data)
+                if manager_email_sent:
+                    logging.info(f"✅ Admin notification email sent successfully")
+                else:
+                    logging.error(f"❌ Admin notification email NOT sent - check logs above for details")
         except Exception as e:
-            logging.error(f"Failed to send email notification: {str(e)}")
+            logging.error(f"❌ Exception while sending email notification to manager/admin: {str(e)}", exc_info=True)
         
         flash('Your permission request has been submitted successfully!', 'success')
         return redirect(url_for('permission.index'))
@@ -204,21 +253,33 @@ def view(id):
     can_approve = False
     approval_form = None
     
-    # Check if requester is a manager (special case - managers skip manager approval)
+    # Check if requester is a manager or director (special case - managers/directors skip manager approval)
     requester_is_manager = requester.role == 'manager'
+    requester_is_director = requester.role == 'director'
     
-    # Manager can approve if they are the department manager and request is pending
-    if user_role == 'manager' and not requester_is_manager:
+    if user_role == 'manager':
+        # Manager can approve if they are the department manager and request is pending manager approval
+        # Note: If requester is a manager or director, their manager_status is already approved, so they skip this step
         if (requester.department and requester.department.manager_id == current_user.id and 
-            permission_request.status == 'pending' and permission_request.admin_status == 'pending'):
-                    can_approve = True
-                    approval_form = ApprovalForm()
+            permission_request.manager_status == 'pending'):
+            can_approve = True
+            approval_form = ApprovalForm()
     
-    # Admin can approve if request has manager approval or if requester is manager
+    elif user_role == 'director':
+        # Directors cannot approve their own requests - only admin can approve director requests
+        # Directors can view all requests but cannot approve any (including their own)
+        # This ensures all director requests must be approved by admin only
+        can_approve = False
+        approval_form = None
+    
     elif user_role in ['admin', 'product_owner']:
-        if permission_request.status == 'pending' and permission_request.admin_status == 'pending':
-                can_approve = True
-                approval_form = ApprovalForm()
+        # Admin/Technical Support can approve if:
+        # 1. Request has manager approval and is pending admin approval (normal flow)
+        # 2. OR if requester is manager or director, admin/product_owner can approve directly (manager/director requests skip manager approval)
+        if ((permission_request.manager_status == 'approved' and permission_request.admin_status == 'pending') or
+            ((requester_is_manager or requester_is_director) and permission_request.admin_status == 'pending')):
+            can_approve = True
+            approval_form = ApprovalForm()
     
     # Handle approval/rejection submission
     if approval_form and approval_form.validate_on_submit():
@@ -229,41 +290,14 @@ def view(id):
             if user_role == 'manager':
                 # Capture before status for logging
                 before_status = {
+                    'manager_status': permission_request.manager_status,
                     'admin_status': permission_request.admin_status,
                     'overall_status': permission_request.status
                 }
                 
-                # Manager approval - set a flag or comment, then notify admin
-                # Since PermissionRequest model doesn't have manager_status, we'll use admin_status
-                # but mark it as manager-approved in the comment
-                permission_request.admin_comment = f"Manager approved: {comment}" if comment else "Manager approved"
-                
-                # Log manager approval/rejection
-                start_date_str = permission_request.start_time.strftime('%Y-%m-%d')
-                start_time_str = permission_request.start_time.strftime('%H:%M')
-                end_time_str = permission_request.end_time.strftime('%H:%M')
-                duration_hours = (permission_request.end_time - permission_request.start_time).total_seconds() / 3600
-                
-                if approval_status == 'rejected':
-                    permission_request.admin_status = 'rejected'
-                    permission_request.update_overall_status()
-                
-                db.session.refresh(permission_request)
-                
-                after_status = {
-                    'admin_status': permission_request.admin_status,
-                    'overall_status': permission_request.status
-                }
-                
-                log_activity(
-                    user=current_user,
-                    action='manager_approve_permission_request' if approval_status == 'approved' else 'manager_reject_permission_request',
-                    entity_type='permission_request',
-                    entity_id=permission_request.id,
-                    before_values=before_status,
-                    after_values=after_status,
-                    description=f'Manager {current_user.get_full_name()} {approval_status} permission request #{permission_request.id} ({duration_hours:.1f} hour(s) on {start_date_str}) by {requester.get_full_name()}'
-                )
+                permission_request.manager_status = approval_status
+                permission_request.manager_comment = comment
+                permission_request.manager_updated_at = datetime.utcnow()
                 
                 # Send email notification
                 try:
@@ -302,15 +336,79 @@ def view(id):
                             'request_id': str(permission_request.id)
                         }
                         send_email_to_employee(requester, 'permission_employee_rejection', request_data)
-                        # Update status to rejected
-                        permission_request.admin_status = 'rejected'
-                        permission_request.update_overall_status()
                 except Exception as e:
                     logging.error(f"Failed to send email notification: {str(e)}")
+                
+                # Update overall status (if not already updated in admin approval section)
+                try:
+                    old_status = permission_request.status
+                    permission_request.update_overall_status()
+                    # Explicitly mark the status field as modified to ensure SQLAlchemy tracks the change
+                    from sqlalchemy.orm.attributes import flag_modified
+                    flag_modified(permission_request, 'status')
+                    # Explicitly mark the object as modified to ensure SQLAlchemy tracks the change
+                    db.session.add(permission_request)
+                    logging.info(f"Manager approval: Updated permission request #{permission_request.id} status from '{old_status}' to '{permission_request.status}'")
+                except Exception as status_error:
+                    logging.error(f"Error updating overall status: {str(status_error)}", exc_info=True)
+                    # Continue even if status update fails
+                
+                # Log permission request approval/rejection (after status update)
+                start_date_str = permission_request.start_time.strftime('%Y-%m-%d')
+                start_time_str = permission_request.start_time.strftime('%H:%M')
+                end_time_str = permission_request.end_time.strftime('%H:%M')
+                duration_hours = (permission_request.end_time - permission_request.start_time).total_seconds() / 3600
+                
+                # Get the status after update (don't refresh before commit to avoid stale data)
+                # The status should already be updated by update_overall_status()
+                after_status = {
+                    'manager_status': permission_request.manager_status,
+                    'admin_status': permission_request.admin_status,
+                    'overall_status': permission_request.status
+                }
+                
+                approver_role = 'Manager'
+                action_name = f'{user_role}_approve_permission_request' if approval_status == 'approved' else f'{user_role}_reject_permission_request'
+                log_activity(
+                    user=current_user,
+                    action=action_name,
+                    entity_type='permission_request',
+                    entity_id=permission_request.id,
+                    before_values=before_status,
+                    after_values=after_status,
+                    description=f'{approver_role} {current_user.get_full_name()} {approval_status} permission request #{permission_request.id} ({duration_hours:.1f} hour(s) on {start_date_str}) by {requester.get_full_name()}'
+                )
+                
+                # Flush changes to database before commit to ensure status is saved
+                db.session.flush()
+                
+                # Verify the status was updated correctly before commit
+                if approval_status == 'approved':
+                    # Ensure status is updated one more time before commit
+                    permission_request.update_overall_status()
+                    # Explicitly set and flag the status to ensure it's saved
+                    final_status = permission_request.status
+                    permission_request.status = final_status
+                    from sqlalchemy.orm.attributes import flag_modified
+                    flag_modified(permission_request, 'status')
+                    db.session.add(permission_request)
+                    logging.info(f"Before commit - Permission request #{permission_request.id} status: {final_status}, manager_status: {permission_request.manager_status}, admin_status: {permission_request.admin_status}")
+                
+                # Commit all changes including status update
+                db.session.commit()
+                
+                # Verify after commit by re-querying from database
+                db.session.expire(permission_request)
+                verified_request = PermissionRequest.query.get(permission_request.id)
+                logging.info(f"After commit (verified from DB) - Permission request #{permission_request.id} status: {verified_request.status}, manager_status: {verified_request.manager_status}, admin_status: {verified_request.admin_status}")
+                
+                flash(f'Permission request has been {approval_status}.', 'success')
+                return redirect(url_for('permission.index'))
         
             elif user_role in ['admin', 'product_owner']:
                 # Capture before status for logging
                 before_status = {
+                    'manager_status': permission_request.manager_status,
                     'admin_status': permission_request.admin_status,
                     'overall_status': permission_request.status
                 }
@@ -319,20 +417,27 @@ def view(id):
                 permission_request.admin_comment = comment
                 permission_request.admin_updated_at = datetime.utcnow()
                 
-                # Update overall status
-                try:
-                    permission_request.update_overall_status()
-                except Exception as status_error:
-                    logging.error(f"Error updating overall status: {str(status_error)}", exc_info=True)
-                    # Continue even if status update fails
+                # If requester is a manager and admin is approving, ensure manager_status is also approved
+                # (Manager requests skip manager approval, so manager_status should already be approved,
+                # but we ensure it's set correctly here)
+                if approval_status == 'approved' and requester_is_manager and permission_request.manager_status != 'approved':
+                    permission_request.manager_status = 'approved'
+                    permission_request.manager_updated_at = datetime.utcnow()
                 
-                # Commit the status change FIRST before sending emails
-                try:
-                    db.session.commit()
-                except Exception as commit_error:
-                    db.session.rollback()
-                    logging.error(f"Error committing permission request status: {str(commit_error)}", exc_info=True)
-                    raise commit_error
+                # Update overall status immediately after setting admin_status
+                old_status = permission_request.status
+                permission_request.update_overall_status()
+                new_status = permission_request.status
+                
+                # Explicitly mark the status field as modified to ensure SQLAlchemy tracks the change
+                from sqlalchemy.orm.attributes import flag_modified
+                flag_modified(permission_request, 'status')
+                
+                # Log the status update for debugging
+                logging.info(f"Admin approval: Updated permission request #{permission_request.id} status from '{old_status}' to '{new_status}' (manager_status: {permission_request.manager_status}, admin_status: {permission_request.admin_status})")
+                
+                # Explicitly mark the object as modified to ensure SQLAlchemy tracks the change
+                db.session.add(permission_request)
                 
                 # Log permission request approval/rejection
                 start_date_str = permission_request.start_time.strftime('%Y-%m-%d')
@@ -340,10 +445,8 @@ def view(id):
                 end_time_str = permission_request.end_time.strftime('%H:%M')
                 duration_hours = (permission_request.end_time - permission_request.start_time).total_seconds() / 3600
                 
-                # Get the status after update
-                db.session.refresh(permission_request)
-                
                 after_status = {
+                    'manager_status': permission_request.manager_status,
                     'admin_status': permission_request.admin_status,
                     'overall_status': permission_request.status
                 }
@@ -407,6 +510,29 @@ def view(id):
                 except Exception as e:
                     logging.error(f"Failed to send email notification: {str(e)}")
                     # Don't fail the whole operation if email fails - status is already saved
+                
+                # Flush changes to database before commit to ensure status is saved
+                db.session.flush()
+                
+                # Verify the status was updated correctly before commit
+                if approval_status == 'approved':
+                    # Ensure status is updated one more time before commit
+                    permission_request.update_overall_status()
+                    # Explicitly set and flag the status to ensure it's saved
+                    final_status = permission_request.status
+                    permission_request.status = final_status
+                    from sqlalchemy.orm.attributes import flag_modified
+                    flag_modified(permission_request, 'status')
+                    db.session.add(permission_request)
+                    logging.info(f"Before commit - Permission request #{permission_request.id} status: {final_status}, manager_status: {permission_request.manager_status}, admin_status: {permission_request.admin_status}")
+                
+                # Commit all changes including status update
+                db.session.commit()
+                
+                # Verify after commit by re-querying from database
+                db.session.expire(permission_request)
+                verified_request = PermissionRequest.query.get(permission_request.id)
+                logging.info(f"After commit (verified from DB) - Permission request #{permission_request.id} status: {verified_request.status}, manager_status: {verified_request.manager_status}, admin_status: {verified_request.admin_status}")
                 
                 flash(f'Permission request has been {approval_status}.', 'success')
                 return redirect(url_for('permission.index'))
@@ -593,10 +719,12 @@ def admin_create():
             start_time=start_datetime,
             end_time=end_datetime,
             reason=form.reason.data,
-            status='pending'
+            status='approved'  # Auto-approve when created by admin
         )
         
-        # If the employee is a manager, no special handling needed since only admin approval is required
+        # Set all approval statuses to approved when created by admin
+        permission_request.manager_status = 'approved'
+        permission_request.admin_status = 'approved'
         
         db.session.add(permission_request)
         db.session.commit()
@@ -605,7 +733,7 @@ def admin_create():
         
         # Manager and director notifications removed - will be replaced with SMTP email notifications
         
-        flash(f'Permission request for {employee.get_full_name()} has been submitted successfully!', 'success')
+        flash(f'Permission request for {employee.get_full_name()} has been created and approved successfully!', 'success')
         return redirect(url_for('permission.index'))
     
     return render_template('permission/admin_create.html', 

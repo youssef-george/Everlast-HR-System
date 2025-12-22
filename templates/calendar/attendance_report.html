@@ -602,6 +602,17 @@
                                         {% else %}
                                             <span class="badge bg-secondary">-</span>
                                         {% endif %}
+                                        
+                                        {% if record.notes and record.notes|length > 0 %}
+                                            {% for note in record.notes %}
+                                            <button type="button" class="btn btn-sm btn-purple ms-1" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#noteModal{{ note.id }}"
+                                                    title="View Note">
+                                                <i class="fas fa-sticky-note me-1"></i>Note
+                                            </button>
+                                            {% endfor %}
+                                        {% endif %}
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -1071,4 +1082,79 @@
         }
     });
 </script>
+
+<!-- Note Modals -->
+{% for user_report in all_user_reports %}
+    {% for record in user_report.attendance_records %}
+        {% if record.notes and record.notes|length > 0 %}
+            {% for note in record.notes %}
+            <div class="modal fade" id="noteModal{{ note.id }}" tabindex="-1" aria-labelledby="noteModalLabel{{ note.id }}" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="noteModalLabel{{ note.id }}">
+                                <i class="fas fa-sticky-note me-2"></i>Note Details
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Employee</label>
+                                <div class="form-control-plaintext">
+                                    {{ note.user.get_full_name() if note.user else 'Unknown' }}
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Date Range</label>
+                                <div class="form-control-plaintext">
+                                    {% if note.start_date == note.end_date %}
+                                        <i class="fas fa-calendar me-2"></i>{{ note.start_date.strftime('%B %d, %Y') }}
+                                    {% else %}
+                                        <i class="fas fa-calendar me-2"></i>{{ note.start_date.strftime('%B %d, %Y') }} - {{ note.end_date.strftime('%B %d, %Y') }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Comment</label>
+                                <div class="form-control-plaintext" style="white-space: pre-wrap;">{{ note.comment }}</div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">Created By</label>
+                                    <div class="form-control-plaintext">
+                                        {{ note.created_by.get_full_name() if note.created_by else 'Unknown' }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">Created At</label>
+                                    <div class="form-control-plaintext">
+                                        {{ note.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% endif %}
+    {% endfor %}
+{% endfor %}
+
+<style>
+.btn-purple {
+    background-color: #6f42c1;
+    border-color: #6f42c1;
+    color: white;
+}
+.btn-purple:hover {
+    background-color: #5a32a3;
+    border-color: #5a32a3;
+    color: white;
+}
+</style>
+
 {% endblock %}

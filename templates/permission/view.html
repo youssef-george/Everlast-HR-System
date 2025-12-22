@@ -106,8 +106,44 @@
             </div>
             <div class="card-body">
                 <div class="d-flex flex-column">
-                    <!-- Admin Approval Only -->
-                    <div class="d-flex align-items-center">
+                    <!-- Step 1: Direct Manager -->
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="symbol symbol-40px me-3 position-relative">
+                            <div class="symbol-label bg-light-primary">
+                                <i class="fas fa-user-tie text-primary"></i>
+                            </div>
+                            {% if permission_request.manager_status == 'approved' %}
+                                <div class="position-absolute bottom-0 end-0 bg-success rounded-circle p-1">
+                                    <i class="fas fa-check text-white" style="font-size: 10px;"></i>
+                                </div>
+                            {% elif permission_request.manager_status == 'rejected' %}
+                                <div class="position-absolute bottom-0 end-0 bg-danger rounded-circle p-1">
+                                    <i class="fas fa-times text-white" style="font-size: 10px;"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex flex-column flex-grow-1">
+                            <span class="fw-bold mb-1">Direct Manager Approval</span>
+                            <span class="text-muted">
+                                {% if permission_request.manager_status == 'approved' %}
+                                    <span class="text-success">Approved</span>
+                                {% elif permission_request.manager_status == 'rejected' %}
+                                    <span class="text-danger">Rejected</span>
+                                {% else %}
+                                    <span class="text-warning">Pending</span>
+                                {% endif %}
+                            </span>
+                            {% if permission_request.manager_comment %}
+                                <small class="text-muted mt-1">Comment: {{ permission_request.manager_comment }}</small>
+                            {% endif %}
+                            {% if permission_request.manager_updated_at %}
+                                <small class="text-muted mt-1">Updated: {{ permission_request.manager_updated_at|safe_datetime('%d/%m/%Y %I:%M %p') }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Step 2: Admin Approval -->
+                    <div class="d-flex align-items-center mb-4">
                         <div class="symbol symbol-40px me-3 position-relative">
                             <div class="symbol-label bg-light-primary">
                                 <i class="fas fa-user-shield text-primary"></i>
@@ -123,21 +159,27 @@
                             {% endif %}
                         </div>
                         <div class="d-flex flex-column flex-grow-1">
-                            <span class="fw-bold mb-1">Admin Approval</span>
+                            <span class="fw-bold mb-1">Account Manager (Admin) Approval</span>
                             <span class="text-muted">
                                 {% if permission_request.admin_status == 'approved' %}
                                     <span class="text-success">Approved</span>
                                 {% elif permission_request.admin_status == 'rejected' %}
                                     <span class="text-danger">Rejected</span>
-                                {% else %}
+                                {% elif permission_request.manager_status == 'approved' %}
                                     <span class="text-warning">Pending</span>
+                                {% else %}
+                                    <span class="text-muted">Awaiting Manager Approval</span>
                                 {% endif %}
                             </span>
                             {% if permission_request.admin_comment %}
                                 <small class="text-muted mt-1">Comment: {{ permission_request.admin_comment }}</small>
                             {% endif %}
+                            {% if permission_request.admin_updated_at %}
+                                <small class="text-muted mt-1">Updated: {{ permission_request.admin_updated_at|safe_datetime('%d/%m/%Y %I:%M %p') }}</small>
+                            {% endif %}
                         </div>
                     </div>
+                    
                 </div>
             </div>
         </div>
