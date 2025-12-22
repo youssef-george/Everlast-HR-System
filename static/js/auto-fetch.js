@@ -12,6 +12,8 @@ class AutoFetchSystem {
         this.connectionFailures = 0;
         this.maxFailures = 3;
         this.baseDelay = 5000; // 5 seconds base delay
+        this.gatewayErrors = 0; // Track consecutive 502/503 errors
+        this.gatewayErrorDelay = 0; // Current delay for gateway errors
         
         // Data cache to avoid unnecessary updates
         this.dataCache = new Map();
@@ -98,6 +100,9 @@ class AutoFetchSystem {
         this.isRunning = true;
         console.log(`🚀 Starting auto-fetch with ${this.fetchInterval/1000}s interval`);
         
+        // Store original interval for restoration
+        this.originalFetchInterval = this.fetchInterval;
+        
         this.fetchIntervalId = setInterval(() => {
             // Only fetch if page is visible and not in a form
             if (!document.hidden && !document.querySelector('form:focus')) {
@@ -105,11 +110,25 @@ class AutoFetchSystem {
             }
         }, this.fetchInterval);
         
-        // Perform initial fetch with a small delay to let page load
+        // Check if we just submitted a form (detect query parameter)
+        const urlParams = new URLSearchParams(window.location.search);
+        const justSubmitted = urlParams.get('submitted') === '1';
+        
+        // Delay initial fetch longer if we just submitted a form to avoid 502 errors
+        const initialDelay = justSubmitted ? 15000 : 2000; // 15 seconds after submission, 2 seconds normally
+        
+        if (justSubmitted) {
+            console.log('⏳ Recent submission detected - delaying initial fetch to allow backend processing...');
+            // Remove the query parameter from URL without reload
+            const newUrl = window.location.pathname + (window.location.hash || '');
+            window.history.replaceState({}, '', newUrl);
+        }
+        
+        // Perform initial fetch with appropriate delay
         setTimeout(() => {
             console.log('🔄 Performing initial data fetch...');
             this.performFetch();
-        }, 2000);
+        }, initialDelay);
     }
     
     startAutoRefresh() {
@@ -156,6 +175,7 @@ class AutoFetchSystem {
             // Process results
             let successCount = 0;
             let sslErrorCount = 0;
+            let gatewayErrorCount = 0;
             results.forEach((result, index) => {
                 if (result.status === 'fulfilled') {
                     this.handleFetchSuccess(result.value);
@@ -167,6 +187,10 @@ class AutoFetchSystem {
                         sslErrorCount++;
                         // Suppress SSL errors - they're expected when page is HTTPS but server is HTTP
                         console.debug(`⚠️ SSL protocol error suppressed (HTTP/HTTPS mismatch)`);
+                    } else if (error && error.message && (error.message.includes('502') || error.message.includes('503') || error.message.includes('504'))) {
+                        // Track gateway errors (502, 503, 504)
+                        gatewayErrorCount++;
+                        console.warn(`⚠️ Gateway error detected (${error.message}) - backend may be processing`);
                     } else {
                         console.warn(`❌ Fetch operation ${index} failed:`, result.reason);
                     }
@@ -176,6 +200,45 @@ class AutoFetchSystem {
             if (sslErrorCount > 0) {
                 console.debug(`⚠️ ${sslErrorCount} SSL errors suppressed (likely HTTP/HTTPS protocol mismatch)`);
             }
+            
+            // Handle gateway errors with exponential backoff
+            if (gatewayErrorCount > 0) {
+                this.gatewayErrors++;
+                // Exponential backoff: 5s, 10s, 20s, 40s, max 60s
+                this.gatewayErrorDelay = Math.min(5000 * Math.pow(2, this.gatewayErrors - 1), 60000);
+                console.warn(`⚠️ ${gatewayErrorCount} gateway errors detected (consecutive: ${this.gatewayErrors}). Backend may be processing.`);
+                
+                // Temporarily increase fetch interval if we're getting gateway errors
+                if (this.gatewayErrors >= 2 && this.fetchIntervalId) {
+                    clearInterval(this.fetchIntervalId);
+                    const newInterval = Math.max(this.originalFetchInterval, this.gatewayErrorDelay);
+                    console.log(`⏳ Temporarily increasing fetch interval to ${newInterval/1000}s due to gateway errors`);
+                    
+                    this.fetchIntervalId = setInterval(() => {
+                        if (!document.hidden && !document.querySelector('form:focus')) {
+                            this.performFetch();
+                        }
+                    }, newInterval);
+                }
+            } else {
+                // Reset gateway error tracking on successful fetch
+                if (this.gatewayErrors > 0) {
+                    console.log(`✅ Gateway errors resolved - resetting to normal interval`);
+                    // Restore original interval
+                    if (this.fetchIntervalId && this.fetchInterval !== this.originalFetchInterval) {
+                        clearInterval(this.fetchIntervalId);
+                        this.fetchInterval = this.originalFetchInterval;
+                        this.fetchIntervalId = setInterval(() => {
+                            if (!document.hidden && !document.querySelector('form:focus')) {
+                                this.performFetch();
+                            }
+                        }, this.fetchInterval);
+                    }
+                }
+                this.gatewayErrors = 0;
+                this.gatewayErrorDelay = 0;
+            }
+            
             console.log(`✅ Auto-fetch completed: ${successCount}/${results.length} successful`);
             
             // Reset connection failures on successful fetch
@@ -497,7 +560,13 @@ class AutoFetchSystem {
             
             clearTimeout(timeoutId);
             
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            if (!response.ok) {
+                // Check for gateway errors (502, 503, 504)
+                if (response.status === 502 || response.status === 503 || response.status === 504) {
+                    throw new Error(`HTTP ${response.status}: Bad Gateway - Backend may be processing`);
+                }
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
             
             const result = await response.json();
             console.log('📊 Recent requests response:', result);
@@ -506,12 +575,15 @@ class AutoFetchSystem {
             const data = result.data || result;
             return { type: 'recent_requests', data };
         } catch (error) {
-            // Suppress SSL protocol errors (usually means HTTP/HTTPS mismatch)
-            if (error.message && (error.message.includes('SSL') || error.message.includes('ERR_SSL_PROTOCOL_ERROR') || error.message.includes('Failed to fetch'))) {
-                console.debug('SSL protocol error (likely HTTP/HTTPS mismatch) - suppressing');
-                return null;
+            // Only log if it's not an abort (timeout)
+            if (error.name !== 'AbortError' && error.name !== 'TimeoutError') {
+                // Suppress SSL protocol errors (usually means HTTP/HTTPS mismatch)
+                if (error.message && (error.message.includes('SSL') || error.message.includes('ERR_SSL_PROTOCOL_ERROR') || error.message.includes('Failed to fetch'))) {
+                    console.debug('SSL protocol error (likely HTTP/HTTPS mismatch) - suppressing');
+                    return null;
+                }
+                console.warn('Failed to fetch recent requests:', error.message || error);
             }
-            console.warn('Failed to fetch recent requests:', error);
             return null;
         }
     }
@@ -665,63 +737,123 @@ class AutoFetchSystem {
     
     async fetchLeaveRequests() {
         try {
+            const { controller, timeoutId } = this._createTimeoutSignal(15000);
+            
             const response = await fetch('/api/leave/requests', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken()
                 },
-                signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : null  // Increased timeout to 15 seconds
+                credentials: 'same-origin',
+                redirect: 'follow',
+                signal: controller.signal
             });
             
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                // Check for gateway errors (502, 503, 504)
+                if (response.status === 502 || response.status === 503 || response.status === 504) {
+                    throw new Error(`HTTP ${response.status}: Bad Gateway - Backend may be processing`);
+                }
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
             
             const data = await response.json();
             return { type: 'leave_requests', data };
         } catch (error) {
-            console.warn('Failed to fetch leave requests:', error);
+            // Only log if it's not an abort (timeout)
+            if (error.name !== 'AbortError' && error.name !== 'TimeoutError') {
+                // Suppress SSL protocol errors
+                if (error.message && (error.message.includes('SSL') || error.message.includes('ERR_SSL_PROTOCOL_ERROR'))) {
+                    console.debug('SSL protocol error (likely HTTP/HTTPS mismatch) - suppressing');
+                    return null;
+                }
+                console.warn('Failed to fetch leave requests:', error.message || error);
+            }
             return null;
         }
     }
     
     async fetchLeaveTypes() {
         try {
+            const { controller, timeoutId } = this._createTimeoutSignal(15000);
+            
             const response = await fetch('/api/leave/types', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken()
                 },
-                signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : null  // Increased timeout to 15 seconds
+                credentials: 'same-origin',
+                redirect: 'follow',
+                signal: controller.signal
             });
             
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                // Check for gateway errors (502, 503, 504)
+                if (response.status === 502 || response.status === 503 || response.status === 504) {
+                    throw new Error(`HTTP ${response.status}: Bad Gateway - Backend may be processing`);
+                }
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
             
             const data = await response.json();
             return { type: 'leave_types', data };
         } catch (error) {
-            console.warn('Failed to fetch leave types:', error);
+            // Only log if it's not an abort (timeout)
+            if (error.name !== 'AbortError' && error.name !== 'TimeoutError') {
+                // Suppress SSL protocol errors
+                if (error.message && (error.message.includes('SSL') || error.message.includes('ERR_SSL_PROTOCOL_ERROR'))) {
+                    console.debug('SSL protocol error (likely HTTP/HTTPS mismatch) - suppressing');
+                    return null;
+                }
+                console.warn('Failed to fetch leave types:', error.message || error);
+            }
             return null;
         }
     }
     
     async fetchLeaveBalances() {
         try {
+            const { controller, timeoutId } = this._createTimeoutSignal(15000);
+            
             const response = await fetch('/api/leave/balances', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCSRFToken()
                 },
-                signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : null  // Increased timeout to 15 seconds
+                credentials: 'same-origin',
+                redirect: 'follow',
+                signal: controller.signal
             });
             
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                // Check for gateway errors (502, 503, 504)
+                if (response.status === 502 || response.status === 503 || response.status === 504) {
+                    throw new Error(`HTTP ${response.status}: Bad Gateway - Backend may be processing`);
+                }
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
             
             const data = await response.json();
             return { type: 'leave_balances', data };
         } catch (error) {
-            console.warn('Failed to fetch leave balances:', error);
+            // Only log if it's not an abort (timeout)
+            if (error.name !== 'AbortError' && error.name !== 'TimeoutError') {
+                // Suppress SSL protocol errors
+                if (error.message && (error.message.includes('SSL') || error.message.includes('ERR_SSL_PROTOCOL_ERROR'))) {
+                    console.debug('SSL protocol error (likely HTTP/HTTPS mismatch) - suppressing');
+                    return null;
+                }
+                console.warn('Failed to fetch leave balances:', error.message || error);
+            }
             return null;
         }
     }

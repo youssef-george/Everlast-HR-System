@@ -217,8 +217,8 @@ def create():
             status='pending'
         )
         
-        # If the current user is a manager, automatically set manager_status to approved
-        if current_user.role == 'manager':
+        # If the current user is a manager or director, automatically set manager_status to approved
+        if current_user.role in ['manager', 'director']:
             leave_request.manager_status = 'approved'
         
         db.session.add(leave_request)
@@ -242,7 +242,7 @@ def create():
                 'duration_days': duration,
                 'reason': form.reason.data[:100] if len(form.reason.data) > 100 else form.reason.data,
                 'status': 'pending',
-                'manager_status': 'approved' if current_user.role == 'manager' else 'pending'
+                'manager_status': 'approved' if current_user.role in ['manager', 'director'] else 'pending'
             },
             description=f'User {current_user.get_full_name()} created a {leave_type_name} request for {duration} day(s)'
         )
@@ -298,6 +298,7 @@ def create():
             # Don't fail the request if email fails
         
         # Send email notification to manager (or admin if no manager)
+        manager_email_sent = False
         try:
             from helpers import send_email_to_manager
             # url_for is already imported at the top of the file
@@ -308,8 +309,8 @@ def create():
             start_date_str = form.start_date.data.strftime('%B %d, %Y')
             end_date_str = form.end_date.data.strftime('%B %d, %Y')
             
-            # Only send to manager if employee is not a manager (managers skip manager approval)
-            if current_user.role != 'manager':
+            # Only send to manager if employee is not a manager or director (managers and directors skip manager approval)
+            if current_user.role not in ['manager', 'director']:
                 approval_link = url_for('leave.view', id=leave_request.id, _external=True)
                 request_data = {
                     'request_type': 'Leave Request',
@@ -320,9 +321,16 @@ def create():
                     'request_id': str(leave_request.id),
                     'approval_link': approval_link
                 }
-                send_email_to_manager(current_user, 'leave_manager_notification', request_data)
+                logging.info(f"=== SENDING EMAIL TO MANAGER ===")
+                logging.info(f"Employee: {current_user.get_full_name()} ({current_user.email})")
+                logging.info(f"Request ID: {leave_request.id}")
+                manager_email_sent = send_email_to_manager(current_user, 'leave_manager_notification', request_data)
+                if manager_email_sent:
+                    logging.info(f"✅ Manager notification email sent successfully")
+                else:
+                    logging.error(f"❌ Manager notification email NOT sent - check logs above for details")
             else:
-                # If manager submits, send directly to admin
+                # If manager or director submits, send directly to admin
                 from helpers import send_email_to_admin
                 request_data = {
                     'request_type': 'Leave Request',
@@ -333,9 +341,16 @@ def create():
                     'request_id': str(leave_request.id),
                     'approval_link': url_for('leave.view', id=leave_request.id, _external=True)
                 }
-                send_email_to_admin(current_user, 'leave_admin_notification', request_data)
+                logging.info(f"=== SENDING EMAIL TO ADMIN ===")
+                logging.info(f"Employee: {current_user.get_full_name()} ({current_user.email})")
+                logging.info(f"Request ID: {leave_request.id}")
+                manager_email_sent = send_email_to_admin(current_user, 'leave_admin_notification', request_data)
+                if manager_email_sent:
+                    logging.info(f"✅ Admin notification email sent successfully")
+                else:
+                    logging.error(f"❌ Admin notification email NOT sent - check logs above for details")
         except Exception as e:
-            logging.error(f"Failed to send email notification to manager/admin: {str(e)}", exc_info=True)
+            logging.error(f"❌ Exception while sending email notification to manager/admin: {str(e)}", exc_info=True)
         
         # Show appropriate success message
         if email_sent:
@@ -343,7 +358,8 @@ def create():
         else:
             flash('Your leave request has been submitted successfully!', 'success')
         
-        return redirect(url_for('leave.index'))
+        # Add query parameter to signal recent submission - delays auto-fetch to avoid 502 errors
+        return redirect(url_for('leave.index', submitted=1))
     
     return render_template('leave/create.html', 
                            title='Create Leave Request', 
@@ -368,23 +384,31 @@ def view(id):
     can_approve = False
     approval_form = None
     
-    # Check if requester is a manager (special case)
+    # Check if requester is a manager or director (special case)
     requester_is_manager = requester.role == 'manager'
+    requester_is_director = requester.role == 'director'
     
     if user_role == 'manager':
         # Manager can approve if they are the department manager and request is pending manager approval
-        # Note: If requester is a manager, their manager_status is already approved, so they skip this step
+        # Note: If requester is a manager or director, their manager_status is already approved, so they skip this step
         if (requester.department and requester.department.manager_id == current_user.id and 
             leave_request.manager_status == 'pending'):
             can_approve = True
             approval_form = ApprovalForm()
     
+    elif user_role == 'director':
+        # Directors cannot approve their own requests - only admin can approve director requests
+        # Directors can view all requests but cannot approve any (including their own)
+        # This ensures all director requests must be approved by admin only
+        can_approve = False
+        approval_form = None
+    
     elif user_role in ['admin', 'product_owner']:
         # Admin/Technical Support can approve if:
         # 1. Request has manager approval and is pending admin approval (normal flow)
-        # 2. OR if requester is manager, admin/product_owner can approve directly (manager requests skip manager approval)
+        # 2. OR if requester is manager or director, admin/product_owner can approve directly (manager/director requests skip manager approval)
         if ((leave_request.manager_status == 'approved' and leave_request.admin_status == 'pending') or
-            (requester_is_manager and leave_request.admin_status == 'pending')):
+            ((requester_is_manager or requester_is_director) and leave_request.admin_status == 'pending')):
             can_approve = True
             approval_form = ApprovalForm()
     
