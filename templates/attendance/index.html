@@ -874,16 +874,41 @@ table thead th * {
                                         <label for="employee_id" class="form-label fw-bold">
                                             <i class="fas fa-users me-2"></i>Employee
                                         </label>
-                                        <select class="form-select" id="employee_id" name="employee_id">
-                                            <option value="">All Employees</option>
-                                            {% if employees %}
-                                            {% for employee in employees %}
-                                            <option value="{{ employee.id }}" {% if request.args.get('employee_id')|int == employee.id %}selected{% endif %}>
-                                                {{ employee.get_full_name() }}
-                                            </option>
-                                            {% endfor %}
-                                            {% endif %}
-                                        </select>
+                                        <div class="position-relative">
+                                            <div class="employee-select-wrapper">
+                                                <select class="form-select employee-select-searchable" id="employee_id" name="employee_id">
+                                                    <option value="">All Employees</option>
+                                                    {% if employees %}
+                                                    {% for employee in employees %}
+                                                    <option value="{{ employee.id }}" 
+                                                            data-name="{{ employee.get_full_name()|lower }}" 
+                                                            data-fingerprint="{{ (employee.fingerprint_number or '')|lower }}"
+                                                            {% if request.args.get('employee_id')|int == employee.id %}selected{% endif %}>
+                                                        {{ employee.get_full_name() }}
+                                                    </option>
+                                                    {% endfor %}
+                                                    {% endif %}
+                                                </select>
+                                                <div class="employee-search-overlay" id="employeeSearchOverlay" style="display: none;">
+                                                    <div class="employee-search-box">
+                                                        <div class="input-group mb-2">
+                                                            <span class="input-group-text bg-light border-end-0">
+                                                                <i class="fas fa-search text-muted"></i>
+                                                            </span>
+                                                            <input type="text" 
+                                                                   class="form-control border-start-0" 
+                                                                   id="employeeSearchInput" 
+                                                                   placeholder="Type to search employees..."
+                                                                   autocomplete="off">
+                                                            <button class="btn btn-outline-secondary border-start-0" type="button" id="clearEmployeeSearch" style="display: none;">
+                                                                <i class="fas fa-times"></i>
+                                                            </button>
+                                                        </div>
+                                                        <div class="employee-search-results" id="employeeSearchResults"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                     {% elif current_user.role == 'employee' %}
                                     <div class="col-12 col-md-6 col-lg-3">
@@ -2373,6 +2398,99 @@ document.addEventListener('DOMContentLoaded', function() {
 .search-box .form-control:focus + .btn {
     border-color: #ced4da;
 }
+
+/* Employee Searchable Dropdown Styles */
+.employee-select-wrapper {
+    position: relative;
+}
+
+.employee-select-searchable {
+    position: relative;
+    cursor: pointer;
+}
+
+.employee-search-overlay {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1050;
+    background: white;
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    margin-top: 4px;
+    max-height: 350px;
+    overflow: hidden;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.employee-search-box {
+    padding: 0.5rem;
+}
+
+.employee-search-results {
+    max-height: 250px;
+    overflow-y: auto;
+    border-top: 1px solid #e9ecef;
+}
+
+.employee-search-result-item {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.employee-search-result-item:hover {
+    background-color: #f8f9fa;
+    border-left: 3px solid #0d6efd;
+}
+
+.employee-search-result-item.selected {
+    background-color: #e7f3ff;
+    border-left: 3px solid #0d6efd;
+    font-weight: 600;
+}
+
+.employee-search-result-item .employee-name {
+    flex: 1;
+    color: #212529;
+}
+
+.employee-search-result-item .employee-fingerprint {
+    font-size: 0.85rem;
+    color: #6c757d;
+    background: #e9ecef;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+}
+
+.employee-search-result-item.no-results {
+    padding: 1rem;
+    text-align: center;
+    color: #6c757d;
+    cursor: default;
+    border-left: none;
+}
+
+.employee-search-result-item.no-results:hover {
+    background-color: transparent;
+}
 </style>
 
 <script>
@@ -2473,6 +2591,188 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize clear button state
     toggleClearButton();
+});
+
+// AJAX Search for Employee Dropdown
+document.addEventListener('DOMContentLoaded', function() {
+    const employeeSelect = document.getElementById('employee_id');
+    const searchOverlay = document.getElementById('employeeSearchOverlay');
+    const searchInput = document.getElementById('employeeSearchInput');
+    const clearSearchBtn = document.getElementById('clearEmployeeSearch');
+    const searchResults = document.getElementById('employeeSearchResults');
+    
+    if (!employeeSelect || !searchOverlay || !searchInput) {
+        return; // Exit if elements don't exist
+    }
+    
+    let allOptions = [];
+    let selectedEmployeeId = employeeSelect.value;
+    
+    // Store all options (including "All Employees")
+    Array.from(employeeSelect.options).forEach(option => {
+        allOptions.push({
+            value: option.value,
+            text: option.textContent.trim(),
+            name: option.getAttribute('data-name') || option.textContent.trim().toLowerCase(),
+            fingerprint: option.getAttribute('data-fingerprint') || ''
+        });
+    });
+    
+    // Update selected employee ID when select changes
+    employeeSelect.addEventListener('change', function() {
+        selectedEmployeeId = this.value;
+    });
+    
+    // Show search overlay when select is clicked or focused
+    employeeSelect.addEventListener('click', function(e) {
+        e.preventDefault();
+        searchOverlay.style.display = 'block';
+        setTimeout(() => {
+            searchInput.focus();
+        }, 100);
+        filterEmployees('');
+    });
+    
+    employeeSelect.addEventListener('focus', function() {
+        searchOverlay.style.display = 'block';
+        setTimeout(() => {
+            searchInput.focus();
+        }, 100);
+        filterEmployees('');
+    });
+    
+    // Hide search overlay when clicking outside
+    document.addEventListener('click', function(e) {
+        const wrapper = employeeSelect.closest('.employee-select-wrapper');
+        if (wrapper && !wrapper.contains(e.target)) {
+            searchOverlay.style.display = 'none';
+        }
+    });
+    
+    // Prevent select from opening native dropdown
+    employeeSelect.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        this.focus();
+    });
+    
+    // Filter employees based on search term
+    function filterEmployees(searchTerm) {
+        const term = searchTerm.toLowerCase().trim();
+        
+        // Clear previous results
+        searchResults.innerHTML = '';
+        
+        if (term === '') {
+            // Show all employees (including "All Employees" option)
+            allOptions.forEach(option => {
+                const item = createResultItem(option, option.value === selectedEmployeeId);
+                searchResults.appendChild(item);
+            });
+        } else {
+            // Filter options (exclude "All Employees" when searching)
+            const filtered = allOptions.filter(option => {
+                if (!option.value) return false; // Exclude "All Employees" when searching
+                return option.name.includes(term) || 
+                       option.fingerprint.includes(term) ||
+                       option.text.toLowerCase().includes(term);
+            });
+            
+            if (filtered.length === 0) {
+                const noResults = document.createElement('div');
+                noResults.className = 'employee-search-result-item no-results';
+                noResults.innerHTML = '<i class="fas fa-search me-2"></i>No employees found';
+                searchResults.appendChild(noResults);
+            } else {
+                filtered.forEach(option => {
+                    const item = createResultItem(option, option.value === selectedEmployeeId);
+                    searchResults.appendChild(item);
+                });
+            }
+        }
+        
+        // Scroll to selected item if it exists
+        const selectedItem = searchResults.querySelector('.employee-search-result-item.selected');
+        if (selectedItem) {
+            selectedItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+        
+        // Show/hide clear button
+        if (searchInput.value.trim().length > 0) {
+            clearSearchBtn.style.display = 'block';
+        } else {
+            clearSearchBtn.style.display = 'none';
+        }
+    }
+    
+    // Create result item element
+    function createResultItem(option, isSelected) {
+        const item = document.createElement('div');
+        item.className = 'employee-search-result-item' + (isSelected ? ' selected' : '');
+        item.setAttribute('data-value', option.value);
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'employee-name';
+        nameSpan.textContent = option.text;
+        
+        item.appendChild(nameSpan);
+        
+        if (option.fingerprint) {
+            const fpSpan = document.createElement('span');
+            fpSpan.className = 'employee-fingerprint';
+            fpSpan.textContent = `FP: ${option.fingerprint}`;
+            item.appendChild(fpSpan);
+        }
+        
+        // Add click handler
+        item.addEventListener('click', function() {
+            employeeSelect.value = option.value;
+            selectedEmployeeId = option.value;
+            
+            // Trigger change event
+            const changeEvent = new Event('change', { bubbles: true });
+            employeeSelect.dispatchEvent(changeEvent);
+            
+            // Update UI
+            filterEmployees(searchInput.value);
+            
+            // Hide overlay after selection
+            setTimeout(() => {
+                searchOverlay.style.display = 'none';
+            }, 200);
+        });
+        
+        return item;
+    }
+    
+    // Handle search input
+    searchInput.addEventListener('input', function(e) {
+        filterEmployees(e.target.value);
+    });
+    
+    // Handle clear button
+    clearSearchBtn.addEventListener('click', function() {
+        searchInput.value = '';
+        filterEmployees('');
+        searchInput.focus();
+    });
+    
+    // Handle keyboard navigation
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            const firstItem = searchResults.querySelector('.employee-search-result-item:not(.no-results)');
+            if (firstItem) {
+                firstItem.focus();
+                firstItem.scrollIntoView({ block: 'nearest' });
+            }
+        } else if (e.key === 'Escape') {
+            searchOverlay.style.display = 'none';
+            employeeSelect.blur();
+        }
+    });
+    
+    // Initialize with all employees
+    filterEmployees('');
 });
 </script>
 
