@@ -2096,61 +2096,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Pass department data to JavaScript safely
     window.departmentData = {{ department_data|tojson|safe if department_data else '{}' }};
     
-    // Fetch all devices data from dashboard
-    function fetchAllDevicesDataFromDashboard() {
-        // Show loading toast
-        toastr.info('Starting comprehensive data fetch from all devices...', 'Data Fetch Started', {
-            timeOut: 3000
-        });
-        
-        // Make the fetch request
-        fetch('/attendance/fetch-all-devices-data', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            },
-            credentials: 'include'
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                // Show success message with summary
-                const summary = data.summary;
-                toastr.success(
-                    `Successfully fetched data from ${summary.successful_data_fetch}/${summary.total_devices} devices. ` +
-                    `Attendance: ${summary.total_attendance_records} records, Users: ${summary.total_users_synced} synced.`,
-                    'Data Fetch Complete',
-                    { timeOut: 8000 }
-                );
-                
-                // Optionally refresh dashboard data
-                setTimeout(() => {
-                    if (confirm('Data fetch completed successfully. Would you like to refresh the dashboard to see updated statistics?')) {
-                        location.reload();
-                    }
-                }, 2000);
-                
-            } else if (data.status === 'partial_success') {
-                // Show partial success
-                const summary = data.summary;
-                toastr.warning(
-                    `Partial success: ${summary.successful_data_fetch}/${summary.total_devices} devices processed. ` +
-                    `Some devices may have connection issues. Visit Device Settings for detailed results.`,
-                    'Partial Success',
-                    { timeOut: 8000 }
-                );
-                
-            } else {
-                // Show error message
-                toastr.error(data.message || 'Failed to fetch data from devices', 'Fetch Failed');
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching device data:', error);
-            toastr.error('Network error occurred while fetching device data', 'Connection Error');
-        });
-    }
 </script>
 {% endblock %}
 
@@ -2322,13 +2267,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             <i class="fas fa-fingerprint" style="color: #ef4444;"></i>
                             <span>Device Settings</span>
                             <small>Configure attendance device</small>
-                        </a>
-                    </div>
-                    <div class="col-lg-3 col-md-6 col-sm-6">
-                        <a href="javascript:void(0)" onclick="fetchAllDevicesDataFromDashboard()" class="action-btn action-btn-secondary w-100 text-center quick-action-item">
-                            <i class="fas fa-download" style="color: #3b82f6;"></i>
-                            <span>Fetch All Device Data</span>
-                            <small>Sync data from all devices</small>
                         </a>
                     </div>
                     <div class="col-lg-3 col-md-6 col-sm-6">

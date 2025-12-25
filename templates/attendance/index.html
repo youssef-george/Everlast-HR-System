@@ -1149,9 +1149,26 @@ table thead th * {
 
                     <!-- Today's Attendance -->
                     {% if not request.args.get('start_date') or (request.args.get('start_date') == request.args.get('end_date') and request.args.get('start_date') == today.strftime('%Y-%m-%d')) %}
-                    <h6 class="card-subtitle mb-3">Today's Attendance</h6>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="card-subtitle mb-0">Today's Attendance</h6>
+                        <div class="search-box" style="max-width: 300px; width: 100%;">
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="fas fa-search text-muted"></i>
+                                </span>
+                                <input type="text" 
+                                       class="form-control border-start-0" 
+                                       id="todayAttendanceSearch" 
+                                       placeholder="Search by name, fingerprint, or status..."
+                                       autocomplete="off">
+                                <button class="btn btn-outline-secondary" type="button" id="clearTodaySearch" style="display: none;">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                     <div class="table-responsive">
-                        <table class="table employee-table">
+                        <table class="table employee-table" id="todaysAttendanceTable">
                         <thead>
                             <tr>
                                 <th>Fingerprint ID</th>
@@ -2338,6 +2355,125 @@ document.addEventListener('DOMContentLoaded', function() {
     border-color: #5a32a3;
     color: white;
 }
+
+/* Search box styling */
+.search-box .input-group-text {
+    border-right: none;
+}
+
+.search-box .form-control {
+    border-left: none;
+}
+
+.search-box .form-control:focus {
+    border-color: #ced4da;
+    box-shadow: none;
+}
+
+.search-box .form-control:focus + .btn {
+    border-color: #ced4da;
+}
 </style>
+
+<script>
+// AJAX Search for Today's Attendance
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('todayAttendanceSearch');
+    const clearBtn = document.getElementById('clearTodaySearch');
+    const table = document.getElementById('todaysAttendanceTable');
+    
+    if (!searchInput || !table) {
+        return; // Exit if elements don't exist
+    }
+    
+    let searchTimeout;
+    let originalRows = [];
+    
+    // Store original rows on page load
+    const tbody = table.querySelector('tbody');
+    if (tbody) {
+        originalRows = Array.from(tbody.querySelectorAll('tr'));
+    }
+    
+    // Show/hide clear button
+    function toggleClearButton() {
+        if (searchInput.value.trim().length > 0) {
+            clearBtn.style.display = 'block';
+        } else {
+            clearBtn.style.display = 'none';
+        }
+    }
+    
+    // Filter rows based on search term
+    function filterRows(searchTerm) {
+        if (!tbody) return;
+        
+        const term = searchTerm.toLowerCase().trim();
+        
+        if (term === '') {
+            // Show all original rows
+            originalRows.forEach(row => {
+                row.style.display = '';
+            });
+            return;
+        }
+        
+        // Filter rows
+        originalRows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length === 0) {
+                row.style.display = 'none';
+                return;
+            }
+            
+            // Get text from all cells
+            let rowText = '';
+            cells.forEach(cell => {
+                rowText += ' ' + cell.textContent.toLowerCase();
+            });
+            
+            // Check if search term matches
+            if (rowText.includes(term)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+    
+    // Handle search input
+    searchInput.addEventListener('input', function(e) {
+        const searchTerm = e.target.value;
+        toggleClearButton();
+        
+        // Clear previous timeout
+        clearTimeout(searchTimeout);
+        
+        // Debounce search
+        searchTimeout = setTimeout(() => {
+            filterRows(searchTerm);
+        }, 300);
+    });
+    
+    // Handle clear button
+    clearBtn.addEventListener('click', function() {
+        searchInput.value = '';
+        toggleClearButton();
+        filterRows('');
+        searchInput.focus();
+    });
+    
+    // Handle Enter key
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            filterRows(e.target.value);
+        }
+    });
+    
+    // Initialize clear button state
+    toggleClearButton();
+});
+</script>
 
 {% endblock %}
