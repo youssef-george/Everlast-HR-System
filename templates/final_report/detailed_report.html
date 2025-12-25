@@ -913,35 +913,67 @@
 
 .detailed-logs-container {
     background: white;
-    border-radius: 8px;
-    margin: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    margin: 15px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
     overflow: hidden;
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.detailed-logs-container:hover {
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.15);
 }
 
 .detailed-logs-header {
-    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
-    padding: 12px 20px;
-    border-bottom: 1px solid #e9ecef;
+    padding: 1.25rem 1.5rem;
+    border-bottom: none;
     overflow: hidden;
     word-wrap: break-word;
+    position: relative;
+}
+
+.detailed-logs-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+    pointer-events: none;
 }
 
 .detailed-logs-header h6 {
     white-space: normal;
     word-wrap: break-word;
     overflow-wrap: break-word;
+    margin: 0;
+    font-weight: 600;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+}
+
+.detailed-logs-header h6 i {
+    margin-right: 0.5rem;
+    opacity: 0.9;
 }
 
 .detailed-logs-content {
     padding: 0;
+    background: #fafbfc;
 }
 
 .logs-table-container {
     padding: 0;
     overflow-x: auto;
     width: 100%;
+    background: white;
 }
 
 .logs-table-container table {
@@ -953,32 +985,69 @@
 }
 
 .logs-table-container th {
-    background-color: #f8f9fa;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     font-weight: 600;
     font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    padding: 8px 12px;
+    padding: 1rem 1.25rem;
     border-bottom: 2px solid #dee2e6;
+    color: #495057;
 }
 
 .logs-table-container td {
-    padding: 8px 12px;
+    padding: 1rem 1.25rem;
     vertical-align: middle;
-    border-bottom: 1px solid #e9ecef;
+    border-bottom: 1px solid #f0f0f0;
+    background: white;
+}
+
+.logs-table-container tbody tr {
+    transition: all 0.2s ease;
 }
 
 .logs-table-container tbody tr:hover {
-    background-color: #f8f9fa;
+    background-color: #f8f9ff;
+    transform: translateX(2px);
 }
 
 .loading-spinner {
-    background-color: #f8f9fa;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    padding: 3rem 2rem;
+    border-radius: 12px;
+    margin: 1rem;
+}
+
+.loading-spinner .spinner-border {
+    width: 3rem;
+    height: 3rem;
+    border-width: 0.3rem;
+    color: #667eea;
+}
+
+.loading-spinner p {
+    margin-top: 1rem;
+    color: #6c757d;
+    font-weight: 500;
 }
 
 .no-logs-message {
-    background-color: #f8f9fa;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
     color: #6c757d;
+    padding: 3rem 2rem;
+    border-radius: 12px;
+    margin: 1rem;
+}
+
+.no-logs-message i {
+    font-size: 3rem;
+    opacity: 0.5;
+    margin-bottom: 1rem;
+}
+
+.no-logs-message p {
+    font-size: 1rem;
+    font-weight: 500;
 }
 
 /* Animation for expandable rows */
@@ -1272,7 +1341,10 @@
                                 <i class="fas fa-redo me-1"></i> Generate New Report
                             </a>
                             <button class="btn btn-light btn-sm" onclick="exportToExcel()">
-                                <i class="fas fa-download me-1"></i> Export Excel
+                                <i class="fas fa-file-excel me-1"></i> Export Excel
+                            </button>
+                            <button class="btn btn-light btn-sm" onclick="exportToPDF()">
+                                <i class="fas fa-file-pdf me-1"></i> Export PDF
                             </button>
                             <button class="btn btn-light btn-sm" onclick="printReport()" id="printBtn">
                                 <i class="fas fa-print me-1"></i> Print
@@ -1412,20 +1484,23 @@
                                                     <p class="mt-2 text-muted">Loading attendance logs...</p>
                                                 </div>
                                                 <div class="logs-table-container" style="display: none;">
-                                                    <table class="table table-sm table-striped mb-0">
-                                                        <thead class="table-light">
-                                                            <tr>
-                                                                <th><i class="fas fa-calendar me-1"></i>Date</th>
-                                                                <th><i class="fas fa-sign-in-alt me-1"></i>Check In</th>
-                                                                <th><i class="fas fa-sign-out-alt me-1"></i>Check Out</th>
-                                                                <th><i class="fas fa-clock me-1"></i>Duration</th>
-                                                                <th><i class="fas fa-info-circle me-1"></i>Status</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody class="logs-tbody">
-                                                            <!-- Logs will be loaded here via AJAX -->
-                                                        </tbody>
-                                                    </table>
+                                                    <div class="modern-attendance-table-wrapper">
+                                                        <table class="table modern-attendance-table mb-0">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th><i class="fas fa-calendar-alt me-2"></i>Date</th>
+                                                                    <th><i class="fas fa-sign-in-alt me-2"></i>Check In</th>
+                                                                    <th><i class="fas fa-sign-out-alt me-2"></i>Check Out</th>
+                                                                    <th><i class="fas fa-clock me-2"></i>Duration</th>
+                                                                    <th><i class="fas fa-info-circle me-2"></i>Status</th>
+                                                                    <th class="text-center"><i class="fas fa-ellipsis-h me-2"></i>Actions</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody class="logs-tbody">
+                                                                <!-- Logs will be loaded here via AJAX -->
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
                                                 </div>
                                                 <div class="no-logs-message text-center py-4" style="display: none;">
                                                     <i class="fas fa-info-circle text-muted mb-2"></i>
@@ -1514,6 +1589,68 @@ function exportToExcel() {
     const exportForm = document.createElement('form');
     exportForm.method = 'GET';
     exportForm.action = '{{ url_for("final_report.export_detailed_attendance_report") }}';
+    
+    // Add parameters as hidden inputs
+    const startInput = document.createElement('input');
+    startInput.type = 'hidden';
+    startInput.name = 'start_date';
+    startInput.value = finalStartDate;
+    exportForm.appendChild(startInput);
+    
+    const endInput = document.createElement('input');
+    endInput.type = 'hidden';
+    endInput.name = 'end_date';
+    endInput.value = finalEndDate;
+    exportForm.appendChild(endInput);
+    
+    // Add user IDs
+    finalUserIds.forEach(userId => {
+        const userInput = document.createElement('input');
+        userInput.type = 'hidden';
+        userInput.name = 'user_ids';
+        userInput.value = userId;
+        exportForm.appendChild(userInput);
+    });
+    
+    // Add department ID if present
+    if (finalDepartmentId) {
+        const deptInput = document.createElement('input');
+        deptInput.type = 'hidden';
+        deptInput.name = 'department_id';
+        deptInput.value = finalDepartmentId;
+        exportForm.appendChild(deptInput);
+    }
+    
+    document.body.appendChild(exportForm);
+    exportForm.submit();
+    document.body.removeChild(exportForm);
+}
+
+// Export to PDF functionality
+function exportToPDF() {
+    // Get parameters from URL query string (works even when form is hidden)
+    const urlParams = new URLSearchParams(window.location.search);
+    const startDate = urlParams.get('start_date');
+    const endDate = urlParams.get('end_date');
+    const userIds = urlParams.getAll('user_ids');
+    const departmentId = urlParams.get('department_id');
+    
+    // If not in URL, try to get from form (if visible)
+    const form = document.getElementById('reportForm');
+    const finalStartDate = startDate || (form ? form.querySelector('#start_date')?.value : null);
+    const finalEndDate = endDate || (form ? form.querySelector('#end_date')?.value : null);
+    const finalUserIds = userIds.length > 0 ? userIds : (form ? Array.from(form.querySelectorAll('input[name="user_ids"]:checked')).map(cb => cb.value) : []);
+    const finalDepartmentId = departmentId || (form ? form.querySelector('#department_id')?.value : null);
+    
+    if (!finalStartDate || !finalEndDate) {
+        alert('Please generate a report first with date range and selected employees.');
+        return;
+    }
+    
+    // Create a temporary form for PDF export
+    const exportForm = document.createElement('form');
+    exportForm.method = 'GET';
+    exportForm.action = '{{ url_for("final_report.export_detailed_attendance_report_pdf") }}';
     
     // Add parameters as hidden inputs
     const startInput = document.createElement('input');
@@ -1931,36 +2068,134 @@ function printReport() {
     font-size: 0.8rem;
 }
 
-/* Day expand button */
-.day-expand-btn {
-    font-size: 0.75rem;
-    padding: 0.4rem 0.8rem;
-    border-radius: 6px;
-    transition: all 0.2s ease;
-    font-weight: 500;
-    border-width: 1.5px;
+/* Modern Attendance Table Styles */
+.modern-attendance-table-wrapper {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e9ecef;
 }
 
-.day-expand-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+.modern-attendance-table {
+    margin: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.modern-attendance-table thead {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.modern-attendance-table thead th {
+    padding: 1rem 1.25rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: none;
+    color: white;
+    white-space: nowrap;
+}
+
+.modern-attendance-table thead th i {
+    opacity: 0.9;
+}
+
+.modern-attendance-table tbody tr {
+    transition: all 0.2s ease;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.modern-attendance-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.modern-attendance-table tbody tr:hover {
+    background-color: #f8f9ff;
+    transform: translateX(2px);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+}
+
+.modern-attendance-table tbody td {
+    padding: 1rem 1.25rem;
+    vertical-align: middle;
+    border: none;
+    font-size: 0.9rem;
+}
+
+.day-summary-row {
+    background-color: #ffffff;
+}
+
+.day-summary-row:hover {
+    background-color: #f8f9ff !important;
+}
+
+/* Day expand button - Modern Design */
+.day-expand-btn {
+    font-size: 0.8rem;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-weight: 600;
+    border-width: 2px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+    position: relative;
+    overflow: hidden;
+}
+
+.day-expand-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.day-expand-btn:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.day-expand-btn i {
+    transition: transform 0.3s ease;
+    font-size: 0.7rem;
 }
 
 .day-expand-btn.btn-primary {
-    background-color: #0d6efd;
-    border-color: #0d6efd;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: #667eea;
     color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .day-expand-btn.btn-outline-primary {
-    color: #0d6efd;
-    border-color: #0d6efd;
-    background-color: transparent;
+    color: #667eea;
+    border-color: #667eea;
+    background-color: white;
+    border-width: 2px;
 }
 
 .day-expand-btn.btn-outline-primary:hover {
-    background-color: #0d6efd;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: #667eea;
     color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.day-expand-btn.btn-primary i {
+    transform: rotate(180deg);
 }
 
 .day-expand-icon {
@@ -1999,7 +2234,54 @@ function printReport() {
     background-color: #fd7e14 !important;
 }
 
-/* Note button styling */
+/* Modern Badge Styles */
+.badge-modern {
+    padding: 0.5rem 0.85rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+.badge-modern:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.badge-checkin {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    border: none;
+}
+
+.badge-checkout {
+    background: linear-gradient(135deg, #fd7e14 0%, #ffc107 100%);
+    color: white;
+    border: none;
+}
+
+/* Note button styling - Modern */
+.btn-purple-modern {
+    background: linear-gradient(135deg, #6f42c1 0%, #8b5cf6 100%);
+    border: none;
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(111, 66, 193, 0.3);
+}
+
+.btn-purple-modern:hover {
+    background: linear-gradient(135deg, #5a32a3 0%, #7c3aed 100%);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(111, 66, 193, 0.4);
+}
+
 .btn-purple {
     background-color: #6f42c1;
     border-color: #6f42c1;
@@ -2158,12 +2440,17 @@ document.getElementById('selectAll')?.addEventListener('change', function() {
 updateEmployeeCountDetailed();
 
 // Show loading state on form submission
-document.getElementById('reportForm').addEventListener('submit', function() {
-    const submitBtn = this.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Generating Report...';
-    submitBtn.disabled = true;
-});
+const reportForm = document.getElementById('reportForm');
+if (reportForm && typeof reportForm.addEventListener === 'function') {
+    reportForm.addEventListener('submit', function() {
+        const submitBtn = this.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Generating Report...';
+            submitBtn.disabled = true;
+        }
+    });
+}
 
 // Department filter change handler - AJAX
 function setupDepartmentFilter() {
@@ -2409,22 +2696,32 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Debug: Log all expand buttons
     expandButtons.forEach((btn, index) => {
-        console.log(`🔘 Expand button ${index + 1}:`, {
-            element: btn,
-            userId: btn.getAttribute('data-user-id'),
-            startDate: btn.getAttribute('data-start-date'),
-            endDate: btn.getAttribute('data-end-date'),
-            hasClickListener: btn.onclick !== null
-        });
+        if (btn) {
+            console.log(`🔘 Expand button ${index + 1}:`, {
+                element: btn,
+                userId: btn.getAttribute('data-user-id'),
+                startDate: btn.getAttribute('data-start-date'),
+                endDate: btn.getAttribute('data-end-date'),
+                hasClickListener: btn.onclick !== null
+            });
+        }
     });
     
     // Log all expandable rows for debugging
     expandableRows.forEach((row, index) => {
-        const userId = row.getAttribute('data-user-id');
-        console.log(`📄 Expandable row ${index + 1}: User ID ${userId}`);
+        if (row) {
+            const userId = row.getAttribute('data-user-id');
+            console.log(`📄 Expandable row ${index + 1}: User ID ${userId}`);
+        }
     });
     
     expandButtons.forEach((button, index) => {
+        // Add null check before processing
+        if (!button) {
+            console.error(`❌ Expand button ${index + 1} is null, skipping`);
+            return;
+        }
+        
         const userId = button.getAttribute('data-user-id');
         const startDate = button.getAttribute('data-start-date');
         const endDate = button.getAttribute('data-end-date');
@@ -2441,7 +2738,9 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log(`✅ Expandable row exists for User ID: ${userId}`);
         }
         
-        button.addEventListener('click', function(e) {
+        // Use event delegation as fallback, but also attach directly
+        if (button && typeof button.addEventListener === 'function') {
+            button.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
             
@@ -2539,17 +2838,81 @@ document.addEventListener('DOMContentLoaded', function() {
                     expandableRow.style.display = 'none';
                 }, 500);
             }
-        });
-        
-        // Enhanced hover effects
-        button.addEventListener('mouseenter', function() {
-            console.log('🖱️ Mouse enter on expand button for user:', userId);
-            this.style.transform = 'scale(1.1)';
-        });
-        
-        button.addEventListener('mouseleave', function() {
-            this.style.transform = 'scale(1)';
-        });
+            });
+            
+            // Enhanced hover effects with null checks
+            if (button && typeof button.addEventListener === 'function') {
+                button.addEventListener('mouseenter', function() {
+                    console.log('🖱️ Mouse enter on expand button for user:', userId);
+                    if (this && this.style) {
+                        this.style.transform = 'scale(1.1)';
+                    }
+                });
+                
+                button.addEventListener('mouseleave', function() {
+                    if (this && this.style) {
+                        this.style.transform = 'scale(1)';
+                    }
+                });
+            }
+        } else {
+            console.error(`❌ Cannot attach event listener to expand button ${index + 1}: button is null or addEventListener is not a function`);
+        }
+    });
+    
+    // Also use event delegation as a fallback for dynamically added buttons
+    document.addEventListener('click', function(e) {
+        const expandBtn = e.target.closest('.expand-btn');
+        if (expandBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const userId = expandBtn.getAttribute('data-user-id');
+            const startDate = expandBtn.getAttribute('data-start-date');
+            const endDate = expandBtn.getAttribute('data-end-date');
+            const icon = expandBtn.querySelector('.expand-icon');
+            const expandableRow = document.querySelector(`tr.expandable-row[data-user-id="${userId}"]`);
+            
+            if (!expandableRow) {
+                console.error('❌ Expandable row not found via delegation for User ID:', userId);
+                return;
+            }
+            
+            if (!startDate || !endDate) {
+                alert('Error: Date range not specified. Please select dates and generate report again.');
+                return;
+            }
+            
+            const currentDisplay = expandableRow.style.display;
+            const isCurrentlyHidden = currentDisplay === 'none' || currentDisplay === '';
+            
+            if (isCurrentlyHidden) {
+                expandableRow.style.display = 'table-row';
+                setTimeout(() => {
+                    expandableRow.classList.add('expanded');
+                    expandBtn.classList.add('expanded');
+                    if (icon) {
+                        icon.classList.remove('fa-chevron-right');
+                        icon.classList.add('fa-chevron-down');
+                    }
+                }, 10);
+                
+                const logsTbody = expandableRow.querySelector('.logs-tbody');
+                if (logsTbody && logsTbody.children.length === 0) {
+                    loadEmployeeLogs(userId, startDate, endDate, expandableRow);
+                }
+            } else {
+                expandableRow.classList.remove('expanded');
+                expandBtn.classList.remove('expanded');
+                if (icon) {
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-right');
+                }
+                setTimeout(() => {
+                    expandableRow.style.display = 'none';
+                }, 500);
+            }
+        }
     });
     
     console.log('✅ All expand buttons initialized successfully');
@@ -2659,53 +3022,73 @@ function formatHoursMinutes(decimalHours) {
 
 function addDayExpandListeners() {
     // Use event delegation to handle dynamically created buttons
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('.day-expand-btn')) {
-            e.preventDefault();
-            e.stopPropagation();
+    // Check if document exists before adding listener
+    if (document && typeof document.addEventListener === 'function') {
+        document.addEventListener('click', function(e) {
+            if (!e || !e.target) return;
             
-            const button = e.target.closest('.day-expand-btn');
-            const date = button.getAttribute('data-date');
-            const userId = button.getAttribute('data-user-id');
-            // Find icon - it's an <i> tag inside the button, not necessarily with .day-expand-icon class
-            const icon = button.querySelector('i.fas') || button.querySelector('i') || button.querySelector('.day-expand-icon');
-            const detailRow = document.querySelector(`tr.day-detail-row[data-date="${date}"]`);
-            
-            console.log('🖱️ Day expand button clicked for date:', date);
-            console.log('   Button element:', button);
-            console.log('   Detail row found:', !!detailRow);
-            console.log('   Icon found:', !!icon);
-            
-            if (detailRow) {
-                const isExpanded = detailRow.style.display !== 'none';
-                console.log('   Currently expanded:', isExpanded);
+            const dayExpandBtn = e.target.closest('.day-expand-btn');
+            if (dayExpandBtn) {
+                e.preventDefault();
+                e.stopPropagation();
                 
-                if (isExpanded) {
-                    // Collapse
-                    detailRow.style.display = 'none';
-                    if (icon) {
-                        icon.classList.remove('fa-chevron-down');
-                        icon.classList.add('fa-chevron-right');
-                    }
-                    button.classList.remove('btn-primary');
-                    button.classList.add('btn-outline-primary');
-                    console.log('📉 Collapsed logs for date:', date);
-                } else {
-                    // Expand
-                    detailRow.style.display = 'table-row';
-                    if (icon) {
-                        icon.classList.remove('fa-chevron-right');
-                        icon.classList.add('fa-chevron-down');
-                    }
-                    button.classList.remove('btn-outline-primary');
-                    button.classList.add('btn-primary');
-                    console.log('📈 Expanded logs for date:', date);
+                const button = dayExpandBtn;
+                if (!button) return;
+                
+                const date = button.getAttribute('data-date');
+                const userId = button.getAttribute('data-user-id');
+                
+                if (!date) {
+                    console.error('❌ Day expand button missing data-date attribute');
+                    return;
                 }
-            } else {
-                console.error('❌ Detail row not found for date:', date);
+                
+                // Find icon - it's an <i> tag inside the button, not necessarily with .day-expand-icon class
+                const icon = button.querySelector('i.fas') || button.querySelector('i') || button.querySelector('.day-expand-icon');
+                const detailRow = document.querySelector(`tr.day-detail-row[data-date="${date}"]`);
+                
+                console.log('🖱️ Day expand button clicked for date:', date);
+                console.log('   Button element:', button);
+                console.log('   Detail row found:', !!detailRow);
+                console.log('   Icon found:', !!icon);
+                
+                if (detailRow) {
+                    const isExpanded = detailRow.style.display !== 'none';
+                    console.log('   Currently expanded:', isExpanded);
+                    
+                    if (isExpanded) {
+                        // Collapse
+                        detailRow.style.display = 'none';
+                        if (icon && icon.classList) {
+                            icon.classList.remove('fa-chevron-down');
+                            icon.classList.add('fa-chevron-right');
+                        }
+                        if (button && button.classList) {
+                            button.classList.remove('btn-primary');
+                            button.classList.add('btn-outline-primary');
+                        }
+                        console.log('📉 Collapsed logs for date:', date);
+                    } else {
+                        // Expand
+                        detailRow.style.display = 'table-row';
+                        if (icon && icon.classList) {
+                            icon.classList.remove('fa-chevron-right');
+                            icon.classList.add('fa-chevron-down');
+                        }
+                        if (button && button.classList) {
+                            button.classList.remove('btn-outline-primary');
+                            button.classList.add('btn-primary');
+                        }
+                        console.log('📈 Expanded logs for date:', date);
+                    }
+                } else {
+                    console.error('❌ Detail row not found for date:', date);
+                }
             }
-        }
-    });
+        });
+    } else {
+        console.error('❌ Cannot add day expand listeners: document.addEventListener is not available');
+    }
 }
 
 function loadEmployeeLogs(userId, startDate, endDate, expandableRow) {
@@ -2716,6 +3099,13 @@ function loadEmployeeLogs(userId, startDate, endDate, expandableRow) {
     console.log('   Expandable Row:', expandableRow);
     
     // Function called successfully
+    
+    // Add null check for expandableRow
+    if (!expandableRow) {
+        console.error('❌ CRITICAL ERROR: expandableRow is null!');
+        alert('Error: Cannot load logs. Please refresh the page and try again.');
+        return;
+    }
     
     const loadingSpinner = expandableRow.querySelector('.loading-spinner');
     const logsTableContainer = expandableRow.querySelector('.logs-table-container');
@@ -2827,78 +3217,108 @@ function loadEmployeeLogs(userId, startDate, endDate, expandableRow) {
                             duration = `${minutes}m`;
                         }
                         
-                        // Add color coding based on duration
-                        if (hours >= 8) {
-                            duration = `<span class="text-success fw-bold">${duration}</span>`;
+                        // Add color coding based on duration with modern badges
+                        if (hours >= 9) {
+                            duration = `<span class="badge badge-modern" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white;">
+                                <i class="fas fa-clock me-1"></i>${duration}
+                            </span>`;
+                        } else if (hours >= 8) {
+                            duration = `<span class="badge badge-modern" style="background: linear-gradient(135deg, #198754 0%, #28a745 100%); color: white;">
+                                <i class="fas fa-clock me-1"></i>${duration}
+                            </span>`;
                         } else if (hours >= 6) {
-                            duration = `<span class="text-warning fw-bold">${duration}</span>`;
+                            duration = `<span class="badge badge-modern" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%); color: white;">
+                                <i class="fas fa-clock me-1"></i>${duration}
+                            </span>`;
                         } else {
-                            duration = `<span class="text-danger fw-bold">${duration}</span>`;
+                            duration = `<span class="badge badge-modern" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white;">
+                                <i class="fas fa-clock me-1"></i>${duration}
+                            </span>`;
                         }
                     }
                     
-                    // Format status with appropriate badge based on precise status string
+                    // Format status with appropriate badge based on precise status string - Modern Design
                     let status = '';
                     const statusText = dayData.status;
 
                     if (statusText === 'Present') {
-                        status = '<span class="badge bg-success">Present</span>';
+                        status = '<span class="badge badge-modern" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white;"><i class="fas fa-check-circle me-1"></i>Present</span>';
                     } else if (statusText === 'Absent') {
-                        status = '<span class="badge bg-danger">Absent</span>';
+                        status = '<span class="badge badge-modern" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white;"><i class="fas fa-times-circle me-1"></i>Absent</span>';
                     } else if (statusText === 'Incomplete') {
-                        status = '<span class="badge bg-warning">Incomplete</span>';
+                        status = '<span class="badge badge-modern" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%); color: white;"><i class="fas fa-exclamation-triangle me-1"></i>Incomplete</span>';
                     } else if (statusText === 'Paid Leave' || statusText.includes('Holiday')) {
-                        status = '<span class="badge bg-info">Paid Leave</span>';
+                        status = '<span class="badge badge-modern" style="background: linear-gradient(135deg, #0dcaf0 0%, #17a2b8 100%); color: white;"><i class="fas fa-calendar-check me-1"></i>Paid Leave</span>';
                     } else if (statusText === 'Annual Leave' || statusText === 'Sick Leave') {
-                        status = '<span class="badge bg-primary">' + statusText + '</span>';
+                        status = '<span class="badge badge-modern" style="background: linear-gradient(135deg, #0d6efd 0%, #0056b3 100%); color: white;"><i class="fas fa-calendar-alt me-1"></i>' + statusText + '</span>';
                     } else if (statusText === 'Day Off') {
-                        status = '<span class="badge bg-secondary">Day Off</span>';
+                        status = '<span class="badge badge-modern" style="background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%); color: white;"><i class="fas fa-home me-1"></i>Day Off</span>';
                     } else if (statusText.includes('Present /')) {
-                        status = '<span class="badge bg-success">' + statusText + '</span>';
+                        status = '<span class="badge badge-modern" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white;"><i class="fas fa-check-circle me-1"></i>' + statusText + '</span>';
                     } else if (statusText === 'Permission') {
-                        status = '<span class="badge bg-info">Permission</span>';
+                        status = '<span class="badge badge-modern" style="background: linear-gradient(135deg, #0dcaf0 0%, #17a2b8 100%); color: white;"><i class="fas fa-user-clock me-1"></i>Permission</span>';
                     } else {
                         // Default for other statuses or unknown
-                        status = '<span class="badge bg-secondary">' + statusText + '</span>';
+                        status = '<span class="badge badge-modern" style="background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%); color: white;"><i class="fas fa-info-circle me-1"></i>' + statusText + '</span>';
                     }
                     
-                    // Create main day row
+                    // Format date nicely
+                    const dateObj = new Date(dayData.date + 'T00:00:00');
+                    const formattedDate = dateObj.toLocaleDateString('en-US', { 
+                        weekday: 'short', 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                    });
+                    
+                    // Create main day row with improved styling
                     const dayRow = document.createElement('tr');
                     dayRow.className = 'day-summary-row';
                     dayRow.setAttribute('data-date', dayData.date);
                     dayRow.innerHTML = `
-                        <td class="fw-bold text-primary">${dayData.date}</td>
+                        <td>
+                            <div class="d-flex flex-column">
+                                <span class="fw-bold text-dark" style="font-size: 0.95rem;">${formattedDate}</span>
+                                <small class="text-muted" style="font-size: 0.75rem;">${dayData.date}</small>
+                            </div>
+                        </td>
                         <td>
                             ${checkInTime ? 
-                                `<span class="badge bg-success">${checkInTime}</span>` : 
-                                '<span class="text-muted">-</span>'
+                                `<span class="badge badge-modern badge-checkin">
+                                    <i class="fas fa-sign-in-alt me-1"></i>${checkInTime}
+                                </span>` : 
+                                '<span class="text-muted"><i class="fas fa-minus"></i></span>'
                             }
                         </td>
                         <td>
                             ${checkOutTime ? 
-                                `<span class="badge bg-warning">${checkOutTime}</span>` : 
-                                '<span class="text-muted">-</span>'
+                                `<span class="badge badge-modern badge-checkout">
+                                    <i class="fas fa-sign-out-alt me-1"></i>${checkOutTime}
+                                </span>` : 
+                                '<span class="text-muted"><i class="fas fa-minus"></i></span>'
                             }
                         </td>
                         <td>${duration}</td>
                         <td>${status}</td>
-                        <td style="white-space: nowrap; min-width: 120px;">
-                            <button class="btn btn-sm btn-outline-primary day-expand-btn" 
-                                    data-date="${dayData.date}" 
-                                    data-user-id="${userId}"
-                                    data-bs-toggle="collapse" data-bs-target="#logs-${userId}-${dayData.date}" 
-                                    aria-expanded="false" aria-controls="logs-${userId}-${dayData.date}"
-                                    style="white-space: nowrap;">
-                                <i class="fas fa-chevron-down"></i> ${(dayData.logs || dayData.all_logs || []).length} Logs
-                            </button>
-                            ${dayData.notes && dayData.notes.length > 0 ? dayData.notes.map((note, idx) => `
-                                <button type="button" class="btn btn-sm btn-purple ms-1" 
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#noteModal${userId}-${dayData.date}-${note.id}"
-                                        title="View Note">
-                                    <i class="fas fa-sticky-note me-1"></i>Note
+                        <td class="text-center" style="white-space: nowrap;">
+                            <div class="d-flex align-items-center justify-content-center gap-2">
+                                <button class="btn btn-sm btn-outline-primary day-expand-btn" 
+                                        data-date="${dayData.date}" 
+                                        data-user-id="${userId}"
+                                        data-bs-toggle="collapse" data-bs-target="#logs-${userId}-${dayData.date}" 
+                                        aria-expanded="false" aria-controls="logs-${userId}-${dayData.date}">
+                                    <i class="fas fa-chevron-down"></i> 
+                                    <span>${(dayData.logs || dayData.all_logs || []).length} Logs</span>
                                 </button>
-                            `).join('') : ''}
+                                ${dayData.notes && dayData.notes.length > 0 ? dayData.notes.map((note, idx) => `
+                                    <button type="button" class="btn btn-sm btn-purple-modern" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#noteModal${userId}-${dayData.date}-${note.id}"
+                                            title="View Note">
+                                        <i class="fas fa-sticky-note"></i>
+                                    </button>
+                                `).join('') : ''}
+                            </div>
                         </td>
                     `;
                     logsTbody.appendChild(dayRow);

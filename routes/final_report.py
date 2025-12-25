@@ -1502,12 +1502,12 @@ def export_detailed_attendance_report():
         bottom=Side(style='thin')
     )
     
-    # Headers
+    # Headers (removed "Attendance %" column)
     headers = [
         "Name", "Fingerprint Number", "Department", "Total Days", 
         "Total Working Days", "Day Off", "Present Days", "Absent Days", 
         "Annual Leave", "Unpaid Leave", "Paid Leave", "Permission Hours", 
-        "Incomplete Days", "Extra Time (hours)", "Attendance %"
+        "Incomplete Days", "Extra Time (hours)"
     ]
     
     # Write headers
@@ -1539,7 +1539,6 @@ def export_detailed_attendance_report():
         # Format extra time as hours and minutes for Excel
         extra_time_formatted = format_hours_minutes(metrics.extra_time_hours)
         ws.cell(row=row, column=14, value=extra_time_formatted).border = border
-        ws.cell(row=row, column=15, value=f"{metrics.attendance_percentage}%").border = border
     
     # Add summary row
     if all_user_reports:
@@ -1561,7 +1560,6 @@ def export_detailed_attendance_report():
         total_extra_time = sum(r.summary_metrics.extra_time_hours for r in all_user_reports)
         total_extra_time_formatted = format_hours_minutes(total_extra_time)
         ws.cell(row=summary_row, column=14, value=total_extra_time_formatted).border = border
-        ws.cell(row=summary_row, column=15, value="").border = border
     
     # Auto-adjust column widths
     for column in ws.columns:
@@ -1589,6 +1587,375 @@ def export_detailed_attendance_report():
         as_attachment=True,
         download_name=filename,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
+@final_report_bp.route('/detailed-attendance-report/export-pdf')
+@login_required
+@role_required(['admin', 'director', 'support', 'product_owner', 'manager'])
+def export_detailed_attendance_report_pdf():
+    """Export detailed attendance report to PDF"""
+    
+    # Get the same parameters as the detailed attendance report
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    user_ids = request.args.getlist('user_ids', type=int)
+    
+    if not start_date_str or not end_date_str:
+        return jsonify({'error': 'Start date and end date are required'}), 400
+    
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'error': 'Invalid date format'}), 400
+    
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+        from reportlab.lib.units import inch
+    except ImportError:
+        return jsonify({'error': 'PDF export not available. Please install reportlab package: pip install reportlab'}), 500
+    
+    # Get users for export based on role (same logic as Excel export)
+    if current_user.role == 'manager':
+        from helpers import get_employees_for_manager
+        team_members = get_employees_for_manager(current_user.id)
+        users = [current_user] + list(team_members)
+        users = [u for u in users if u.status == 'active' and 
+                 not u.first_name.startswith('User') and 
+                 not u.first_name.startswith('NN-') and
+                 u.first_name != '' and u.last_name != '']
+    else:
+        users = User.query.filter(
+            User.status == 'active',
+            ~User.first_name.like('User%'),
+            ~User.first_name.like('NN-%'),
+            User.first_name != '',
+            User.last_name != ''
+        ).all()
+    
+    # Filter users if specific users are selected
+    if user_ids:
+        if current_user.role == 'manager':
+            manager_employee_ids = [u.id for u in users]
+            if current_user.id not in manager_employee_ids:
+                manager_employee_ids.append(current_user.id)
+            user_ids = [uid for uid in user_ids if uid in manager_employee_ids]
+        users = [user for user in users if user.id in user_ids]
+    
+    # Sort users by fingerprint number
+    def get_fingerprint_sort_key(user):
+        fp = user.fingerprint_number
+        if not fp or fp.strip() == '':
+            return (0, 0)
+        try:
+            fp_int = int(fp.strip())
+            return (1, fp_int)
+        except (ValueError, TypeError):
+            return (2, 0)
+    
+    users = sorted(users, key=get_fingerprint_sort_key)
+    
+    # Generate report data
+    all_user_reports = []
+    for user in users:
+        user_report = calculate_unified_report_data(user, start_date, end_date)
+        all_user_reports.append(user_report)
+    
+    # Create PDF in memory
+    output = io.BytesIO()
+    doc = SimpleDocTemplate(output, pagesize=A4, topMargin=0.5*inch, bottomMargin=0.5*inch)
+    
+    # Get styles
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=18,
+        spaceAfter=20,
+        alignment=1,  # Center
+        textColor=colors.HexColor('#2c3e50')
+    )
+    
+    # Build PDF content
+    story = []
+    
+    # Title
+    title = f"Detailed Attendance Report"
+    subtitle = f"Period: {start_date.strftime('%B %d, %Y')} to {end_date.strftime('%B %d, %Y')}"
+    story.append(Paragraph(title, title_style))
+    story.append(Paragraph(subtitle, styles['Normal']))
+    story.append(Spacer(1, 20))
+    
+    # Create summary table
+    table_data = [['Name', 'Fingerprint', 'Department', 'Total Days', 'Working Days', 
+                   'Day Off', 'Present', 'Absent', 'Annual Leave', 'Paid Leave', 
+                   'Permission Hrs', 'Incomplete', 'Extra Time']]
+    
+    for user_report in all_user_reports:
+        user = user_report.user
+        metrics = user_report.summary_metrics
+        extra_time_formatted = format_hours_minutes(metrics.extra_time_hours)
+        
+        table_data.append([
+            user.get_full_name(),
+            str(user.fingerprint_number or 'N/A'),
+            user.department.department_name if user.department else 'No Department',
+            str(metrics.total_days),
+            str(metrics.total_working_days),
+            str(metrics.day_off_days),
+            str(metrics.present_days),
+            str(metrics.absent_days),
+            str(metrics.annual_leave_days),
+            str(metrics.paid_leave_days),
+            str(metrics.permission_hours),
+            str(metrics.incomplete_days),
+            extra_time_formatted
+        ])
+    
+    # Create table
+    table = Table(table_data, repeatRows=1)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('TOPPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+    ]))
+    
+    story.append(table)
+    
+    # Add summary row if there are reports
+    if all_user_reports:
+        story.append(Spacer(1, 10))
+        summary_data = [['TOTAL', '', '', 
+                         str(sum(r.summary_metrics.total_days for r in all_user_reports)),
+                         str(sum(r.summary_metrics.total_working_days for r in all_user_reports)),
+                         str(sum(r.summary_metrics.day_off_days for r in all_user_reports)),
+                         str(sum(r.summary_metrics.present_days for r in all_user_reports)),
+                         str(sum(r.summary_metrics.absent_days for r in all_user_reports)),
+                         str(sum(r.summary_metrics.annual_leave_days for r in all_user_reports)),
+                         str(sum(r.summary_metrics.paid_leave_days for r in all_user_reports)),
+                         str(sum(r.summary_metrics.permission_hours for r in all_user_reports)),
+                         str(sum(r.summary_metrics.incomplete_days for r in all_user_reports)),
+                         format_hours_minutes(sum(r.summary_metrics.extra_time_hours for r in all_user_reports))
+                        ]]
+        
+        summary_table = Table(summary_data)
+        summary_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#764ba2')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('TOPPADDING', (0, 0), (-1, 0), 12),
+            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+        ]))
+        story.append(summary_table)
+    
+    # Build PDF
+    doc.build(story)
+    output.seek(0)
+    
+    # Generate filename
+    filename = f"Detailed_Attendance_Report_{start_date_str}_to_{end_date_str}.pdf"
+    
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/pdf'
+    )
+
+@final_report_bp.route('/final-report/export-pdf')
+@login_required
+@role_required(['admin', 'product_owner', 'manager', 'employee'])
+def export_final_report_pdf():
+    """Export final report to PDF"""
+    
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    user_ids = request.args.getlist('user_ids', type=int)
+    
+    if not start_date_str or not end_date_str:
+        return jsonify({'error': 'Start date and end date are required'}), 400
+    
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'error': 'Invalid date format'}), 400
+    
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.units import inch
+    except ImportError:
+        return jsonify({'error': 'PDF export not available. Please install reportlab package: pip install reportlab'}), 500
+    
+    # Get users (same logic as Excel export)
+    if current_user.role == 'employee':
+        users = [current_user] if current_user.status == 'active' else []
+    elif current_user.role == 'manager':
+        from helpers import get_employees_for_manager
+        team_members = get_employees_for_manager(current_user.id)
+        users = [current_user] + list(team_members)
+        users = [u for u in users if u.status == 'active' and 
+                 not u.first_name.startswith('User') and 
+                 not u.first_name.startswith('NN-') and
+                 u.first_name != '' and u.last_name != '']
+    else:
+        users = User.query.filter(
+            User.status == 'active',
+            ~User.first_name.like('User%'),
+            ~User.first_name.like('NN-%'),
+            User.first_name != '',
+            User.last_name != ''
+        ).all()
+    
+    if user_ids:
+        if current_user.role == 'employee':
+            user_ids = [current_user.id] if current_user.id in user_ids else []
+        elif current_user.role == 'manager':
+            manager_employee_ids = [u.id for u in users]
+            if current_user.id not in manager_employee_ids:
+                manager_employee_ids.append(current_user.id)
+            user_ids = [uid for uid in user_ids if uid in manager_employee_ids]
+        users = [user for user in users if user.id in user_ids]
+    
+    # Sort users
+    def get_fingerprint_sort_key(user):
+        fp = user.fingerprint_number
+        if not fp or fp.strip() == '':
+            return (0, 0)
+        try:
+            fp_int = int(fp.strip())
+            return (1, fp_int)
+        except (ValueError, TypeError):
+            return (2, 0)
+    
+    users = sorted(users, key=get_fingerprint_sort_key)
+    
+    # Generate report data
+    all_user_reports = []
+    for user in users:
+        user_report = calculate_unified_report_data(user, start_date, end_date)
+        all_user_reports.append(user_report)
+    
+    # Create PDF
+    output = io.BytesIO()
+    doc = SimpleDocTemplate(output, pagesize=A4, topMargin=0.5*inch, bottomMargin=0.5*inch)
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=18,
+        spaceAfter=20,
+        alignment=1,
+        textColor=colors.HexColor('#2c3e50')
+    )
+    
+    story = []
+    
+    title = f"Final Attendance Report"
+    subtitle = f"Period: {start_date.strftime('%B %d, %Y')} to {end_date.strftime('%B %d, %Y')}"
+    story.append(Paragraph(title, title_style))
+    story.append(Paragraph(subtitle, styles['Normal']))
+    story.append(Spacer(1, 20))
+    
+    # Create table
+    table_data = [['Name', 'Fingerprint', 'Department', 'Total Days', 'Working Days', 
+                   'Day Off', 'Present', 'Absent', 'Annual Leave', 'Paid Leave', 
+                   'Permission Hrs', 'Incomplete', 'Extra Time']]
+    
+    for user_report in all_user_reports:
+        user = user_report.user
+        metrics = user_report.summary_metrics
+        extra_time_formatted = format_hours_minutes(metrics.extra_time_hours)
+        
+        table_data.append([
+            user.get_full_name(),
+            str(user.fingerprint_number or 'N/A'),
+            user.department.department_name if user.department else 'No Department',
+            str(metrics.total_days),
+            str(metrics.total_working_days),
+            str(metrics.day_off_days),
+            str(metrics.present_days),
+            str(metrics.absent_days),
+            str(metrics.annual_leave_days),
+            str(metrics.paid_leave_days),
+            str(metrics.permission_hours),
+            str(metrics.incomplete_days),
+            extra_time_formatted
+        ])
+    
+    table = Table(table_data, repeatRows=1)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('TOPPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+    ]))
+    
+    story.append(table)
+    
+    if all_user_reports:
+        story.append(Spacer(1, 10))
+        summary_data = [['TOTAL', '', '', 
+                         str(sum(r.summary_metrics.total_days for r in all_user_reports)),
+                         str(sum(r.summary_metrics.total_working_days for r in all_user_reports)),
+                         str(sum(r.summary_metrics.day_off_days for r in all_user_reports)),
+                         str(sum(r.summary_metrics.present_days for r in all_user_reports)),
+                         str(sum(r.summary_metrics.absent_days for r in all_user_reports)),
+                         str(sum(r.summary_metrics.annual_leave_days for r in all_user_reports)),
+                         str(sum(r.summary_metrics.paid_leave_days for r in all_user_reports)),
+                         str(sum(r.summary_metrics.permission_hours for r in all_user_reports)),
+                         str(sum(r.summary_metrics.incomplete_days for r in all_user_reports)),
+                         format_hours_minutes(sum(r.summary_metrics.extra_time_hours for r in all_user_reports))
+                        ]]
+        
+        summary_table = Table(summary_data)
+        summary_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#764ba2')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('TOPPADDING', (0, 0), (-1, 0), 12),
+            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+        ]))
+        story.append(summary_table)
+    
+    doc.build(story)
+    output.seek(0)
+    
+    filename = f"Final_Report_{start_date_str}_to_{end_date_str}.pdf"
+    
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/pdf'
     )
 
 @final_report_bp.route('/api/employees-by-department', methods=['GET'])

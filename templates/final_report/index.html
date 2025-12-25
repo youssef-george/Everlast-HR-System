@@ -920,7 +920,10 @@
                                 <i class="fas fa-redo me-1"></i> Generate New Report
                             </a>
                             <button class="btn btn-light btn-sm" onclick="exportToExcel()">
-                                <i class="fas fa-download me-1"></i> Export Excel
+                                <i class="fas fa-file-excel me-1"></i> Export Excel
+                            </button>
+                            <button class="btn btn-light btn-sm" onclick="exportToPDF()">
+                                <i class="fas fa-file-pdf me-1"></i> Export PDF
                             </button>
                             <button class="btn btn-light btn-sm" onclick="printReport()" id="printBtn">
                                 <i class="fas fa-print me-1"></i> Print
@@ -1257,6 +1260,68 @@ function exportToExcel() {
     const exportForm = document.createElement('form');
     exportForm.method = 'GET';
     exportForm.action = '{{ url_for("final_report.export_final_report") }}';
+    
+    // Add parameters as hidden inputs
+    const startInput = document.createElement('input');
+    startInput.type = 'hidden';
+    startInput.name = 'start_date';
+    startInput.value = finalStartDate;
+    exportForm.appendChild(startInput);
+    
+    const endInput = document.createElement('input');
+    endInput.type = 'hidden';
+    endInput.name = 'end_date';
+    endInput.value = finalEndDate;
+    exportForm.appendChild(endInput);
+    
+    // Add user IDs
+    finalUserIds.forEach(userId => {
+        const userInput = document.createElement('input');
+        userInput.type = 'hidden';
+        userInput.name = 'user_ids';
+        userInput.value = userId;
+        exportForm.appendChild(userInput);
+    });
+    
+    // Add department ID if present
+    if (finalDepartmentId) {
+        const deptInput = document.createElement('input');
+        deptInput.type = 'hidden';
+        deptInput.name = 'department_id';
+        deptInput.value = finalDepartmentId;
+        exportForm.appendChild(deptInput);
+    }
+    
+    document.body.appendChild(exportForm);
+    exportForm.submit();
+    document.body.removeChild(exportForm);
+}
+
+// Export to PDF functionality
+function exportToPDF() {
+    // Get parameters from URL query string (works even when form is hidden)
+    const urlParams = new URLSearchParams(window.location.search);
+    const startDate = urlParams.get('start_date');
+    const endDate = urlParams.get('end_date');
+    const userIds = urlParams.getAll('user_ids');
+    const departmentId = urlParams.get('department_id');
+    
+    // If not in URL, try to get from form (if visible)
+    const form = document.getElementById('reportForm');
+    const finalStartDate = startDate || (form ? form.querySelector('#start_date')?.value : null);
+    const finalEndDate = endDate || (form ? form.querySelector('#end_date')?.value : null);
+    const finalUserIds = userIds.length > 0 ? userIds : (form ? Array.from(form.querySelectorAll('input[name="user_ids"]:checked')).map(cb => cb.value) : []);
+    const finalDepartmentId = departmentId || (form ? form.querySelector('#department_id')?.value : null);
+    
+    if (!finalStartDate || !finalEndDate) {
+        alert('Please generate a report first with date range and selected employees.');
+        return;
+    }
+    
+    // Create a temporary form for PDF export
+    const exportForm = document.createElement('form');
+    exportForm.method = 'GET';
+    exportForm.action = '{{ url_for("final_report.export_final_report_pdf") }}';
     
     // Add parameters as hidden inputs
     const startInput = document.createElement('input');
