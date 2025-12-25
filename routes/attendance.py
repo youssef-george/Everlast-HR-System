@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app, abort
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app, abort, make_response
 # from flask_apscheduler import STATE_PAUSED, STATE_RUNNING, STATE_STOPPED  # Not needed anymore
 from flask_login import login_required, current_user
 from models import db, User, AttendanceLog, DailyAttendance, LeaveRequest, PermissionRequest, FingerPrintFailure, DeviceSettings, DeviceUser, Note
@@ -15,6 +15,7 @@ import threading
 import json
 import subprocess
 import platform
+import io
 from utils import convert_utc_to_local
 from flask import current_app as app
 
@@ -2396,6 +2397,689 @@ def index():
                           is_admin=is_admin,
                           today=today,
                           user_absent_days=user_absent_days)
+
+
+@attendance_bp.route('/export-daily-attendance')
+@login_required
+def export_daily_attendance():
+    """Export daily attendance data to Excel or PDF"""
+    try:
+        # Get parameters
+        start_date_str = request.args.get('start_date')
+        end_date_str = request.args.get('end_date')
+        employee_id = request.args.get('employee_id', type=int)
+        export_format = request.args.get('format', 'excel').lower()
+        
+        # Determine if viewing today or date range
+        today = date.today()
+        
+        # If no dates provided, default to today
+        if not start_date_str:
+            start_date_str = today.strftime('%Y-%m-%d')
+        if not end_date_str:
+            end_date_str = today.strftime('%Y-%m-%d')
+        
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'error': 'Invalid date format'}), 400
+        
+        # Check if viewing today's attendance
+        is_today_view = (start_date == today and end_date == today)
+        
+        # Get data similar to index route
+        is_admin = current_user.is_authenticated and current_user.is_admin()
+        is_employee_viewing_own_data = current_user.role == 'employee'
+        
+        # Get users based on role (similar to index route)
+        if current_user.role in ['admin', 'product_owner', 'director']:
+            user_query = User.query.filter_by(status='active').filter(
+                *get_fingerprint_filter(),
+                User.first_name != None,
+                User.first_name != '',
+                User.last_name != None,
+                User.last_name != ''
+            )
+            if employee_id:
+                user_query = user_query.filter(User.id == employee_id)
+            all_active_users = safe_db_query(
+                lambda: user_query.order_by(User.first_name.desc(), User.last_name.desc()).all(),
+                default=[]
+            )
+        elif current_user.role == 'manager':
+            if current_user.department_id:
+                user_query = User.query.filter_by(status='active', department_id=current_user.department_id).filter(
+                    *get_fingerprint_filter(),
+                    User.first_name != None,
+                    User.first_name != '',
+                    User.last_name != None,
+                    User.last_name != ''
+                )
+                if employee_id:
+                    user_query = user_query.filter(User.id == employee_id)
+                all_active_users = safe_db_query(
+                    lambda: user_query.order_by(User.first_name.desc(), User.last_name.desc()).all(),
+                    default=[]
+                )
+            else:
+                all_active_users = safe_db_query(
+                    lambda: User.query.filter_by(id=current_user.id, status='active').filter(
+                    *get_fingerprint_filter(),
+                    User.first_name != None,
+                    User.first_name != '',
+                    User.last_name != None,
+                    User.last_name != ''
+                    ).order_by(User.first_name.desc(), User.last_name.desc()).all(),
+                    default=[]
+                )
+        else:
+            all_active_users = safe_db_query(
+                lambda: User.query.filter_by(id=current_user.id, status='active').filter(
+                *get_fingerprint_filter(),
+                User.first_name != None,
+                User.first_name != '',
+                User.last_name != None,
+                User.last_name != ''
+                ).order_by(User.first_name.desc(), User.last_name.desc()).all(),
+                default=[]
+            )
+        
+        # Prepare export data
+        if is_today_view:
+            # Export today's attendance
+            start_datetime = datetime.combine(today, datetime.min.time())
+            end_datetime = datetime.combine(today, datetime.max.time())
+            
+            today_logs_query = AttendanceLog.query\
+                .filter(AttendanceLog.timestamp.between(start_datetime, end_datetime))
+            
+            if employee_id:
+                today_logs_query = today_logs_query.filter(AttendanceLog.user_id == employee_id)
+            elif is_employee_viewing_own_data:
+                today_logs_query = today_logs_query.filter(AttendanceLog.user_id == current_user.id)
+            
+            today_logs = safe_db_query(
+                lambda: today_logs_query.order_by(AttendanceLog.timestamp.desc()).all(),
+                default=[]
+            )
+            
+            processed_logs = process_attendance_logs(today_logs)
+            
+            # Build daily_attendance structure similar to index route
+            daily_attendance = {}
+            today_weekday = today.weekday()
+            is_weekend = (today_weekday == 4 or today_weekday == 5)
+            
+            present_users = {}
+            absent_users = {}
+            
+            for user in all_active_users:
+                if employee_id and user.id != employee_id:
+                    continue
+                if is_employee_viewing_own_data and user.id != current_user.id:
+                    continue
+                
+                # Check leave/permission/holiday status
+                leave_request = safe_db_query(
+                    lambda: LeaveRequest.query.filter(
+                        LeaveRequest.user_id == user.id,
+                        LeaveRequest.status == 'approved',
+                        LeaveRequest.start_date <= today,
+                        LeaveRequest.end_date >= today
+                    ).first(),
+                    default=None
+                )
+                is_on_leave = leave_request is not None
+                
+                permission_request = safe_db_query(
+                    lambda: PermissionRequest.query.filter(
+                        PermissionRequest.user_id == user.id,
+                        PermissionRequest.status == 'approved',
+                        func.date(PermissionRequest.start_time) == today
+                    ).first(),
+                    default=None
+                )
+                has_permission = permission_request is not None
+                
+                daily_record = safe_db_query(
+                    lambda: DailyAttendance.query.filter_by(
+                        user_id=user.id,
+                        date=today
+                    ).first(),
+                    default=None
+                )
+                
+                # Check for paid holiday
+                from models import PaidHoliday
+                paid_holiday = PaidHoliday.query.filter(
+                    or_(
+                        and_(PaidHoliday.holiday_type == 'day',
+                             PaidHoliday.start_date == today),
+                        and_(PaidHoliday.holiday_type == 'range',
+                             PaidHoliday.start_date <= today,
+                             PaidHoliday.end_date >= today)
+                    )
+                ).first()
+                
+                if user.id in processed_logs:
+                    user_data = processed_logs[user.id].copy()
+                    if is_on_leave:
+                        user_data['status'] = 'present'
+                        user_data['leave_request'] = leave_request
+                        if daily_record and daily_record.leave_type_name:
+                            user_data['leave_type_name'] = daily_record.leave_type_name
+                    elif has_permission:
+                        user_data['status'] = 'present'
+                        user_data['permission_request'] = permission_request
+                    elif daily_record and daily_record.status == 'paid_holiday':
+                        user_data['status'] = 'present'
+                        user_data['holiday_name'] = daily_record.holiday_name if daily_record else (paid_holiday.description if paid_holiday else None)
+                    elif is_weekend and user_data['status'] == 'present':
+                        user_data['status'] = 'DayOff / Present'
+                    present_users[user.id] = user_data
+                else:
+                    if is_on_leave:
+                        absent_users[user.id] = {
+                            'user': user,
+                            'check_in': None,
+                            'check_out': None,
+                            'duration': None,
+                            'status': 'leave',
+                            'leave_request': leave_request,
+                            'leave_type_name': daily_record.leave_type_name if daily_record else None
+                        }
+                    elif has_permission:
+                        absent_users[user.id] = {
+                            'user': user,
+                            'check_in': None,
+                            'check_out': None,
+                            'duration': None,
+                            'status': 'permission',
+                            'permission_request': permission_request
+                        }
+                    elif daily_record and daily_record.status == 'paid_holiday':
+                        absent_users[user.id] = {
+                            'user': user,
+                            'check_in': None,
+                            'check_out': None,
+                            'duration': None,
+                            'status': daily_record.holiday_name if daily_record.holiday_name else 'Paid Holiday',
+                            'holiday_name': daily_record.holiday_name if daily_record else (paid_holiday.description if paid_holiday else None)
+                        }
+                    else:
+                        absent_users[user.id] = {
+                            'user': user,
+                            'check_in': None,
+                            'check_out': None,
+                            'duration': None,
+                            'status': 'DayOff' if is_weekend else 'Absent'
+                        }
+            
+            sorted_present_users = {}
+            if present_users:
+                present_items = list(present_users.items())
+                present_items.sort(key=lambda x: (x[1]['check_in'] is None, 
+                                                -x[1]['check_in'].timestamp.timestamp() if x[1]['check_in'] else 0))
+                sorted_present_users = {user_id: data for user_id, data in present_items}
+            
+            daily_attendance = {**sorted_present_users, **absent_users}
+            
+            # Export today's data
+            if export_format == 'pdf':
+                return export_daily_attendance_to_pdf(daily_attendance, today, today, employee_id)
+            else:
+                return export_daily_attendance_to_excel(daily_attendance, today, today, employee_id)
+        else:
+            # Export historical data (date range)
+            start_datetime_obj = datetime.combine(start_date, datetime.min.time())
+            end_datetime_obj = datetime.combine(end_date, datetime.max.time())
+            
+            query = AttendanceLog.query\
+                .filter(AttendanceLog.timestamp.between(start_datetime_obj, end_datetime_obj))\
+                .join(User, AttendanceLog.user_id == User.id)
+            
+            if (is_admin and employee_id) or is_employee_viewing_own_data:
+                if employee_id:
+                    employee_id = int(employee_id)
+                else:
+                    employee_id = current_user.id
+                query = query.filter(AttendanceLog.user_id == employee_id)
+            
+            historical_logs = query.order_by(AttendanceLog.timestamp.desc()).all()
+            
+            # Generate all dates in the range
+            all_dates = []
+            current_date = start_date
+            while current_date <= end_date:
+                all_dates.append(current_date)
+                current_date += timedelta(days=1)
+            
+            # Group logs by date
+            date_grouped_logs = defaultdict(list)
+            for log in historical_logs:
+                date_key = log.timestamp.strftime('%Y-%m-%d')
+                date_grouped_logs[date_key].append(log)
+            
+            # Build historical_attendance structure
+            historical_attendance = OrderedDict()
+            
+            for date_obj in all_dates:
+                date_key = date_obj.strftime('%Y-%m-%d')
+                logs = date_grouped_logs.get(date_key, [])
+                processed_historical_logs = process_attendance_logs(logs)
+                historical_weekday = date_obj.weekday()
+                is_historical_weekend = (historical_weekday == 4 or historical_weekday == 5)
+                
+                # Check if this date is a paid holiday
+                from models import PaidHoliday
+                paid_holiday = PaidHoliday.query.filter(
+                    or_(
+                        # Single day holiday
+                        and_(PaidHoliday.holiday_type == 'day',
+                             PaidHoliday.start_date == date_obj),
+                        # Range holiday that includes this date
+                        and_(PaidHoliday.holiday_type == 'range',
+                             PaidHoliday.start_date <= date_obj,
+                             PaidHoliday.end_date >= date_obj)
+                    )
+                ).first()
+                
+                all_users = {}
+                
+                for user in all_active_users:
+                    if (is_admin and employee_id and user.id != employee_id) or (is_employee_viewing_own_data and user.id != current_user.id):
+                        continue
+                    
+                    if user.joining_date and date_obj < user.joining_date:
+                        all_users[user.id] = {
+                            'user': user,
+                            'check_in': None,
+                            'check_out': None,
+                            'duration': None,
+                            'status': 'Not Yet Joined'
+                        }
+                        continue
+                    
+                    daily_record = DailyAttendance.query.filter_by(
+                        user_id=user.id,
+                        date=date_obj
+                    ).first()
+                    
+                    leave_request = LeaveRequest.query.filter(
+                        LeaveRequest.user_id == user.id,
+                        LeaveRequest.status == 'approved',
+                        LeaveRequest.start_date <= date_obj,
+                        LeaveRequest.end_date >= date_obj
+                    ).first()
+                    is_on_leave = leave_request is not None
+                    
+                    permission_request = PermissionRequest.query.filter(
+                        PermissionRequest.user_id == user.id,
+                        PermissionRequest.status == 'approved',
+                        func.date(PermissionRequest.start_time) == date_obj
+                    ).first()
+                    has_permission = permission_request is not None
+                    
+                    user_data = {
+                        'user': user,
+                        'check_in': None,
+                        'check_out': None,
+                        'duration': None,
+                        'status': 'Absent'
+                    }
+                    
+                    if user.id in processed_historical_logs:
+                        user_data = processed_historical_logs[user.id].copy()
+                        user_data['user'] = user
+                        
+                        if is_on_leave:
+                            user_data['status'] = 'Present'
+                            user_data['leave_request'] = leave_request
+                            if daily_record and daily_record.leave_type_name:
+                                user_data['leave_type_name'] = daily_record.leave_type_name
+                        elif has_permission:
+                            user_data['status'] = 'Present'
+                            user_data['permission_request'] = permission_request
+                        elif user_data['status'] == 'present':
+                            user_data['status'] = 'Present'
+                    else:
+                        if is_on_leave:
+                            user_data['status'] = daily_record.leave_type_name if daily_record and daily_record.leave_type_name else 'Leave Request'
+                            user_data['leave_request'] = leave_request
+                        elif has_permission:
+                            user_data['status'] = 'Permission'
+                            user_data['permission_request'] = permission_request
+                        elif daily_record and daily_record.status == 'paid_holiday' and daily_record.paid_holiday_id:
+                            # Check if paid holiday still exists
+                            paid_holiday_check = PaidHoliday.query.get(daily_record.paid_holiday_id)
+                            if paid_holiday_check:
+                                user_data['status'] = daily_record.holiday_name if daily_record.holiday_name else 'Paid Holiday'
+                                user_data['holiday_name'] = daily_record.holiday_name
+                            else:
+                                user_data['status'] = 'DayOff' if is_historical_weekend else 'Absent'
+                        else:
+                            user_data['status'] = 'DayOff' if is_historical_weekend else 'Absent'
+                    
+                    all_users[user.id] = user_data
+                
+                # Sort users by name
+                sorted_users = {}
+                if all_users:
+                    user_items = list(all_users.items())
+                    user_items.sort(key=lambda x: (x[1]['user'].first_name, x[1]['user'].last_name))
+                    sorted_users = {user_id: data for user_id, data in user_items}
+                
+                historical_attendance[date_key] = {
+                    'attendance_data': sorted_users,
+                    'date': date_obj,
+                    'paid_holiday': paid_holiday.description if paid_holiday else None,
+                    'is_paid_holiday': paid_holiday is not None
+                }
+            
+            # Export historical data
+            if export_format == 'pdf':
+                return export_daily_attendance_to_pdf(None, start_date, end_date, employee_id, historical_attendance)
+            else:
+                return export_daily_attendance_to_excel(None, start_date, end_date, employee_id, historical_attendance)
+                
+    except Exception as e:
+        logging.error(f"Error exporting daily attendance: {str(e)}")
+        return jsonify({'error': f'Export failed: {str(e)}'}), 500
+
+
+def export_daily_attendance_to_excel(daily_attendance, start_date, end_date, employee_id=None, historical_attendance=None):
+    """Export daily attendance to Excel format"""
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+        from openpyxl.utils import get_column_letter
+    except ImportError:
+        return jsonify({'error': 'Excel export not available. Please install openpyxl package.'}), 500
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Daily Attendance"
+    
+    # Set up styles
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # Add title
+    if start_date == end_date:
+        title = f"Daily Attendance - {start_date.strftime('%Y-%m-%d')}"
+    else:
+        title = f"Daily Attendance ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})"
+    
+    ws.merge_cells('A1:H1')
+    ws['A1'] = title
+    ws['A1'].font = Font(bold=True, size=14)
+    ws['A1'].alignment = Alignment(horizontal='center')
+    
+    # Headers
+    headers = ['Fingerprint ID', 'Employee', 'Check In', 'Check Out', 'Duration', 'Status', 'Details']
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=3, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.border = border
+        cell.alignment = Alignment(horizontal='center')
+    
+    row = 4
+    
+    if historical_attendance:
+        # Export historical data (multiple dates)
+        for date_key, date_data in historical_attendance.items():
+            date_obj = date_data['date']
+            attendance = date_data['attendance_data']
+            
+            # Add date header
+            ws.merge_cells(f'A{row}:H{row}')
+            date_cell = ws.cell(row=row, column=1, value=f"Date: {date_obj.strftime('%Y-%m-%d')}")
+            date_cell.font = Font(bold=True, size=12)
+            date_cell.fill = PatternFill(start_color="E0E0E0", end_color="E0E0E0", fill_type="solid")
+            row += 1
+            
+            # Add data for this date
+            for user_id, data in attendance.items():
+                user = data['user']
+                fingerprint_id = user.fingerprint_number or 'Not Assigned'
+                employee_name = user.get_full_name()
+                check_in = data['check_in'].timestamp.strftime('%I:%M %p') if data['check_in'] else '-'
+                check_out = data['check_out'].timestamp.strftime('%I:%M %p') if data['check_out'] else '-'
+                duration = data['duration'] or '-'
+                status = data['status']
+                
+                # Build details string
+                details = []
+                if data.get('leave_type_name'):
+                    details.append(f"Leave: {data['leave_type_name']}")
+                if data.get('holiday_name'):
+                    details.append(f"Holiday: {data['holiday_name']}")
+                if data.get('permission_request'):
+                    details.append("Permission")
+                details_str = ', '.join(details) if details else '-'
+                
+                ws.cell(row=row, column=1, value=fingerprint_id).border = border
+                ws.cell(row=row, column=2, value=employee_name).border = border
+                ws.cell(row=row, column=3, value=check_in).border = border
+                ws.cell(row=row, column=4, value=check_out).border = border
+                ws.cell(row=row, column=5, value=duration).border = border
+                ws.cell(row=row, column=6, value=status).border = border
+                ws.cell(row=row, column=7, value=details_str).border = border
+                row += 1
+            
+            row += 1  # Add spacing between dates
+    else:
+        # Export today's data
+        for user_id, data in daily_attendance.items():
+            user = data['user']
+            fingerprint_id = user.fingerprint_number or 'Not Assigned'
+            employee_name = user.get_full_name()
+            check_in = data['check_in'].timestamp.strftime('%I:%M %p') if data['check_in'] else '-'
+            check_out = data['check_out'].timestamp.strftime('%I:%M %p') if data['check_out'] else '-'
+            duration = data['duration'] or '-'
+            status = data['status']
+            
+            # Build details string
+            details = []
+            if data.get('leave_type_name'):
+                details.append(f"Leave: {data['leave_type_name']}")
+            if data.get('holiday_name'):
+                details.append(f"Holiday: {data['holiday_name']}")
+            if data.get('permission_request'):
+                details.append("Permission")
+            details_str = ', '.join(details) if details else '-'
+            
+            ws.cell(row=row, column=1, value=fingerprint_id).border = border
+            ws.cell(row=row, column=2, value=employee_name).border = border
+            ws.cell(row=row, column=3, value=check_in).border = border
+            ws.cell(row=row, column=4, value=check_out).border = border
+            ws.cell(row=row, column=5, value=duration).border = border
+            ws.cell(row=row, column=6, value=status).border = border
+            ws.cell(row=row, column=7, value=details_str).border = border
+            row += 1
+    
+    # Auto-adjust column widths
+    for col in range(1, 8):
+        ws.column_dimensions[get_column_letter(col)].width = 18
+    
+    # Save to BytesIO
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    # Create filename
+    if start_date == end_date:
+        filename = f"Daily_Attendance_{start_date.strftime('%Y%m%d')}.xlsx"
+    else:
+        filename = f"Daily_Attendance_{start_date.strftime('%Y%m%d')}_to_{end_date.strftime('%Y%m%d')}.xlsx"
+    
+    # Create response
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+    
+    return response
+
+
+def export_daily_attendance_to_pdf(daily_attendance, start_date, end_date, employee_id=None, historical_attendance=None):
+    """Export daily attendance to PDF format"""
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+        from reportlab.lib.units import inch
+    except ImportError as e:
+        logging.error(f"ReportLab import error: {str(e)}")
+        return jsonify({'error': 'PDF export not available. Please install reportlab package.'}), 500
+    
+    output = io.BytesIO()
+    
+    # Create PDF document
+    doc = SimpleDocTemplate(output, pagesize=A4, topMargin=0.5*inch)
+    styles = getSampleStyleSheet()
+    story = []
+    
+    # Add title
+    if start_date == end_date:
+        title = f"Daily Attendance - {start_date.strftime('%Y-%m-%d')}"
+    else:
+        title = f"Daily Attendance ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})"
+    story.append(Paragraph(title, styles['Title']))
+    story.append(Spacer(1, 12))
+    
+    # Create table data
+    if historical_attendance:
+        # Export historical data (multiple dates)
+        for date_key, date_data in historical_attendance.items():
+            date_obj = date_data['date']
+            attendance = date_data['attendance_data']
+            
+            # Add date header
+            story.append(Paragraph(f"<b>Date: {date_obj.strftime('%Y-%m-%d')}</b>", styles['Heading2']))
+            story.append(Spacer(1, 6))
+            
+            # Create table for this date
+            table_data = [['Fingerprint ID', 'Employee', 'Check In', 'Check Out', 'Duration', 'Status', 'Details']]
+            
+            for user_id, data in attendance.items():
+                user = data['user']
+                fingerprint_id = user.fingerprint_number or 'Not Assigned'
+                employee_name = user.get_full_name()
+                check_in = data['check_in'].timestamp.strftime('%I:%M %p') if data['check_in'] else '-'
+                check_out = data['check_out'].timestamp.strftime('%I:%M %p') if data['check_out'] else '-'
+                duration = data['duration'] or '-'
+                status = data['status']
+                
+                # Build details string
+                details = []
+                if data.get('leave_type_name'):
+                    details.append(f"Leave: {data['leave_type_name']}")
+                if data.get('holiday_name'):
+                    details.append(f"Holiday: {data['holiday_name']}")
+                if data.get('permission_request'):
+                    details.append("Permission")
+                details_str = ', '.join(details) if details else '-'
+                
+                table_data.append([
+                    fingerprint_id,
+                    employee_name,
+                    check_in,
+                    check_out,
+                    duration,
+                    status,
+                    details_str
+                ])
+            
+            # Create table
+            table = Table(table_data, colWidths=[1*inch, 1.5*inch, 1*inch, 1*inch, 1*inch, 1*inch, 1.5*inch])
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ]))
+            
+            story.append(table)
+            story.append(Spacer(1, 12))
+    else:
+        # Export today's data
+        table_data = [['Fingerprint ID', 'Employee', 'Check In', 'Check Out', 'Duration', 'Status', 'Details']]
+        
+        for user_id, data in daily_attendance.items():
+            user = data['user']
+            fingerprint_id = user.fingerprint_number or 'Not Assigned'
+            employee_name = user.get_full_name()
+            check_in = data['check_in'].timestamp.strftime('%I:%M %p') if data['check_in'] else '-'
+            check_out = data['check_out'].timestamp.strftime('%I:%M %p') if data['check_out'] else '-'
+            duration = data['duration'] or '-'
+            status = data['status']
+            
+            # Build details string
+            details = []
+            if data.get('leave_type_name'):
+                details.append(f"Leave: {data['leave_type_name']}")
+            if data.get('holiday_name'):
+                details.append(f"Holiday: {data['holiday_name']}")
+            if data.get('permission_request'):
+                details.append("Permission")
+            details_str = ', '.join(details) if details else '-'
+            
+            table_data.append([
+                fingerprint_id,
+                employee_name,
+                check_in,
+                check_out,
+                duration,
+                status,
+                details_str
+            ])
+        
+        # Create table
+        table = Table(table_data, colWidths=[1*inch, 1.5*inch, 1*inch, 1*inch, 1*inch, 1*inch, 1.5*inch])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ]))
+        
+        story.append(table)
+    
+    # Build PDF
+    doc.build(story)
+    output.seek(0)
+    
+    # Create filename
+    if start_date == end_date:
+        filename = f"Daily_Attendance_{start_date.strftime('%Y%m%d')}.pdf"
+    else:
+        filename = f"Daily_Attendance_{start_date.strftime('%Y%m%d')}_to_{end_date.strftime('%Y%m%d')}.pdf"
+    
+    # Create response
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename={filename}'
+    
+    return response
 
 
 @attendance_bp.route('/sync-fingerprint')

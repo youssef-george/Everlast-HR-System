@@ -907,6 +907,34 @@ table thead th * {
                             </form>
                         </div>
                     </div>
+                    
+                    <!-- Export Buttons -->
+                    {% set show_export = False %}
+                    {% set has_date_range = request.args.get('start_date') and request.args.get('end_date') %}
+                    {% set has_employee = request.args.get('employee_id') %}
+                    {% set is_today_view = not request.args.get('start_date') or (request.args.get('start_date') == request.args.get('end_date') and request.args.get('start_date') == today.strftime('%Y-%m-%d')) %}
+                    
+                    {% if (has_date_range and has_employee) or is_today_view %}
+                        {% set show_export = True %}
+                    {% endif %}
+                    {% if show_export %}
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="d-flex gap-2 flex-wrap">
+                                <a href="{{ url_for('attendance.export_daily_attendance', start_date=request.args.get('start_date', today.strftime('%Y-%m-%d')), end_date=request.args.get('end_date', today.strftime('%Y-%m-%d')), employee_id=request.args.get('employee_id', ''), format='excel') }}" 
+                                   class="btn btn-success" 
+                                   target="_blank">
+                                    <i class="fas fa-file-excel me-2"></i>Export to Excel
+                                </a>
+                                <a href="{{ url_for('attendance.export_daily_attendance', start_date=request.args.get('start_date', today.strftime('%Y-%m-%d')), end_date=request.args.get('end_date', today.strftime('%Y-%m-%d')), employee_id=request.args.get('employee_id', ''), format='pdf') }}" 
+                                   class="btn btn-danger" 
+                                   target="_blank">
+                                    <i class="fas fa-file-pdf me-2"></i>Export to PDF
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                     <!-- Absent Days Summary -->
                     {% if user_absent_days %}
                     <div class="row mb-4">

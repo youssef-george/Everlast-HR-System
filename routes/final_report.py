@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from flask_login import login_required, current_user
 from functools import wraps
 from datetime import datetime, date, timedelta
-from models import User, DailyAttendance, LeaveRequest, PermissionRequest, AttendanceLog, PaidHoliday, Note, db
+from models import User, DailyAttendance, LeaveRequest, PermissionRequest, AttendanceLog, PaidHoliday, Note, Department, db
 from connection_manager import is_sync_running
 from sqlalchemy import or_, and_, func
 import logging
@@ -561,7 +561,10 @@ def final_report():
             ~User.first_name.like('User%'),  # Exclude generic test users
             ~User.first_name.like('NN-%'),   # Exclude numbered test users
             User.first_name != '',           # Exclude empty names
-            User.last_name != ''             # Exclude users without last names
+            User.last_name != '',            # Exclude users without last names
+            User.fingerprint_number != None, # Exclude users without fingerprint number
+            User.fingerprint_number != '',   # Exclude users with empty fingerprint number
+            User.fingerprint_number != '1'   # Exclude users with fingerprint number 1
         ).all()
     
     # Sort users by fingerprint number: Not Assigned (None/empty) first, then numeric low to high
@@ -577,10 +580,18 @@ def final_report():
     
     users = sorted(users, key=get_fingerprint_sort_key)
     
+    # Get all departments for filter dropdown
+    departments = Department.query.all()
+    
     # Get date range from query parameters (no default - user must choose)
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
+    department_id = request.args.get('department_id', type=int)
     user_ids = request.args.getlist('user_ids', type=int)
+    
+    # Filter users by department if department_id is provided
+    if department_id:
+        users = [user for user in users if user.department_id == department_id]
     
     # Only process if dates are provided
     if not start_date_str or not end_date_str:
@@ -589,7 +600,8 @@ def final_report():
                              users=users, 
                              start_date=None, 
                              end_date=None, 
-                             all_user_reports=[])
+                             all_user_reports=[],
+                             departments=departments)
     
     start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
     end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
@@ -725,7 +737,8 @@ def final_report():
                              users=users, 
                              start_date=start_date, 
                              end_date=end_date, 
-                             all_user_reports=all_user_reports)
+                             all_user_reports=all_user_reports,
+                             departments=departments)
     except Exception as e:
         logging.error(f'Error rendering final report template: {str(e)}')
         return render_template('final_report/index.html', 
@@ -733,6 +746,7 @@ def final_report():
                              start_date=start_date, 
                              end_date=end_date, 
                              all_user_reports=[],
+                             departments=departments,
                              error_message=f"Error loading report: {str(e)}")
 
 @final_report_bp.route('/final-report/export')
@@ -970,11 +984,13 @@ def detailed_attendance_report():
         team_members = get_employees_for_manager(current_user.id)
         # Include manager themselves
         users = [current_user] + list(team_members)
-        # Filter to active users only
+        # Filter to active users only with fingerprint numbers (excluding fingerprint 1)
         users = [u for u in users if u.status == 'active' and 
                  not u.first_name.startswith('User') and 
                  not u.first_name.startswith('NN-') and
-                 u.first_name != '' and u.last_name != '']
+                 u.first_name != '' and u.last_name != '' and
+                 u.fingerprint_number and u.fingerprint_number.strip() != '' and
+                 str(u.fingerprint_number).strip() != '1']
     else:
         # Admin, Director, Support, Product Owner see all active users
         users = User.query.filter(
@@ -982,7 +998,10 @@ def detailed_attendance_report():
             ~User.first_name.like('User%'),  # Exclude generic test users
             ~User.first_name.like('NN-%'),   # Exclude numbered test users
             User.first_name != '',           # Exclude empty names
-            User.last_name != ''             # Exclude users without last names
+            User.last_name != '',            # Exclude users without last names
+            User.fingerprint_number != None, # Exclude users without fingerprint number
+            User.fingerprint_number != '',   # Exclude users with empty fingerprint number
+            User.fingerprint_number != '1'   # Exclude users with fingerprint number 1
         ).all()
     
     # Sort users by fingerprint number: Not Assigned (None/empty) first, then numeric low to high
@@ -998,10 +1017,18 @@ def detailed_attendance_report():
     
     users = sorted(users, key=get_fingerprint_sort_key)
     
+    # Get all departments for filter dropdown
+    departments = Department.query.all()
+    
     # Get date range from query parameters (no default - user must choose)
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
+    department_id = request.args.get('department_id', type=int)
     user_ids = request.args.getlist('user_ids', type=int)
+    
+    # Filter users by department if department_id is provided
+    if department_id:
+        users = [user for user in users if user.department_id == department_id]
     
     # Only process if dates are provided
     if not start_date_str or not end_date_str:
@@ -1010,7 +1037,8 @@ def detailed_attendance_report():
                              users=users, 
                              start_date=None, 
                              end_date=None, 
-                             all_user_reports=[])
+                             all_user_reports=[],
+                             departments=departments)
     
     start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
     end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
@@ -1054,7 +1082,8 @@ def detailed_attendance_report():
                              users=users, 
                              start_date=start_date, 
                              end_date=end_date, 
-                             all_user_reports=all_user_reports)
+                             all_user_reports=all_user_reports,
+                             departments=departments)
     except Exception as e:
         logging.error(f'Error rendering detailed attendance report template: {str(e)}')
         return render_template('final_report/detailed_report.html', 
@@ -1062,6 +1091,7 @@ def detailed_attendance_report():
                              start_date=start_date, 
                              end_date=end_date, 
                              all_user_reports=[],
+                             departments=departments,
                              error_message=f"Error loading report: {str(e)}")
 
 @final_report_bp.route('/detailed-attendance-report/employee-logs/<int:user_id>', methods=['GET'])
@@ -1560,4 +1590,78 @@ def export_detailed_attendance_report():
         download_name=filename,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
+@final_report_bp.route('/api/employees-by-department', methods=['GET'])
+@login_required
+@role_required(['admin', 'product_owner', 'manager', 'director', 'support'])
+def get_employees_by_department():
+    """API endpoint to get employees filtered by department"""
+    try:
+        department_id = request.args.get('department_id', type=int)
+        
+        # Get users based on role (same logic as final_report function)
+        if current_user.role == 'employee':
+            users = [current_user] if current_user.status == 'active' else []
+        elif current_user.role == 'manager':
+            from helpers import get_employees_for_manager
+            team_members = get_employees_for_manager(current_user.id)
+            users = [current_user] + list(team_members)
+            users = [u for u in users if u.status == 'active' and 
+                     not u.first_name.startswith('User') and 
+                     not u.first_name.startswith('NN-') and
+                     u.first_name != '' and u.last_name != '' and
+                     u.fingerprint_number and u.fingerprint_number.strip() != '']
+        else:
+            users = User.query.filter(
+                User.status == 'active',
+                ~User.first_name.like('User%'),
+                ~User.first_name.like('NN-%'),
+                User.first_name != '',
+                User.last_name != '',
+                User.fingerprint_number != None,
+                User.fingerprint_number != '',
+                User.fingerprint_number != '1'
+            ).all()
+        
+        # Filter by department if provided
+        if department_id:
+            users = [user for user in users if user.department_id == department_id]
+        
+        # Sort users by fingerprint number
+        def get_fingerprint_sort_key(user):
+            fp = user.fingerprint_number
+            if not fp or fp.strip() == '':
+                return (0, 0)
+            try:
+                fp_int = int(fp.strip())
+                return (1, fp_int)
+            except (ValueError, TypeError):
+                return (2, 0)
+        
+        users = sorted(users, key=get_fingerprint_sort_key)
+        
+        # Filter out users without fingerprint numbers and fingerprint number 1 (additional safety check)
+        users = [u for u in users if u.fingerprint_number and u.fingerprint_number.strip() != '' and str(u.fingerprint_number).strip() != '1']
+        
+        # Format users for JSON response
+        employees_data = []
+        for user in users:
+            employees_data.append({
+                'id': user.id,
+                'full_name': user.get_full_name(),
+                'fingerprint_number': user.fingerprint_number or 'Not Assigned',
+                'department_name': user.department.department_name if user.department else '',
+                'department_id': user.department_id
+            })
+        
+        return jsonify({
+            'success': True,
+            'employees': employees_data
+        })
+    except Exception as e:
+        logging.error(f'Error fetching employees by department: {str(e)}')
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
