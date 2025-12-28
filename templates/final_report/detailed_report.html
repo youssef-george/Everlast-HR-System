@@ -2531,6 +2531,7 @@ function setupDepartmentFilter() {
                     // Reattach checkbox event listeners
                     document.querySelectorAll('.employee-checkbox').forEach(checkbox => {
                         checkbox.addEventListener('change', function() {
+                            updateEmployeeCountDetailed();
                             updateSelectAllStateDetailed();
                         });
                     });
@@ -2540,6 +2541,9 @@ function setupDepartmentFilter() {
                         selectAllCheckbox.checked = false;
                         selectAllCheckbox.indeterminate = false;
                     }
+                    
+                    // Update employee count after loading
+                    updateEmployeeCountDetailed();
                     
                     // Clear search input and reapply if there's a search term
                     if (employeeSearch && employeeSearch.value) {
@@ -2638,13 +2642,23 @@ document.addEventListener('DOMContentLoaded', function() {
             // Update visual state
             this.indeterminate = false;
             
+            // Update employee count after changing checkboxes
+            updateEmployeeCountDetailed();
+            
             console.log('✅ Updated', visibleCheckboxes.length, 'visible employee checkboxes to:', this.checked);
         });
         
         // Individual checkbox change handlers for synchronization
         employeeCheckboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
+            // Remove any existing listeners to avoid duplicates
+            const newCheckbox = checkbox.cloneNode(true);
+            checkbox.parentNode.replaceChild(newCheckbox, checkbox);
+            
+            newCheckbox.addEventListener('change', function() {
                 console.log('📋 Individual checkbox changed for:', this.value);
+                
+                // Update employee count first
+                updateEmployeeCountDetailed();
                 
                 // Update Select All checkbox state based on visible checkboxes
                 updateSelectAllStateDetailed();
@@ -2694,6 +2708,9 @@ document.addEventListener('DOMContentLoaded', function() {
             selectAllCheckbox.indeterminate = false;
             console.log('❌ Initial state: No employees selected');
         }
+        
+        // Update employee count after initial state check
+        updateEmployeeCountDetailed();
         
         console.log('✅ Select All synchronization initialized successfully');
     } else {

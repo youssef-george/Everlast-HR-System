@@ -147,6 +147,35 @@ def cleanup_orphaned_paid_holiday_records():
         except Exception:
             pass
 
+def deduplicate_attendance_logs(logs):
+    """Remove duplicate attendance logs (same user_id and timestamp within 1 second)
+    
+    Args:
+        logs: List of AttendanceLog objects
+        
+    Returns:
+        List of deduplicated AttendanceLog objects, sorted by timestamp
+    """
+    seen_logs = {}  # Key: (user_id, timestamp_rounded_to_second), Value: log
+    
+    for log in logs:
+        # Round timestamp to nearest second to catch duplicates within 1 second
+        timestamp_key = (log.user_id, log.timestamp.replace(microsecond=0))
+        
+        if timestamp_key not in seen_logs:
+            # First occurrence of this timestamp - keep it
+            seen_logs[timestamp_key] = log
+        else:
+            # Duplicate found - keep the one with the lower ID (earlier created)
+            existing_log = seen_logs[timestamp_key]
+            if hasattr(log, 'id') and hasattr(existing_log, 'id'):
+                if log.id < existing_log.id:
+                    # Replace with the earlier log
+                    seen_logs[timestamp_key] = log
+    
+    # Convert to list of deduplicated logs and sort by timestamp
+    return sorted(seen_logs.values(), key=lambda x: x.timestamp)
+
 def determine_attendance_type(timestamp):
     """Simple fallback for legacy code - determines type based on time of day"""
     hour = timestamp.hour
@@ -206,8 +235,12 @@ def process_attendance_logs(logs):
     """Process attendance logs to group by user and determine check-in/check-out using dynamic logic"""
     user_logs = {}
     
-    # Group logs by user
-    for log in logs:
+    # Remove duplicate logs (same user_id and timestamp within 1 second)
+    # This prevents showing the same log multiple times
+    deduplicated_logs = deduplicate_attendance_logs(logs)
+    
+    # Group deduplicated logs by user
+    for log in deduplicated_logs:
         if log.user_id not in user_logs:
             user_logs[log.user_id] = {
                 'user': log.user,
@@ -296,10 +329,13 @@ def process_daily_attendance(user_id, attendance_date):
     # Get all logs for this user on this date, ordered by timestamp
     start_of_day = datetime.combine(attendance_date, datetime.min.time())
     end_of_day = datetime.combine(attendance_date, datetime.max.time())
-    daily_logs = AttendanceLog.query.filter(
+    daily_logs_raw = AttendanceLog.query.filter(
         AttendanceLog.user_id == user_id,
         AttendanceLog.timestamp.between(start_of_day, end_of_day)
     ).order_by(AttendanceLog.timestamp).all()
+    
+    # Remove duplicate logs before processing
+    daily_logs = deduplicate_attendance_logs(daily_logs_raw)
 
     user = User.query.get(user_id)
     if user and user.joining_date and attendance_date < user.joining_date:

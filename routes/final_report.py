@@ -1416,7 +1416,7 @@ def get_employee_logs(user_id):
 @login_required
 @role_required(['admin', 'director', 'support', 'product_owner', 'manager'])
 def export_detailed_attendance_report():
-    """Export detailed attendance report to Excel"""
+    """Export detailed attendance report to Excel with summary and daily attendance details"""
     
     # Get the same parameters as the detailed attendance report
     start_date_str = request.args.get('start_date')
@@ -1488,8 +1488,13 @@ def export_detailed_attendance_report():
     
     # Create Excel workbook
     wb = Workbook()
-    ws = wb.active
-    ws.title = "Detailed Attendance Report"
+    
+    # Remove default sheet and create our own
+    if 'Sheet' in wb.sheetnames:
+        wb.remove(wb['Sheet'])
+    
+    # ===== SHEET 1: SUMMARY REPORT =====
+    ws_summary = wb.create_sheet("Summary", 0)
     
     # Define styles
     header_font = Font(bold=True, color="FFFFFF")
@@ -1502,7 +1507,7 @@ def export_detailed_attendance_report():
         bottom=Side(style='thin')
     )
     
-    # Headers (removed "Attendance %" column)
+    # Headers for summary
     headers = [
         "Name", "Fingerprint Number", "Department", "Total Days", 
         "Total Working Days", "Day Off", "Present Days", "Absent Days", 
@@ -1512,7 +1517,7 @@ def export_detailed_attendance_report():
     
     # Write headers
     for col, header in enumerate(headers, 1):
-        cell = ws.cell(row=1, column=col, value=header)
+        cell = ws_summary.cell(row=1, column=col, value=header)
         cell.font = header_font
         cell.fill = header_fill
         cell.alignment = center_alignment
@@ -1523,46 +1528,46 @@ def export_detailed_attendance_report():
         user = user_report.user
         metrics = user_report.summary_metrics
         
-        ws.cell(row=row, column=1, value=user.get_full_name()).border = border
-        ws.cell(row=row, column=2, value=user.fingerprint_number or 'N/A').border = border
-        ws.cell(row=row, column=3, value=user.department.department_name if user.department else 'No Department').border = border
-        ws.cell(row=row, column=4, value=metrics.total_days).border = border
-        ws.cell(row=row, column=5, value=metrics.total_working_days).border = border
-        ws.cell(row=row, column=6, value=metrics.day_off_days).border = border
-        ws.cell(row=row, column=7, value=metrics.present_days).border = border
-        ws.cell(row=row, column=8, value=metrics.absent_days).border = border
-        ws.cell(row=row, column=9, value=metrics.annual_leave_days).border = border
-        ws.cell(row=row, column=10, value=metrics.unpaid_leave_days).border = border
-        ws.cell(row=row, column=11, value=metrics.paid_leave_days).border = border
-        ws.cell(row=row, column=12, value=metrics.permission_hours).border = border
-        ws.cell(row=row, column=13, value=metrics.incomplete_days).border = border
+        ws_summary.cell(row=row, column=1, value=user.get_full_name()).border = border
+        ws_summary.cell(row=row, column=2, value=user.fingerprint_number or 'N/A').border = border
+        ws_summary.cell(row=row, column=3, value=user.department.department_name if user.department else 'No Department').border = border
+        ws_summary.cell(row=row, column=4, value=metrics.total_days).border = border
+        ws_summary.cell(row=row, column=5, value=metrics.total_working_days).border = border
+        ws_summary.cell(row=row, column=6, value=metrics.day_off_days).border = border
+        ws_summary.cell(row=row, column=7, value=metrics.present_days).border = border
+        ws_summary.cell(row=row, column=8, value=metrics.absent_days).border = border
+        ws_summary.cell(row=row, column=9, value=metrics.annual_leave_days).border = border
+        ws_summary.cell(row=row, column=10, value=metrics.unpaid_leave_days).border = border
+        ws_summary.cell(row=row, column=11, value=metrics.paid_leave_days).border = border
+        ws_summary.cell(row=row, column=12, value=metrics.permission_hours).border = border
+        ws_summary.cell(row=row, column=13, value=metrics.incomplete_days).border = border
         # Format extra time as hours and minutes for Excel
         extra_time_formatted = format_hours_minutes(metrics.extra_time_hours)
-        ws.cell(row=row, column=14, value=extra_time_formatted).border = border
+        ws_summary.cell(row=row, column=14, value=extra_time_formatted).border = border
     
     # Add summary row
     if all_user_reports:
         summary_row = len(all_user_reports) + 2
-        ws.cell(row=summary_row, column=1, value="TOTAL").font = Font(bold=True)
-        ws.cell(row=summary_row, column=2, value="").border = border
-        ws.cell(row=summary_row, column=3, value="").border = border
-        ws.cell(row=summary_row, column=4, value=sum(r.summary_metrics.total_days for r in all_user_reports)).border = border
-        ws.cell(row=summary_row, column=5, value=sum(r.summary_metrics.total_working_days for r in all_user_reports)).border = border
-        ws.cell(row=summary_row, column=6, value=sum(r.summary_metrics.day_off_days for r in all_user_reports)).border = border
-        ws.cell(row=summary_row, column=7, value=sum(r.summary_metrics.present_days for r in all_user_reports)).border = border
-        ws.cell(row=summary_row, column=8, value=sum(r.summary_metrics.absent_days for r in all_user_reports)).border = border
-        ws.cell(row=summary_row, column=9, value=sum(r.summary_metrics.annual_leave_days for r in all_user_reports)).border = border
-        ws.cell(row=summary_row, column=10, value=sum(r.summary_metrics.unpaid_leave_days for r in all_user_reports)).border = border
-        ws.cell(row=summary_row, column=11, value=sum(r.summary_metrics.paid_leave_days for r in all_user_reports)).border = border
-        ws.cell(row=summary_row, column=12, value=sum(r.summary_metrics.permission_hours for r in all_user_reports)).border = border
-        ws.cell(row=summary_row, column=13, value=sum(r.summary_metrics.incomplete_days for r in all_user_reports)).border = border
+        ws_summary.cell(row=summary_row, column=1, value="TOTAL").font = Font(bold=True)
+        ws_summary.cell(row=summary_row, column=2, value="").border = border
+        ws_summary.cell(row=summary_row, column=3, value="").border = border
+        ws_summary.cell(row=summary_row, column=4, value=sum(r.summary_metrics.total_days for r in all_user_reports)).border = border
+        ws_summary.cell(row=summary_row, column=5, value=sum(r.summary_metrics.total_working_days for r in all_user_reports)).border = border
+        ws_summary.cell(row=summary_row, column=6, value=sum(r.summary_metrics.day_off_days for r in all_user_reports)).border = border
+        ws_summary.cell(row=summary_row, column=7, value=sum(r.summary_metrics.present_days for r in all_user_reports)).border = border
+        ws_summary.cell(row=summary_row, column=8, value=sum(r.summary_metrics.absent_days for r in all_user_reports)).border = border
+        ws_summary.cell(row=summary_row, column=9, value=sum(r.summary_metrics.annual_leave_days for r in all_user_reports)).border = border
+        ws_summary.cell(row=summary_row, column=10, value=sum(r.summary_metrics.unpaid_leave_days for r in all_user_reports)).border = border
+        ws_summary.cell(row=summary_row, column=11, value=sum(r.summary_metrics.paid_leave_days for r in all_user_reports)).border = border
+        ws_summary.cell(row=summary_row, column=12, value=sum(r.summary_metrics.permission_hours for r in all_user_reports)).border = border
+        ws_summary.cell(row=summary_row, column=13, value=sum(r.summary_metrics.incomplete_days for r in all_user_reports)).border = border
         # Format total extra time as hours and minutes
         total_extra_time = sum(r.summary_metrics.extra_time_hours for r in all_user_reports)
         total_extra_time_formatted = format_hours_minutes(total_extra_time)
-        ws.cell(row=summary_row, column=14, value=total_extra_time_formatted).border = border
+        ws_summary.cell(row=summary_row, column=14, value=total_extra_time_formatted).border = border
     
-    # Auto-adjust column widths
-    for column in ws.columns:
+    # Auto-adjust column widths for summary
+    for column in ws_summary.columns:
         max_length = 0
         column_letter = get_column_letter(column[0].column)
         for cell in column:
@@ -1572,7 +1577,250 @@ def export_detailed_attendance_report():
             except:
                 pass
         adjusted_width = min(max_length + 2, 20)
-        ws.column_dimensions[column_letter].width = adjusted_width
+        ws_summary.column_dimensions[column_letter].width = adjusted_width
+    
+    # ===== CREATE SEPARATE SHEET FOR EACH DAY =====
+    # Headers for detailed attendance (without Date column since each sheet is for one day)
+    detail_headers = [
+        "Employee Name", "Fingerprint", "Department", "Day of Week",
+        "Check In", "Check Out", "Hours Worked", "Status", "Extra Time"
+    ]
+    
+    # Pre-fetch all data for all users to avoid repeated queries
+    user_data_cache = {}
+    for user_report in all_user_reports:
+        user = user_report.user
+        
+        # Get raw attendance logs for this user
+        attendance_logs = AttendanceLog.query.filter(
+            AttendanceLog.user_id == user.id,
+            func.date(AttendanceLog.timestamp) >= start_date,
+            func.date(AttendanceLog.timestamp) <= end_date
+        ).order_by(AttendanceLog.timestamp).all()
+        
+        # Group logs by date
+        logs_by_date = {}
+        for log in attendance_logs:
+            log_date = log.timestamp.date()
+            if log_date not in logs_by_date:
+                logs_by_date[log_date] = []
+            logs_by_date[log_date].append(log)
+        
+        # Get leave requests for this user in the date range
+        leave_requests = LeaveRequest.query.filter(
+            LeaveRequest.user_id == user.id,
+            LeaveRequest.start_date <= end_date,
+            LeaveRequest.end_date >= start_date,
+            LeaveRequest.status == 'approved'
+        ).all()
+        
+        # Get permission requests for this user in the date range
+        start_datetime = datetime.combine(start_date, datetime.min.time())
+        end_datetime = datetime.combine(end_date, datetime.max.time())
+        permission_requests = PermissionRequest.query.filter(
+            PermissionRequest.user_id == user.id,
+            PermissionRequest.start_time <= end_datetime,
+            PermissionRequest.end_time >= start_datetime,
+            PermissionRequest.status == 'approved'
+        ).all()
+        
+        user_data_cache[user.id] = {
+            'user': user,
+            'user_report': user_report,
+            'logs_by_date': logs_by_date,
+            'leave_requests': leave_requests,
+            'permission_requests': permission_requests
+        }
+    
+    # Create a separate sheet for each day
+    current_date = start_date
+    sheet_index = 1
+    while current_date <= end_date:
+        # Create sheet name (limit to 31 characters for Excel)
+        sheet_name = current_date.strftime('%Y-%m-%d')
+        if len(sheet_name) > 31:
+            sheet_name = current_date.strftime('%m-%d')
+        
+        # Create new sheet for this day
+        ws_day = wb.create_sheet(sheet_name, sheet_index)
+        
+        # Add date as title in row 1
+        title_cell = ws_day.cell(row=1, column=1, value=f"Date: {current_date.strftime('%B %d, %Y')} ({current_date.strftime('%A')})")
+        title_cell.font = Font(bold=True, size=12)
+        ws_day.merge_cells(f'A1:I1')
+        title_cell.alignment = Alignment(horizontal="center", vertical="center")
+        
+        # Write headers for this day's sheet in row 2
+        for col, header in enumerate(detail_headers, 1):
+            cell = ws_day.cell(row=2, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = center_alignment
+            cell.border = border
+        
+        # Process all users for this specific day
+        current_row = 3
+        for user_id, user_data in user_data_cache.items():
+            user = user_data['user']
+            user_report = user_data['user_report']
+            logs_by_date = user_data['logs_by_date']
+            leave_requests = user_data['leave_requests']
+            permission_requests = user_data['permission_requests']
+            # Get attendance record for this date
+            attendance_record = next(
+                (record for record in user_report.attendance_records if record.date == current_date), 
+                None
+            )
+            
+            # Get logs for this date
+            daily_logs = logs_by_date.get(current_date, [])
+            
+            # Find leave request for this date
+            leave_request = next(
+                (lr for lr in leave_requests 
+                 if lr.start_date <= current_date <= lr.end_date), 
+                None
+            )
+            
+            # Find permission request for this date
+            permission_request = next(
+                (pr for pr in permission_requests
+                 if pr.start_time and pr.end_time and \
+                    pr.start_time.date() <= current_date <= pr.end_time.date()),
+                None
+            )
+            
+            # Initialize variables
+            check_in = None
+            check_out = None
+            hours_worked = 0.0
+            extra_time = 0.0
+            status = 'Absent'
+            
+            # Check if before joining date
+            if user.joining_date and current_date < user.joining_date:
+                status = 'Not Yet Joined'
+            elif current_date > date.today():
+                status = 'Future Date'
+            else:
+                # Check for paid holidays first
+                paid_holiday = PaidHoliday.query.filter(
+                    or_(
+                        and_(PaidHoliday.holiday_type == 'day', PaidHoliday.start_date == current_date),
+                        and_(PaidHoliday.holiday_type == 'range', 
+                             PaidHoliday.start_date <= current_date, 
+                             PaidHoliday.end_date >= current_date)
+                    )
+                ).first()
+                
+                if paid_holiday:
+                    if attendance_record and (attendance_record.first_check_in or attendance_record.last_check_out):
+                        status = f"Present - {paid_holiday.description}"
+                        check_in = attendance_record.first_check_in
+                        check_out = attendance_record.last_check_out
+                        if len(daily_logs) >= 2:
+                            sorted_logs = sorted(daily_logs, key=lambda x: x.timestamp)
+                            check_out = sorted_logs[-1].timestamp
+                    else:
+                        status = paid_holiday.description
+                elif attendance_record and (attendance_record.first_check_in or attendance_record.last_check_out):
+                    # User has attendance logs
+                    check_in = attendance_record.first_check_in
+                    check_out = attendance_record.last_check_out
+                    
+                    # Use the last log as check-out when there are 2+ logs
+                    if len(daily_logs) >= 2:
+                        sorted_logs = sorted(daily_logs, key=lambda x: x.timestamp)
+                        check_out = sorted_logs[-1].timestamp
+                    
+                    hours_worked = getattr(attendance_record, 'hours_worked', 0.0)
+                    extra_time = getattr(attendance_record, 'extra_time', 0.0)
+                    
+                    # Recalculate if not set
+                    if hours_worked == 0.0 and check_in and check_out:
+                        time_diff = check_out - check_in
+                        hours_worked = time_diff.total_seconds() / 3600
+                        extra_time = hours_worked - 9
+                    
+                    # Determine status based on day and leave/permission
+                    if current_date.weekday() in [4, 5]:  # Friday/Saturday
+                        status = 'Day Off / Present'
+                    elif leave_request:
+                        leave_type_name = leave_request.leave_type.name if leave_request.leave_type else 'Leave Request'
+                        status = f"Present / {leave_type_name}"
+                    elif permission_request:
+                        status = 'Present / Permission'
+                    else:
+                        status = attendance_record.status if attendance_record.status else 'Present'
+                elif daily_logs and len(daily_logs) > 0:
+                    # Has logs but no attendance record - calculate from logs
+                    sorted_logs = sorted(daily_logs, key=lambda x: x.timestamp)
+                    check_in = sorted_logs[0].timestamp
+                    check_out = sorted_logs[-1].timestamp
+                    time_diff = check_out - check_in
+                    hours_worked = time_diff.total_seconds() / 3600
+                    extra_time = hours_worked - 9
+                    status = 'Present (Logs Found)'
+                else:
+                    # No attendance record or logs
+                    # Check for day off: Friday (4) and Saturday (5) only
+                    if current_date.weekday() in [4, 5]:  # Friday/Saturday only
+                        status = 'Day Off'
+                    elif leave_request:
+                        # Show leave type instead of Absent for approved leave days
+                        if leave_request.leave_type:
+                            status = leave_request.leave_type.name
+                        else:
+                            status = 'Annual Leave'  # Default if no type specified
+                    elif permission_request:
+                        status = 'Permission'
+                    else:
+                        # Sunday (6) and Monday-Thursday (0-3) are working days and can be absent
+                        # Only Friday (4) and Saturday (5) are day off
+                        if current_date.weekday() in [0, 1, 2, 3, 6]:  # Monday-Thursday and Sunday
+                            status = 'Absent'
+                        else:
+                            status = 'Day Off'  # Friday/Saturday fallback
+            
+            # Write row data for this user on this day
+            ws_day.cell(row=current_row, column=1, value=user.get_full_name()).border = border
+            ws_day.cell(row=current_row, column=2, value=user.fingerprint_number or 'N/A').border = border
+            ws_day.cell(row=current_row, column=3, value=user.department.department_name if user.department else 'No Department').border = border
+            ws_day.cell(row=current_row, column=4, value=current_date.strftime('%A')).border = border
+            # Format times in 12-hour format with AM/PM
+            check_in_str = check_in.strftime('%I:%M:%S %p') if check_in else '-'
+            check_out_str = check_out.strftime('%I:%M:%S %p') if check_out else '-'
+            ws_day.cell(row=current_row, column=5, value=check_in_str).border = border
+            ws_day.cell(row=current_row, column=6, value=check_out_str).border = border
+            
+            # Format hours worked in "Xh Ym" format
+            if hours_worked > 0:
+                hours_worked_str = format_hours_minutes(hours_worked)
+            else:
+                hours_worked_str = '-'
+            
+            ws_day.cell(row=current_row, column=7, value=hours_worked_str).border = border
+            ws_day.cell(row=current_row, column=8, value=status).border = border
+            ws_day.cell(row=current_row, column=9, value=format_hours_minutes(extra_time) if extra_time != 0 else '-').border = border
+            
+            current_row += 1
+        
+        # Auto-adjust column widths for this day's sheet
+        for column in ws_day.columns:
+            max_length = 0
+            column_letter = get_column_letter(column[0].column)
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 25)
+            ws_day.column_dimensions[column_letter].width = adjusted_width
+        
+        # Move to next day
+        sheet_index += 1
+        current_date += timedelta(days=1)
     
     # Save to BytesIO
     output = io.BytesIO()
@@ -1664,6 +1912,52 @@ def export_detailed_attendance_report_pdf():
         user_report = calculate_unified_report_data(user, start_date, end_date)
         all_user_reports.append(user_report)
     
+    # Pre-fetch all data for all users (same as Excel export)
+    user_data_cache = {}
+    for user_report in all_user_reports:
+        user = user_report.user
+        
+        # Get raw attendance logs for this user
+        attendance_logs = AttendanceLog.query.filter(
+            AttendanceLog.user_id == user.id,
+            func.date(AttendanceLog.timestamp) >= start_date,
+            func.date(AttendanceLog.timestamp) <= end_date
+        ).order_by(AttendanceLog.timestamp).all()
+        
+        # Group logs by date
+        logs_by_date = {}
+        for log in attendance_logs:
+            log_date = log.timestamp.date()
+            if log_date not in logs_by_date:
+                logs_by_date[log_date] = []
+            logs_by_date[log_date].append(log)
+        
+        # Get leave requests for this user in the date range
+        leave_requests = LeaveRequest.query.filter(
+            LeaveRequest.user_id == user.id,
+            LeaveRequest.start_date <= end_date,
+            LeaveRequest.end_date >= start_date,
+            LeaveRequest.status == 'approved'
+        ).all()
+        
+        # Get permission requests for this user in the date range
+        start_datetime = datetime.combine(start_date, datetime.min.time())
+        end_datetime = datetime.combine(end_date, datetime.max.time())
+        permission_requests = PermissionRequest.query.filter(
+            PermissionRequest.user_id == user.id,
+            PermissionRequest.start_time <= end_datetime,
+            PermissionRequest.end_time >= start_datetime,
+            PermissionRequest.status == 'approved'
+        ).all()
+        
+        user_data_cache[user.id] = {
+            'user': user,
+            'user_report': user_report,
+            'logs_by_date': logs_by_date,
+            'leave_requests': leave_requests,
+            'permission_requests': permission_requests
+        }
+    
     # Create PDF in memory
     output = io.BytesIO()
     doc = SimpleDocTemplate(output, pagesize=A4, topMargin=0.5*inch, bottomMargin=0.5*inch)
@@ -1679,30 +1973,66 @@ def export_detailed_attendance_report_pdf():
         textColor=colors.HexColor('#2c3e50')
     )
     
+    day_title_style = ParagraphStyle(
+        'DayTitle',
+        parent=styles['Heading2'],
+        fontSize=16,
+        spaceAfter=15,
+        alignment=1,  # Center
+        textColor=colors.HexColor('#366092')
+    )
+    
     # Build PDF content
     story = []
     
-    # Title
+    # ===== SUMMARY PAGE =====
     title = f"Detailed Attendance Report"
     subtitle = f"Period: {start_date.strftime('%B %d, %Y')} to {end_date.strftime('%B %d, %Y')}"
     story.append(Paragraph(title, title_style))
     story.append(Paragraph(subtitle, styles['Normal']))
     story.append(Spacer(1, 20))
     
-    # Create summary table
-    table_data = [['Name', 'Fingerprint', 'Department', 'Total Days', 'Working Days', 
-                   'Day Off', 'Present', 'Absent', 'Annual Leave', 'Paid Leave', 
-                   'Permission Hrs', 'Incomplete', 'Extra Time']]
+    # Create summary table with proper column widths
+    # Calculate column widths to fit A4 page (8.27 inches width - margins)
+    available_width = 7.27 * inch  # A4 width (8.27") minus margins (1")
+    col_widths = [
+        1.0 * inch,   # Name
+        0.5 * inch,   # Fingerprint
+        0.8 * inch,   # Department
+        0.5 * inch,   # Total Days
+        0.6 * inch,   # Working Days
+        0.5 * inch,   # Day Off
+        0.5 * inch,   # Present
+        0.5 * inch,   # Absent
+        0.6 * inch,   # Annual Leave
+        0.5 * inch,   # Paid Leave
+        0.6 * inch,   # Permission Hrs
+        0.5 * inch,   # Incomplete
+        0.67 * inch   # Extra Time
+    ]
+    
+    table_data = [['Name', 'FP', 'Dept', 'Total', 'Working', 
+                   'Day Off', 'Present', 'Absent', 'Annual', 'Paid', 
+                   'Perm Hrs', 'Incomp', 'Extra']]
     
     for user_report in all_user_reports:
         user = user_report.user
         metrics = user_report.summary_metrics
         extra_time_formatted = format_hours_minutes(metrics.extra_time_hours)
         
+        # Truncate long names and department names
+        name = user.get_full_name()
+        if len(name) > 15:
+            name = name[:12] + '...'
+        
+        dept = user.department.department_name if user.department else 'No Dept'
+        if len(dept) > 12:
+            dept = dept[:9] + '...'
+        
         table_data.append([
-            user.get_full_name(),
+            name,
             str(user.fingerprint_number or 'N/A'),
-            user.department.department_name if user.department else 'No Department',
+            dept,
             str(metrics.total_days),
             str(metrics.total_working_days),
             str(metrics.day_off_days),
@@ -1715,20 +2045,22 @@ def export_detailed_attendance_report_pdf():
             extra_time_formatted
         ])
     
-    # Create table
-    table = Table(table_data, repeatRows=1)
+    # Create table with column widths
+    table = Table(table_data, colWidths=col_widths, repeatRows=1)
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 9),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('TOPPADDING', (0, 0), (-1, 0), 12),
+        ('FONTSIZE', (0, 0), (-1, 0), 7),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('TOPPADDING', (0, 0), (-1, 0), 8),
         ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
         ('GRID', (0, 0), (-1, -1), 1, colors.grey),
-        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('FONTSIZE', (0, 1), (-1, -1), 7),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+        ('WORDWRAP', (0, 0), (-1, -1), True),
     ]))
     
     story.append(table)
@@ -1749,18 +2081,206 @@ def export_detailed_attendance_report_pdf():
                          format_hours_minutes(sum(r.summary_metrics.extra_time_hours for r in all_user_reports))
                         ]]
         
-        summary_table = Table(summary_data)
+        summary_table = Table(summary_data, colWidths=col_widths)
         summary_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#764ba2')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 9),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('TOPPADDING', (0, 0), (-1, 0), 12),
+            ('FONTSIZE', (0, 0), (-1, 0), 7),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+            ('TOPPADDING', (0, 0), (-1, 0), 8),
             ('GRID', (0, 0), (-1, -1), 1, colors.grey),
         ]))
         story.append(summary_table)
+    
+    # ===== SEPARATE PAGE FOR EACH DAY =====
+    current_date = start_date
+    while current_date <= end_date:
+        # Add page break before each day (except first day after summary)
+        if current_date > start_date:
+            story.append(PageBreak())
+        
+        # Day title
+        day_title = f"{current_date.strftime('%B %d, %Y')} ({current_date.strftime('%A')})"
+        story.append(Paragraph(day_title, day_title_style))
+        story.append(Spacer(1, 10))
+        
+        # Create table for this day
+        day_table_data = [['Employee Name', 'Fingerprint', 'Department', 'Day of Week',
+                          'Check In', 'Check Out', 'Hours Worked', 'Status', 'Extra Time']]
+        
+        # Process all users for this specific day
+        for user_id, user_data in user_data_cache.items():
+            user = user_data['user']
+            user_report = user_data['user_report']
+            logs_by_date = user_data['logs_by_date']
+            leave_requests = user_data['leave_requests']
+            permission_requests = user_data['permission_requests']
+            
+            # Get attendance record for this date
+            attendance_record = next(
+                (record for record in user_report.attendance_records if record.date == current_date), 
+                None
+            )
+            
+            # Get logs for this date
+            daily_logs = logs_by_date.get(current_date, [])
+            
+            # Find leave request for this date
+            leave_request = next(
+                (lr for lr in leave_requests 
+                 if lr.start_date <= current_date <= lr.end_date), 
+                None
+            )
+            
+            # Find permission request for this date
+            permission_request = next(
+                (pr for pr in permission_requests
+                 if pr.start_time and pr.end_time and \
+                    pr.start_time.date() <= current_date <= pr.end_time.date()),
+                None
+            )
+            
+            # Initialize variables
+            check_in = None
+            check_out = None
+            hours_worked = 0.0
+            extra_time = 0.0
+            status = 'Absent'
+            
+            # Check if before joining date
+            if user.joining_date and current_date < user.joining_date:
+                status = 'Not Yet Joined'
+            elif current_date > date.today():
+                status = 'Future Date'
+            else:
+                # Check for paid holidays first
+                paid_holiday = PaidHoliday.query.filter(
+                    or_(
+                        and_(PaidHoliday.holiday_type == 'day', PaidHoliday.start_date == current_date),
+                        and_(PaidHoliday.holiday_type == 'range', 
+                             PaidHoliday.start_date <= current_date, 
+                             PaidHoliday.end_date >= current_date)
+                    )
+                ).first()
+                
+                if paid_holiday:
+                    if attendance_record and (attendance_record.first_check_in or attendance_record.last_check_out):
+                        status = f"Present - {paid_holiday.description}"
+                        check_in = attendance_record.first_check_in
+                        check_out = attendance_record.last_check_out
+                        if len(daily_logs) >= 2:
+                            sorted_logs = sorted(daily_logs, key=lambda x: x.timestamp)
+                            check_out = sorted_logs[-1].timestamp
+                    else:
+                        status = paid_holiday.description
+                elif attendance_record and (attendance_record.first_check_in or attendance_record.last_check_out):
+                    # User has attendance logs
+                    check_in = attendance_record.first_check_in
+                    check_out = attendance_record.last_check_out
+                    
+                    # Use the last log as check-out when there are 2+ logs
+                    if len(daily_logs) >= 2:
+                        sorted_logs = sorted(daily_logs, key=lambda x: x.timestamp)
+                        check_out = sorted_logs[-1].timestamp
+                    
+                    hours_worked = getattr(attendance_record, 'hours_worked', 0.0)
+                    extra_time = getattr(attendance_record, 'extra_time', 0.0)
+                    
+                    # Recalculate if not set
+                    if hours_worked == 0.0 and check_in and check_out:
+                        time_diff = check_out - check_in
+                        hours_worked = time_diff.total_seconds() / 3600
+                        extra_time = hours_worked - 9
+                    
+                    # Determine status based on day and leave/permission
+                    if current_date.weekday() in [4, 5]:  # Friday/Saturday
+                        status = 'Day Off / Present'
+                    elif leave_request:
+                        leave_type_name = leave_request.leave_type.name if leave_request.leave_type else 'Leave Request'
+                        status = f"Present / {leave_type_name}"
+                    elif permission_request:
+                        status = 'Present / Permission'
+                    else:
+                        status = attendance_record.status if attendance_record.status else 'Present'
+                elif daily_logs and len(daily_logs) > 0:
+                    # Has logs but no attendance record - calculate from logs
+                    sorted_logs = sorted(daily_logs, key=lambda x: x.timestamp)
+                    check_in = sorted_logs[0].timestamp
+                    check_out = sorted_logs[-1].timestamp
+                    time_diff = check_out - check_in
+                    hours_worked = time_diff.total_seconds() / 3600
+                    extra_time = hours_worked - 9
+                    status = 'Present (Logs Found)'
+                else:
+                    # No attendance record or logs
+                    # Check for day off: Friday (4) and Saturday (5) only
+                    if current_date.weekday() in [4, 5]:  # Friday/Saturday only
+                        status = 'Day Off'
+                    elif leave_request:
+                        # Show leave type instead of Absent for approved leave days
+                        if leave_request.leave_type:
+                            status = leave_request.leave_type.name
+                        else:
+                            status = 'Annual Leave'  # Default if no type specified
+                    elif permission_request:
+                        status = 'Permission'
+                    else:
+                        # Sunday (6) and Monday-Thursday (0-3) are working days and can be absent
+                        # Only Friday (4) and Saturday (5) are day off
+                        if current_date.weekday() in [0, 1, 2, 3, 6]:  # Monday-Thursday and Sunday
+                            status = 'Absent'
+                        else:
+                            status = 'Day Off'  # Friday/Saturday fallback
+            
+            # Format times in 12-hour format with AM/PM
+            check_in_str = check_in.strftime('%I:%M:%S %p') if check_in else '-'
+            check_out_str = check_out.strftime('%I:%M:%S %p') if check_out else '-'
+            
+            # Format hours worked
+            if hours_worked > 0:
+                hours_worked_str = format_hours_minutes(hours_worked)
+            else:
+                hours_worked_str = '-'
+            
+            # Format extra time
+            extra_time_str = format_hours_minutes(extra_time) if extra_time != 0 else '-'
+            
+            # Add row to table
+            day_table_data.append([
+                user.get_full_name(),
+                str(user.fingerprint_number or 'N/A'),
+                user.department.department_name if user.department else 'No Department',
+                current_date.strftime('%A'),
+                check_in_str,
+                check_out_str,
+                hours_worked_str,
+                status,
+                extra_time_str
+            ])
+        
+        # Create and style the day table
+        day_table = Table(day_table_data, repeatRows=1)
+        day_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#366092')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+            ('TOPPADDING', (0, 0), (-1, 0), 10),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+            ('FONTSIZE', (0, 1), (-1, -1), 7),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+        ]))
+        
+        story.append(day_table)
+        
+        # Move to next day
+        current_date += timedelta(days=1)
     
     # Build PDF
     doc.build(story)
