@@ -792,6 +792,100 @@ table thead th * {
             padding: 0.75rem 0.5rem !important;
         }
     }
+    
+    /* Desktop Styles for Export Buttons - Not full width */
+    @media (min-width: 992px) {
+        .d-flex.flex-column.flex-md-row.gap-2 .btn {
+            width: auto !important;
+            min-width: auto !important;
+        }
+    }
+    
+    /* Mobile Styles for Export Buttons and Today's Attendance Section */
+    @media (max-width: 991.98px) {
+        /* Export Buttons */
+        .d-flex.flex-column.flex-md-row.gap-2 .btn {
+            width: 100% !important;
+            padding: 0.875rem 1.25rem !important;
+            font-size: 1rem !important;
+            font-weight: 600 !important;
+            min-height: 48px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        
+        .d-flex.flex-column.flex-md-row.gap-2 .btn i {
+            font-size: 1.1rem !important;
+            margin-right: 0.5rem !important;
+        }
+        
+        /* Today's Attendance Header and Search */
+        .d-flex.flex-column.flex-md-row.justify-content-between.mb-3 {
+            gap: 1rem !important;
+        }
+        
+        .card-subtitle {
+            font-size: 1.1rem !important;
+            font-weight: 700 !important;
+            color: #1e293b !important;
+            margin-bottom: 0.75rem !important;
+            width: 100% !important;
+        }
+        
+        .search-box {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+        
+        .search-box .input-group {
+            width: 100% !important;
+        }
+        
+        .search-box .form-control {
+            font-size: 1rem !important;
+            padding: 0.75rem 1rem !important;
+            min-height: 48px !important;
+        }
+        
+        .search-box .input-group-text {
+            min-height: 48px !important;
+            padding: 0.75rem 1rem !important;
+        }
+        
+        .search-box .btn-outline-secondary {
+            min-height: 48px !important;
+            min-width: 48px !important;
+            padding: 0.75rem !important;
+        }
+    }
+    
+    @media (max-width: 767.98px) {
+        /* Export Buttons - Stack on smaller screens */
+        .d-flex.flex-column.flex-md-row.gap-2 {
+            flex-direction: column !important;
+        }
+        
+        .d-flex.flex-column.flex-md-row.gap-2 .btn {
+            width: 100% !important;
+            margin-bottom: 0.5rem !important;
+        }
+        
+        .d-flex.flex-column.flex-md-row.gap-2 .btn:last-child {
+            margin-bottom: 0 !important;
+        }
+        
+        /* Today's Attendance - Full width on mobile */
+        .d-flex.flex-column.flex-md-row.justify-content-between.mb-3 {
+            flex-direction: column !important;
+            align-items: stretch !important;
+        }
+        
+        .card-subtitle {
+            text-align: left !important;
+            margin-bottom: 1rem !important;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -945,14 +1039,14 @@ table thead th * {
                     {% if show_export %}
                     <div class="row mb-4">
                         <div class="col-12">
-                            <div class="d-flex gap-2 flex-wrap">
+                            <div class="d-flex flex-column flex-md-row gap-2 flex-wrap">
                                 <a href="{{ url_for('attendance.export_daily_attendance', start_date=request.args.get('start_date', today.strftime('%Y-%m-%d')), end_date=request.args.get('end_date', today.strftime('%Y-%m-%d')), employee_id=request.args.get('employee_id', ''), format='excel') }}" 
-                                   class="btn btn-success" 
+                                   class="btn btn-success w-100 w-md-auto d-md-inline-block" 
                                    target="_blank">
                                     <i class="fas fa-file-excel me-2"></i>Export to Excel
                                 </a>
                                 <a href="{{ url_for('attendance.export_daily_attendance', start_date=request.args.get('start_date', today.strftime('%Y-%m-%d')), end_date=request.args.get('end_date', today.strftime('%Y-%m-%d')), employee_id=request.args.get('employee_id', ''), format='pdf') }}" 
-                                   class="btn btn-danger" 
+                                   class="btn btn-danger w-100 w-md-auto d-md-inline-block" 
                                    target="_blank">
                                     <i class="fas fa-file-pdf me-2"></i>Export to PDF
                                 </a>
@@ -1174,9 +1268,9 @@ table thead th * {
 
                     <!-- Today's Attendance -->
                     {% if not request.args.get('start_date') or (request.args.get('start_date') == request.args.get('end_date') and request.args.get('start_date') == today.strftime('%Y-%m-%d')) %}
-                    <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 gap-3">
                         <h6 class="card-subtitle mb-0">Today's Attendance</h6>
-                        <div class="search-box" style="max-width: 300px; width: 100%;">
+                        <div class="search-box" style="max-width: 100%; width: 100%;">
                             <div class="input-group">
                                 <span class="input-group-text bg-light border-end-0">
                                     <i class="fas fa-search text-muted"></i>

@@ -725,6 +725,13 @@
     
     /* Responsive Improvements */
     @media (max-width: 768px) {
+        /* Ensure 2 cards per row on mobile */
+        .quick-action-card-body .col-6 {
+            flex: 0 0 50% !important;
+            max-width: 50% !important;
+            width: 50% !important;
+        }
+        
         .stat-card {
             min-height: 120px;
         }
@@ -1319,9 +1326,17 @@
         
         .quick-action-card-body .col-lg-3,
         .quick-action-card-body .col-md-6,
-        .quick-action-card-body .col-sm-6 {
+        .quick-action-card-body .col-sm-6,
+        .quick-action-card-body .col-6 {
             padding: 0.5rem !important;
             margin-bottom: 0.75rem !important;
+        }
+        
+        /* Force 2 cards per row on mobile */
+        .quick-action-card-body .col-6 {
+            flex: 0 0 50% !important;
+            max-width: 50% !important;
+            width: 50% !important;
         }
         
         .quick-action-item {
@@ -1584,6 +1599,13 @@
         
         .quick-action-card {
             padding: 1rem 0.75rem !important;
+        }
+        
+        /* Ensure 2 cards per row on small mobile */
+        .quick-action-card-body .col-6 {
+            flex: 0 0 50% !important;
+            max-width: 50% !important;
+            width: 50% !important;
         }
         
         .quick-action-item {
@@ -2248,28 +2270,28 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
             <div class="quick-action-card-body" style="padding-top: 2rem;">
                 <div class="row g-4">
-                    <div class="col-lg-3 col-md-6 col-sm-6">
+                    <div class="col-lg-3 col-md-6 col-6">
                         <a href="{{ url_for('dashboard.users') }}" class="action-btn action-btn-primary w-100 text-center quick-action-item">
                             <i class="fas fa-user-plus" style="color: #10b981;"></i>
                             <span>User Management</span>
                             <small>Manage team members and users</small>
                         </a>
                     </div>
-                    <div class="col-lg-3 col-md-6 col-sm-6">
+                    <div class="col-lg-3 col-md-6 col-6">
                         <a href="{{ url_for('leave.index') }}" class="action-btn action-btn-secondary w-100 text-center quick-action-item">
                             <i class="fas fa-calendar-check" style="color: #3b82f6;"></i>
                             <span>Manage Leaves</span>
                             <small>Approve leave requests</small>
                         </a>
                     </div>
-                    <div class="col-lg-3 col-md-6 col-sm-6">
+                    <div class="col-lg-3 col-md-6 col-6">
                         <a href="{{ url_for('attendance.device_settings') }}" class="action-btn action-btn-secondary w-100 text-center quick-action-item">
                             <i class="fas fa-fingerprint" style="color: #ef4444;"></i>
                             <span>Device Settings</span>
                             <small>Configure attendance device</small>
                         </a>
                     </div>
-                    <div class="col-lg-3 col-md-6 col-sm-6">
+                    <div class="col-lg-3 col-md-6 col-6">
                         <a href="{{ url_for('attendance.index') }}" class="action-btn action-btn-secondary w-100 text-center quick-action-item">
                             <i class="fas fa-clipboard-list" style="color: #8b5cf6;"></i>
                             <span>Attendance Management</span>

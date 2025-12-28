@@ -1004,6 +1004,11 @@
 
 .logs-table-container tbody tr {
     transition: all 0.2s ease;
+    border-bottom: 2px solid #dee2e6 !important;
+}
+
+.logs-table-container tbody tr:last-child {
+    border-bottom: 2px solid #dee2e6 !important;
 }
 
 .logs-table-container tbody tr:hover {
@@ -1862,7 +1867,15 @@ function printReport() {
 .logs-table-container .table td {
     padding: 10px 8px;
     vertical-align: middle;
-    border-bottom: 1px solid #f1f3f4;
+    border-bottom: 2px solid #dee2e6 !important;
+}
+
+.logs-table-container .table tbody tr {
+    border-bottom: 2px solid #dee2e6 !important;
+}
+
+.logs-table-container .table tbody tr:last-child {
+    border-bottom: 2px solid #dee2e6 !important;
 }
 
 .logs-table-container .table tbody tr:hover {
@@ -1888,7 +1901,7 @@ function printReport() {
 }
 
 .day-summary-row td {
-    border-bottom: 1px solid #e9ecef;
+    border-bottom: 2px solid #dee2e6 !important;
     font-weight: 500;
 }
 
@@ -2105,11 +2118,11 @@ function printReport() {
 
 .modern-attendance-table tbody tr {
     transition: all 0.2s ease;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 2px solid #dee2e6 !important;
 }
 
 .modern-attendance-table tbody tr:last-child {
-    border-bottom: none;
+    border-bottom: 2px solid #dee2e6 !important;
 }
 
 .modern-attendance-table tbody tr:hover {
@@ -2121,7 +2134,7 @@ function printReport() {
 .modern-attendance-table tbody td {
     padding: 1rem 1.25rem;
     vertical-align: middle;
-    border: none;
+    border-bottom: 2px solid #dee2e6 !important;
     font-size: 0.9rem;
 }
 
@@ -2252,15 +2265,15 @@ function printReport() {
 }
 
 .badge-checkin {
-    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-    color: white;
-    border: none;
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+    color: white !important;
+    border: none !important;
 }
 
 .badge-checkout {
-    background: linear-gradient(135deg, #fd7e14 0%, #ffc107 100%);
-    color: white;
-    border: none;
+    background: linear-gradient(135deg, #fd7e14 0%, #ffc107 100%) !important;
+    color: white !important;
+    border: none !important;
 }
 
 /* Note button styling - Modern */
@@ -3200,9 +3213,46 @@ function loadEmployeeLogs(userId, startDate, endDate, expandableRow) {
                 data.daily_data.forEach(dayData => {
                     console.log(`📅 Processing date ${dayData.date}:`, dayData);
                     
-                    // Format time display
-                    const checkInTime = dayData.check_in ? formatTimeToAMPM(dayData.check_in) : null;
-                    const checkOutTime = dayData.check_out ? formatTimeToAMPM(dayData.check_out) : null;
+                    // Extract check-in and check-out times from logs array
+                    // First log = check-in, last log = check-out
+                    const logs = (dayData.logs || dayData.all_logs || []).slice();
+                    logs.sort((a, b) => {
+                        const timeA = a.time || (a.timestamp ? a.timestamp.split(' ')[1] : '00:00:00');
+                        const timeB = b.time || (b.timestamp ? b.timestamp.split(' ')[1] : '00:00:00');
+                        return timeA.localeCompare(timeB);
+                    });
+                    
+                    // Get check-in time (first log)
+                    let checkInTime = null;
+                    if (logs.length > 0 && logs[0]) {
+                        const firstLogTime = logs[0].time || (logs[0].timestamp ? logs[0].timestamp.split(' ')[1] : null);
+                        if (firstLogTime) {
+                            checkInTime = formatTimeToAMPM(firstLogTime);
+                        }
+                    }
+                    
+                    // Get check-out time (last log, if different from first)
+                    let checkOutTime = null;
+                    if (logs.length > 1 && logs[logs.length - 1]) {
+                        const lastLogTime = logs[logs.length - 1].time || (logs[logs.length - 1].timestamp ? logs[logs.length - 1].timestamp.split(' ')[1] : null);
+                        if (lastLogTime) {
+                            checkOutTime = formatTimeToAMPM(lastLogTime);
+                        }
+                    } else if (logs.length === 1) {
+                        // If only one log, it's both check-in and check-out
+                        const singleLogTime = logs[0].time || (logs[0].timestamp ? logs[0].timestamp.split(' ')[1] : null);
+                        if (singleLogTime) {
+                            checkOutTime = formatTimeToAMPM(singleLogTime);
+                        }
+                    }
+                    
+                    // Fallback to direct check_in/check_out if logs are not available
+                    if (!checkInTime && dayData.check_in) {
+                        checkInTime = formatTimeToAMPM(dayData.check_in);
+                    }
+                    if (!checkOutTime && dayData.check_out) {
+                        checkOutTime = formatTimeToAMPM(dayData.check_out);
+                    }
                     
                     // Format duration - use raw_hours_worked for numeric calculations
                     let duration = '-';
@@ -3284,7 +3334,7 @@ function loadEmployeeLogs(userId, startDate, endDate, expandableRow) {
                         </td>
                         <td>
                             ${checkInTime ? 
-                                `<span class="badge badge-modern badge-checkin">
+                                `<span class="badge badge-modern badge-checkin" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white !important; border: none;">
                                     <i class="fas fa-sign-in-alt me-1"></i>${checkInTime}
                                 </span>` : 
                                 '<span class="text-muted"><i class="fas fa-minus"></i></span>'
@@ -3292,7 +3342,7 @@ function loadEmployeeLogs(userId, startDate, endDate, expandableRow) {
                         </td>
                         <td>
                             ${checkOutTime ? 
-                                `<span class="badge badge-modern badge-checkout">
+                                `<span class="badge badge-modern badge-checkout" style="background: linear-gradient(135deg, #fd7e14 0%, #ffc107 100%); color: white !important; border: none;">
                                     <i class="fas fa-sign-out-alt me-1"></i>${checkOutTime}
                                 </span>` : 
                                 '<span class="text-muted"><i class="fas fa-minus"></i></span>'
