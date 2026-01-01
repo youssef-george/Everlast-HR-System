@@ -672,7 +672,7 @@ table thead th * {
                                                 {% endif %}
                                             </div>
                                         </td>
-                                        <td>{{ leave.created_at.strftime('%d/%m/%Y') }}</td>
+                                        <td>{{ leave.created_at|egypt_time }}</td>
                                         <td>
                                             <div class="d-flex gap-1">
                                                 <a href="{{ url_for('leave.view', id=leave.id) }}" class="btn btn-sm btn-icon btn-light" data-bs-toggle="tooltip" title="View Details">

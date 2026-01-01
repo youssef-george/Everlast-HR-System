@@ -282,8 +282,8 @@ def create_app(config_name='default'):
             # Convert to Egypt timezone (Africa/Cairo)
             egypt_tz = pytz_timezone('Africa/Cairo')
             egypt_dt = dt.astimezone(egypt_tz) if hasattr(dt, 'astimezone') else utc.localize(dt).astimezone(egypt_tz)
-            # Format with AM/PM
-            return egypt_dt.strftime('%Y-%m-%d %I:%M:%S %p')
+            # Format with AM/PM in DD/MM/YYYY format to match original style
+            return egypt_dt.strftime('%d/%m/%Y %I:%M:%S %p')
         except Exception as e:
             # Fallback to original value if conversion fails
             return str(value)

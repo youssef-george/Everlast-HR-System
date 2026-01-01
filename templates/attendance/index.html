@@ -2143,7 +2143,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label fw-bold">Created At</label>
                                     <div class="form-control-plaintext">
-                                        {{ leave.created_at.strftime('%Y-%m-%d %H:%M:%S') if leave.created_at else 'N/A' }}
+                                        {{ leave.created_at|egypt_time if leave.created_at else 'N/A' }}
                                     </div>
                                 </div>
                             </div>
@@ -2207,7 +2207,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label fw-bold">Created At</label>
                                     <div class="form-control-plaintext">
-                                        {{ permission.created_at.strftime('%Y-%m-%d %H:%M:%S') if permission.created_at else 'N/A' }}
+                                        {{ permission.created_at|egypt_time if permission.created_at else 'N/A' }}
                                     </div>
                                 </div>
                             </div>
@@ -2262,7 +2262,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label fw-bold">Created At</label>
                                     <div class="form-control-plaintext">
-                                        {{ note.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                                        {{ note.created_at|egypt_time }}
                                     </div>
                                 </div>
                             </div>

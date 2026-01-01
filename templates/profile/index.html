@@ -350,7 +350,7 @@
                                                     <span class="badge badge-light-danger">Rejected</span>
                                                 {% endif %}
                                             </td>
-                                            <td>{{ leave.created_at.strftime('%d/%m/%Y') }}</td>
+                                            <td>{{ leave.created_at|egypt_time }}</td>
                                             <td>
                                                 <a href="{{ url_for('leave.view', id=leave.id) }}" class="btn btn-sm btn-icon btn-light" data-bs-toggle="tooltip" title="View Details">
                                                     <i class="fas fa-eye"></i>
@@ -396,7 +396,7 @@
                                                     <span class="badge badge-light-danger">Rejected</span>
                                                 {% endif %}
                                             </td>
-                                            <td>{{ permission.created_at|safe_datetime('%d/%m/%Y') }}</td>
+                                            <td>{{ permission.created_at|egypt_time }}</td>
                                             <td>
                                                 <a href="{{ url_for('permission.view', id=permission.id) }}" class="btn btn-sm btn-icon btn-light" data-bs-toggle="tooltip" title="View Details">
                                                     <i class="fas fa-eye"></i>

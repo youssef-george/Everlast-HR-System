@@ -79,12 +79,12 @@
                 
                 <div class="row mb-3">
                     <label class="col-sm-3 fw-bold">Created On:</label>
-                    <div class="col-sm-9">{{ leave_request.created_at.strftime('%d/%m/%Y %I:%M %p') }}</div>
+                    <div class="col-sm-9">{{ leave_request.created_at|egypt_time }}</div>
                 </div>
                 
                 <div class="row mb-3">
                     <label class="col-sm-3 fw-bold">Last Updated:</label>
-                    <div class="col-sm-9">{{ leave_request.updated_at.strftime('%d/%m/%Y %I:%M %p') }}</div>
+                    <div class="col-sm-9">{{ leave_request.updated_at|egypt_time }}</div>
                 </div>
                 
                 {% if leave_request.comment %}
@@ -282,7 +282,7 @@
                                     {% endif %}
                                 </div>
                                 <p class="mb-1 text-muted">{{ leave.reason|truncate(50) }}</p>
-                                <small>{{ leave.created_at.strftime('%d/%m/%Y') }}</small>
+                                <small>{{ leave.created_at|egypt_time }}</small>
                             </a>
                         {% endif %}
                     {% endfor %}

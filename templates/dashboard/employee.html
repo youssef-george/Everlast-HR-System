@@ -1818,7 +1818,7 @@
                                             {% endif %}
                                         </td>
                                         <td>
-                                            <span class="text-muted fs-7">{{ leave.created_at.strftime('%d/%m/%Y') }}</span>
+                                            <span class="text-muted fs-7">{{ leave.created_at|egypt_time }}</span>
                                         </td>
                                         <td class="text-end">
                                             <div class="d-flex gap-1 justify-content-end">
@@ -1877,7 +1877,7 @@
                                             <td>
                                                 <div class="d-flex align-items-center">
                                                     <div class="d-flex justify-content-start flex-column">
-                                                        <span class="text-dark fw-bolder text-hover-primary fs-6">{{ permission.created_at.strftime('%d/%m/%Y %I:%M %p') }}</span>
+                                                        <span class="text-dark fw-bolder text-hover-primary fs-6">{{ permission.created_at|egypt_time }}</span>
                                                     </div>
                                                 </div>
                                             </td>

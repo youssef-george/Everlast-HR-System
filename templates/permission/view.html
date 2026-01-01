@@ -80,12 +80,12 @@
                 
                 <div class="row mb-3">
                     <label class="col-sm-3 fw-bold">Created On:</label>
-                    <div class="col-sm-9">{{ permission_request.created_at|safe_datetime('%d/%m/%Y %I:%M %p') }}</div>
+                    <div class="col-sm-9">{{ permission_request.created_at|egypt_time }}</div>
                 </div>
                 
                 <div class="row mb-3">
                     <label class="col-sm-3 fw-bold">Last Updated:</label>
-                    <div class="col-sm-9">{{ permission_request.updated_at|safe_datetime('%d/%m/%Y %I:%M %p') }}</div>
+                    <div class="col-sm-9">{{ permission_request.updated_at|egypt_time }}</div>
                 </div>
                 
                 {% if permission_request.comment %}
@@ -289,7 +289,7 @@
                                     {% endif %}
                                 </div>
                                 <p class="mb-1 text-muted">{{ permission.reason|truncate(50) }}</p>
-                                <small>{{ permission.created_at|safe_datetime('%d/%m/%Y') }}</small>
+                                <small>{{ permission.created_at|egypt_time }}</small>
                             </a>
                         {% endif %}
                     {% endfor %}

@@ -3,6 +3,12 @@ from datetime import datetime
 from extensions import db
 from sqlalchemy import Index, String
 from sqlalchemy.dialects.postgresql import ARRAY
+from pytz import timezone as pytz_timezone, utc
+
+def get_egypt_time():
+    """Get current datetime in Egypt timezone (Africa/Cairo)"""
+    egypt_tz = pytz_timezone('Africa/Cairo')
+    return datetime.now(egypt_tz)
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
@@ -253,9 +259,8 @@ class LeaveRequest(db.Model):
     admin_updated_at = db.Column(db.DateTime, nullable=True)
     
     
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    delegate_employee_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=get_egypt_time)
+    updated_at = db.Column(db.DateTime, default=get_egypt_time, onupdate=get_egypt_time)
     
     def can_edit(self):
         return self.status == 'pending'
@@ -306,8 +311,8 @@ class PermissionRequest(db.Model):
     admin_comment = db.Column(db.Text, nullable=True)
     admin_updated_at = db.Column(db.DateTime, nullable=True)
     
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_egypt_time)
+    updated_at = db.Column(db.DateTime, default=get_egypt_time, onupdate=get_egypt_time)
     
     def can_edit(self):
         return self.status == 'pending'
@@ -335,8 +340,8 @@ class Note(db.Model):
     end_date = db.Column(db.Date, nullable=False)
     comment = db.Column(db.Text, nullable=False)
     
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_egypt_time)
+    updated_at = db.Column(db.DateTime, default=get_egypt_time, onupdate=get_egypt_time)
     
     # Relationships
     user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('notes', lazy=True))
