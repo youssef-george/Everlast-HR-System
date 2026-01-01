@@ -4,7 +4,7 @@
 <style>
     /* Enhanced Employee Dashboard Styles - Matching Other Dashboards */
     .dashboard-header {
-        background-color: #667eea;
+        background-color: #005d99;
         color: white;
         border-radius: 20px;
         padding: 2.5rem;
@@ -165,7 +165,7 @@
         width: 50px;
         height: 50px;
         border-radius: 12px;
-        background: rgba(102, 126, 234, 0.1);
+        background: rgba(0, 93, 153, 0.1);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -273,8 +273,8 @@
     
     .employee-quick-action-item:hover {
         transform: translateY(-2px) !important;
-        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.12) !important;
-        border-color: #667eea !important;
+        box-shadow: 0 8px 25px rgba(0, 93, 153, 0.12) !important;
+        border-color: #005d99 !important;
         background-color: #ffffff !important;
     }
     
@@ -295,7 +295,7 @@
     }
     
     .employee-quick-action-item:hover .fw-bold {
-        color: #667eea !important;
+        color: #005d99 !important;
     }
     
     .employee-quick-action-item small {
@@ -336,7 +336,7 @@
     }
     
     .employee-card-header i {
-        color: #667eea;
+        color: #005d99;
         margin-right: 0.5rem;
         font-size: 1.2rem;
     }
@@ -347,7 +347,7 @@
     
     /* Enhanced View All Buttons */
     .view-all-btn {
-        background-color: #667eea !important;
+        background-color: #005d99 !important;
         color: white !important;
         border: none !important;
         padding: 0.5rem 1rem !important;
@@ -356,15 +356,15 @@
         font-weight: 600 !important;
         text-decoration: none !important;
         transition: all 0.3s ease !important;
-        box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2) !important;
+        box-shadow: 0 2px 4px rgba(0, 93, 153, 0.2) !important;
         backdrop-filter: none !important;
     }
     
     .view-all-btn:hover {
         transform: translateY(-2px) !important;
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+        box-shadow: 0 4px 12px rgba(0, 93, 153, 0.3) !important;
         color: white !important;
-        background-color: #5a67d8 !important;
+        background-color: #005d99 !important;
     }
     
     .card-toolbar {
@@ -726,7 +726,7 @@
         justify-content: center;
         width: 60px;
         height: 60px;
-        background-color: #667eea;
+        background-color: #005d99;
         border-radius: 12px;
         margin-right: 1rem;
         color: white;
@@ -748,7 +748,7 @@
     }
     
     .holiday-date {
-        background-color: #8b5cf6 !important;
+        background-color: #005d99 !important;
     }
     
     .event-details {
@@ -781,11 +781,11 @@
     }
     
     .holiday-item {
-        border-left: 4px solid #8b5cf6;
+        border-left: 4px solid #005d99;
     }
     
     .holiday-item .event-title {
-        color: #8b5cf6;
+        color: #005d99;
     }
     
     /* ===== COMPREHENSIVE MOBILE UI/UX FIXES ===== */
@@ -1264,7 +1264,7 @@
                     <div class="employee-card">
                         <div class="employee-card-header">
                             <h3 class="card-title" style="color: #2d3748 !important; font-weight: 600;">
-                                <i class="fas fa-chart-bar me-2" style="color: #667eea;"></i>
+                                <i class="fas fa-chart-bar me-2" style="color: #005d99;"></i>
                                 My Statistics Overview
                             </h3>
                 </div>
@@ -1351,7 +1351,7 @@
                     <div class="employee-card">
                         <div class="employee-card-header">
                             <h3 class="card-title" style="color: #2d3748 !important; font-weight: 600;">
-                                <i class="fas fa-clock me-2" style="color: #8b5cf6;"></i>
+                                <i class="fas fa-clock me-2" style="color: #005d99;"></i>
                                 Permission Duration
                             </h3>
                         </div>
@@ -1407,7 +1407,7 @@
                                 <div class="col-lg-3 col-md-6">
                                     <div class="leave-type-stat-card">
                                         <div class="leave-type-header">
-                                            <div class="leave-type-icon" data-bg-color="{{ leave_type.color or '#667eea' }}">
+                                            <div class="leave-type-icon" data-bg-color="{{ leave_type.color or '#005d99' }}">
                                                 <i class="fas fa-calendar-check"></i>
                                             </div>
                                             <div class="leave-type-info">
@@ -1445,7 +1445,7 @@
                     <div class="leave-balance-card">
                         <div class="d-flex justify-content-between align-items-center mb-4">
                             <h3 class="mb-0" style="color: #2d3748;">
-                                <i class="fas fa-calendar-alt me-2" style="color: #667eea;"></i>
+                                <i class="fas fa-calendar-alt me-2" style="color: #005d99;"></i>
                                 My Leave Balance
                             </h3>
                         </div>
@@ -1456,11 +1456,11 @@
                                 <div class="leave-balance-card h-100">
                                     <div class="leave-balance-header">
                                         <div class="leave-type-icon">
-                                            <i class="fas fa-umbrella-beach leave-type-icon-color" data-color="{{ balance.color or '#667eea' }}"></i>
+                                            <i class="fas fa-umbrella-beach leave-type-icon-color" data-color="{{ balance.color or '#005d99' }}"></i>
                 </div>
                                         <div class="leave-type-info">
                                             <h6 class="leave-type-name">{{ balance.leave_type_name or 'Leave Type' }}</h6>
-                                            <span class="leave-type-badge" data-bg-color="{{ balance.color or '#667eea' }}">
+                                            <span class="leave-type-badge" data-bg-color="{{ balance.color or '#005d99' }}">
                                                 {{ balance.leave_type_name[0] if balance.leave_type_name else 'L' }}
                                         </span>
                                     </div>
@@ -1567,7 +1567,7 @@
                     <div class="quick-action-card mb-4">
                         <div class="quick-action-card-header" style="border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem;">
                             <h5 class="card-title mb-0" style="color: #1e293b; font-weight: 700; font-size: 1.25rem;">
-                                <i class="fas fa-bolt me-3" style="color: #667eea;"></i>
+                                <i class="fas fa-bolt me-3" style="color: #005d99;"></i>
                                 Quick Actions
                             </h5>
                             <p class="text-muted mb-0 mt-2" style="font-size: 0.85rem;">Essential tools for managing your work</p>
@@ -1582,14 +1582,14 @@
             </div>
                                 </a>
                                 <a href="{{ url_for('permission.create') }}" class="employee-quick-action-item">
-                                    <i class="fas fa-user-clock" style="color: #3b82f6;"></i>
+                                    <i class="fas fa-user-clock" style="color: #005d99;"></i>
                                     <div class="text-start">
                                         <div class="fw-bold">Submit Permission Request</div>
                                         <small>Request permission to leave</small>
                 </div>
                                 </a>
                                 <a href="{{ url_for('attendance.index') }}" class="employee-quick-action-item">
-                                    <i class="fas fa-clipboard-check" style="color: #8b5cf6;"></i>
+                                    <i class="fas fa-clipboard-check" style="color: #005d99;"></i>
                                     <div class="text-start">
                                         <div class="fw-bold">View Attendance</div>
                                         <small>Check your attendance records</small>
@@ -1660,7 +1660,7 @@
                                     {% if upcoming_holidays %}
                                         <div class="events-section">
                                             <h6 class="events-section-title">
-                                                <i class="fas fa-calendar-star me-2" style="color: #8b5cf6;"></i>
+                                                <i class="fas fa-calendar-star me-2" style="color: #005d99;"></i>
                                                 Company Holidays
                                             </h6>
                                             <div class="events-list">
@@ -1793,7 +1793,7 @@
             <div class="employee-card">
                 <div class="employee-card-header d-flex justify-content-between align-items-center">
                     <h3 class="card-title mb-0" style="color: #2d3748 !important; font-weight: 600;">
-                        <i class="fas fa-user-clock me-2" style="color: #8b5cf6;"></i>
+                        <i class="fas fa-user-clock me-2" style="color: #005d99;"></i>
                         Recent Permission Requests
                     </h3>
                     <div class="card-toolbar">

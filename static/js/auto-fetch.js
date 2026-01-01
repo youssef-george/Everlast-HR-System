@@ -1131,9 +1131,25 @@ class AutoFetchSystem {
             console.log('🔄 Updating present today count:', data.total_attendance_today);
             this.updateElement('.total-attendance-today', data.total_attendance_today);
         }
+        // Handle team present today (for managers/admins/directors)
+        if (data.team_present_today !== undefined) {
+            console.log('🔄 Updating team present today count:', data.team_present_today);
+            this.updateElement('.team-present-today', data.team_present_today);
+        }
+        // Handle employee present today (for employees)
+        if (data.present_today !== undefined) {
+            console.log('🔄 Updating present today count:', data.present_today);
+            this.updateElement('.team-present-today', data.present_today);
+        }
+        // Handle team absent today (for managers/admins/directors)
         if (data.team_absent_today !== undefined) {
             console.log('🔄 Updating absent today count:', data.team_absent_today);
             this.updateElement('.team-absent-today', data.team_absent_today);
+        }
+        // Handle employee absent today (for employees)
+        if (data.absent_today !== undefined) {
+            console.log('🔄 Updating absent today count:', data.absent_today);
+            this.updateElement('.team-absent-today', data.absent_today);
         }
         if (data.attendance_rate !== undefined) {
             console.log('🔄 Updating attendance rate:', data.attendance_rate);

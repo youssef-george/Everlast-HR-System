@@ -8,9 +8,9 @@
 .employee-table thead th,
 .enhanced-table thead th,
 table thead th {
-    background: #1e40af !important;
-    background-color: #1e40af !important;
-    background-color: #1e40af !important;
+    background: #005d99 !important;
+    background-color: #005d99 !important;
+    background-color: #005d99 !important;
     color: #ffffff !important;
     font-weight: 700 !important;
     text-shadow: 0 2px 4px rgba(0,0,0,0.6) !important;
@@ -19,7 +19,7 @@ table thead th {
     letter-spacing: 0.5px !important;
     padding: 1rem 0.75rem !important;
     border: none !important;
-    border-bottom: 2px solid #1e3a8a !important;
+    border-bottom: 2px solid #004d80 !important;
     opacity: 1 !important;
     visibility: visible !important;
     -webkit-text-fill-color: #ffffff !important;
@@ -40,7 +40,7 @@ table thead th * {
 
 /* Enhanced SMTP Configuration UI */
 .smtp-page-header {
-    background-color: #667eea;
+    background-color: #005d99;
     color: white;
     border-radius: 20px;
     padding: 2rem;
@@ -129,8 +129,8 @@ table thead th * {
 }
 
 .smtp-form-control:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        border-color: #005d99;
+    box-shadow: 0 0 0 3px rgba(0, 93, 153, 0.1);
     outline: none;
 }
 
@@ -144,7 +144,7 @@ table thead th * {
 .smtp-checkbox {
     width: 18px;
     height: 18px;
-    accent-color: #667eea;
+        accent-color: #005d99;
 }
 
 .smtp-btn {
@@ -161,18 +161,18 @@ table thead th * {
 }
 
 .smtp-btn-primary {
-    background-color: #667eea;
+    background-color: #005d99;
     color: white;
 }
 
 .smtp-btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 6px 20px rgba(0, 93, 153, 0.3);
     color: white;
 }
 
 .smtp-btn-secondary {
-    background-color: #6366f1;
+    background-color: #005d99;
     color: white;
 }
 
@@ -313,7 +313,7 @@ table thead th * {
         <div class="smtp-card">
             <div class="smtp-card-header">
                 <h3 class="smtp-card-title">
-                    <i class="fas fa-cog me-2" style="color: #667eea;"></i>
+                    <i class="fas fa-cog me-2" style="color: #005d99;"></i>
                     Email Server Configuration
                 </h3>
             </div>
@@ -486,7 +486,7 @@ table thead th * {
                     <div class="row mt-4">
                         <div class="col-12">
                             <h4 class="smtp-card-title mb-3">
-                                <i class="fas fa-envelope-open-text me-2" style="color: #667eea;"></i>
+                                <i class="fas fa-envelope-open-text me-2" style="color: #005d99;"></i>
                                 Email Notification Lists
                             </h4>
                             <div class="alert alert-info">
@@ -525,7 +525,7 @@ table thead th * {
                         <div class="col-md-6">
                             <div class="smtp-form-group">
                                 <label class="smtp-form-label" for="{{ form.admin_notification_emails.id }}">
-                                    <i class="fas fa-user-shield me-1" style="color: #6f42c1;"></i>
+                                    <i class="fas fa-user-shield me-1" style="color: #005d99;"></i>
                                     {{ form.admin_notification_emails.label.text }}
                                 </label>
                                 {{ form.admin_notification_emails(class="smtp-form-control") }}
@@ -660,7 +660,7 @@ table thead th * {
                         
                         {% if config.admin_notification_emails %}
                         <div class="mb-3">
-                            <p><strong><i class="fas fa-user-shield me-1" style="color: #6f42c1;"></i>Admin Email List:</strong></p>
+                            <p><strong><i class="fas fa-user-shield me-1" style="color: #005d99;"></i>Admin Email List:</strong></p>
                             <small class="text-muted">{{ config.admin_notification_emails }}</small>
                         </div>
                         {% endif %}

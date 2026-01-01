@@ -286,6 +286,46 @@ def get_dashboard_stats(user):
             user_id=user.id, status='rejected'
         ).count()
         
+        # Add employee-specific attendance stats for today
+        from models import AttendanceLog
+        from datetime import date, datetime
+        today = date.today()
+        
+        # Check if employee is present today using AttendanceLog (more reliable for real-time data)
+        start_datetime = datetime.combine(today, datetime.min.time())
+        end_datetime = datetime.combine(today, datetime.max.time())
+        
+        # Check if employee has ANY attendance log today (check-in OR check-out)
+        has_attendance_log = AttendanceLog.query.filter(
+            AttendanceLog.user_id == user.id,
+            AttendanceLog.timestamp.between(start_datetime, end_datetime)
+        ).first() is not None
+        
+        if has_attendance_log:
+            stats['present_today'] = 1
+            stats['absent_today'] = 0
+            # Also set team_present_today and team_absent_today for consistency
+            stats['team_present_today'] = 1
+            stats['team_absent_today'] = 0
+        else:
+            stats['present_today'] = 0
+            stats['absent_today'] = 1
+            # Also set team_present_today and team_absent_today for consistency
+            stats['team_present_today'] = 0
+            stats['team_absent_today'] = 1
+        
+        # Get department information
+        if user.department:
+            stats['department_name'] = user.department.department_name
+            # Count employees in the same department
+            stats['total_employees'] = User.query.filter_by(
+                department_id=user.department_id,
+                status='active'
+            ).count()
+        else:
+            stats['department_name'] = None
+            stats['total_employees'] = 0
+        
     elif user.role == 'manager':
         # Manager sees stats for their department
         employees = get_employees_for_manager(user.id)
@@ -316,19 +356,27 @@ def get_dashboard_stats(user):
             ).count()
             
             # Get team attendance statistics for today
-            from models import DailyAttendance
-            from datetime import date
+            from models import DailyAttendance, AttendanceLog
+            from datetime import date, datetime
             today = date.today()
-            
-            # Count team members present today
-            stats['team_present_today'] = DailyAttendance.query.filter(
-                DailyAttendance.date == today,
-                DailyAttendance.user_id.in_(employee_ids),
-                DailyAttendance.status.in_(['present', 'half-day', 'in_office'])
-            ).count()
             
             # Filter to only active employees for counts
             active_employee_ids = [emp.id for emp in employees if emp.status == 'active']
+            
+            # Count team members present today using AttendanceLog (more reliable for real-time data)
+            # Check for any attendance log today (check-in OR check-out)
+            start_datetime = datetime.combine(today, datetime.min.time())
+            end_datetime = datetime.combine(today, datetime.max.time())
+            
+            # Get users who have ANY attendance log today
+            present_user_ids = db.session.query(AttendanceLog.user_id).filter(
+                AttendanceLog.timestamp.between(start_datetime, end_datetime),
+                AttendanceLog.user_id.in_(active_employee_ids)
+            ).distinct().all()
+            
+            # Convert to list of IDs
+            present_user_ids_list = [user_id[0] for user_id in present_user_ids]
+            stats['team_present_today'] = len(present_user_ids_list)
             
             # Count team members absent today (only active employees)
             stats['team_absent_today'] = len(active_employee_ids) - stats['team_present_today']
@@ -393,6 +441,7 @@ def get_dashboard_stats(user):
         ).distinct().count()
         
         stats['total_attendance_today'] = present_users
+        stats['team_present_today'] = present_users  # Also set for consistency
         
         # Count employees absent today (only those with fingerprint numbers)
         total_active_employees_with_fingerprint = User.query.filter(
@@ -463,6 +512,7 @@ def get_dashboard_stats(user):
         ).distinct().count()
         
         stats['total_attendance_today'] = present_users
+        stats['team_present_today'] = present_users  # Also set for consistency
         
         # Count employees absent today (only those with fingerprint numbers)
         total_active_employees_with_fingerprint = User.query.filter(

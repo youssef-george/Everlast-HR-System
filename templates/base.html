@@ -77,6 +77,18 @@
 </head>
 
 <body class="sb-nav-fixed" data-user-role="{{ current_user.role if current_user.is_authenticated else 'guest' }}">
+    <!-- Page Loader -->
+    <div id="page-loader" class="page-loader">
+        <div class="d-flex flex-column align-items-center justify-content-center">
+            <div class="page-loader-container">
+                <div class="page-loader-spinner"></div>
+                <div class="page-loader-logo">
+                    <img src="{{ url_for('static', filename='images/login-logo.png') }}" alt="Everlast ERP Logo">
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Top Navigation -->
     <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
         <a class="navbar-brand ps-3" href="{{ url_for('dashboard.index') }}">Everlast ERP</a>
@@ -403,7 +415,7 @@
             // Apply enhanced styling to table header cells
             headerCells.forEach(function(header) {
                 // High contrast blue gradient background
-                header.style.setProperty('background', 'linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%)', 'important');
+                header.style.setProperty('background', 'linear-gradient(135deg, #005d99 0%, #004d80 100%)', 'important');
                 
                 // Bold white text with shadow for maximum readability
                 header.style.setProperty('color', '#ffffff', 'important');
@@ -636,7 +648,43 @@
                 document.body.classList.toggle('sb-sidenav-toggled');
             });
         }
+        
+        // Hide page loader with fade animation
+        function hideLoaderWithFade() {
+            const loader = document.getElementById('page-loader');
+            if (loader && !loader.classList.contains('fade-out')) {
+                loader.classList.add('fade-out');
+                setTimeout(function() {
+                    loader.style.display = 'none';
+                }, 300);
+            }
+        }
+        
+        // Hide loader when page is ready
+        hideLoaderWithFade();
     });
+    
+    // Fallback - hide loader after window load
+    window.addEventListener('load', function() {
+        const loader = document.getElementById('page-loader');
+        if (loader && !loader.classList.contains('fade-out')) {
+            loader.classList.add('fade-out');
+            setTimeout(function() {
+                loader.style.display = 'none';
+            }, 300);
+        }
+    });
+    
+    // Ultimate fallback - hide loader after 3 seconds
+    setTimeout(function() {
+        const loader = document.getElementById('page-loader');
+        if (loader) {
+            loader.classList.add('fade-out');
+            setTimeout(function() {
+                loader.style.display = 'none';
+            }, 300);
+        }
+    }, 3000);
     </script>
 </body>
 </html>

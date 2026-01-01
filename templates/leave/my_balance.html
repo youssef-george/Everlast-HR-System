@@ -25,9 +25,6 @@
                                 type="button" 
                                 onclick="window.location.href='{{ url_for('leave.my_balance', year=year) }}'">
                             {{ year }}
-                            {% if year == 2026 %}
-                            <small class="text-muted d-block">(21 days)</small>
-                            {% endif %}
                         </button>
                     </li>
                     {% endfor %}
@@ -91,9 +88,6 @@
                                 <div>
                                     <h6 class="mb-1">{{ balance.leave_type.name if balance.leave_type else 'Unknown Type' }}</h6>
                                     <small class="text-muted">{{ balance.leave_type.description if balance.leave_type and balance.leave_type.description else 'Leave entitlement' }}</small>
-                                    {% if selected_year == 2026 and balance.id is none %}
-                                    <br><small class="text-info"><i class="fas fa-info-circle"></i> Default allocation: 21 days</small>
-                                    {% endif %}
                                 </div>
                                 <div class="text-end">
                                     <span class="h5 mb-0 text-success">{{ balance.remaining_days }}</span>

@@ -197,15 +197,16 @@ def create():
             # Calculate days requested
             days_requested = (form.end_date.data - form.start_date.data).days + 1
             
-            # Check leave balance
+            # Check leave balance - use start_date year to determine which year's balance to check
+            leave_year = form.start_date.data.year
             leave_balance = LeaveBalance.query.filter_by(
                 user_id=current_user.id,
                 leave_type_id=form.leave_type_id.data,
-                year=datetime.utcnow().year
+                year=leave_year
             ).first()
             
             if not leave_balance or leave_balance.remaining_days < days_requested:
-                flash(f'Insufficient leave balance. You have {leave_balance.remaining_days if leave_balance else 0} days remaining.', 'danger')
+                flash(f'Insufficient leave balance for {leave_year}. You have {leave_balance.remaining_days if leave_balance else 0} days remaining.', 'danger')
                 return render_template('leave/create.html', form=form, title='Create Leave Request')
         
         leave_request = LeaveRequest(
@@ -1170,12 +1171,12 @@ def update_leave_balance_for_leave(leave_request):
         # Calculate number of days
         days_count = (leave_request.end_date - leave_request.start_date).days + 1
         
-        # Get or create leave balance for this year
-        current_year = datetime.now().year
+        # Get or create leave balance for the leave request's year (based on start_date)
+        leave_year = leave_request.start_date.year
         balance = LeaveBalance.query.filter_by(
             user_id=leave_request.user_id,
             leave_type_id=leave_request.leave_type_id,
-            year=current_year
+            year=leave_year
         ).first()
         
         if balance:
@@ -1194,13 +1195,13 @@ def update_leave_balance_for_leave(leave_request):
                 total_days=0,
                 used_days=days_count,
                 remaining_days=-days_count,  # Allow negative values
-                year=current_year
+                year=leave_year
             )
             db.session.add(balance)
         
         # Execute with retry logic
         execute_with_retry(lambda: db.session.commit())
-        logging.info(f"Updated leave balance for user {leave_request.user_id}: {days_count} days used for {leave_type.name}")
+        logging.info(f"Updated leave balance for user {leave_request.user_id}: {days_count} days used for {leave_type.name} (year: {leave_year})")
         
     except Exception as e:
         db.session.rollback()
@@ -1227,12 +1228,12 @@ def refund_leave_balance_for_leave(leave_request):
         # Calculate number of days to refund
         days_count = (leave_request.end_date - leave_request.start_date).days + 1
         
-        # Get leave balance for this year
-        current_year = datetime.now().year
+        # Get leave balance for the leave request's year (based on start_date)
+        leave_year = leave_request.start_date.year
         balance = LeaveBalance.query.filter_by(
             user_id=leave_request.user_id,
             leave_type_id=leave_request.leave_type_id,
-            year=current_year
+            year=leave_year
         ).first()
         
         if balance:
@@ -1246,9 +1247,9 @@ def refund_leave_balance_for_leave(leave_request):
             
             # Execute with retry logic
             execute_with_retry(lambda: db.session.commit())
-            logging.info(f"Refunded leave balance for user {leave_request.user_id}: {days_count} days refunded for {leave_type.name}")
+            logging.info(f"Refunded leave balance for user {leave_request.user_id}: {days_count} days refunded for {leave_type.name} (year: {leave_year})")
         else:
-            logging.warning(f"No leave balance found to refund for user {leave_request.user_id} and leave type {leave_type.name}")
+            logging.warning(f"No leave balance found to refund for user {leave_request.user_id} and leave type {leave_type.name} (year: {leave_year})")
         
     except Exception as e:
         db.session.rollback()
@@ -1329,6 +1330,7 @@ def my_balance():
             ).first()
         
         # Get leave balances for selected year - only annual leave type
+        # New employees will have 0 balance until admin/support manually adds days
         if annual_leave_type:
             leave_balances = LeaveBalance.query.filter_by(
                 user_id=current_user.id,
@@ -1337,33 +1339,6 @@ def my_balance():
             ).all()
         else:
             leave_balances = []
-        
-        # For 2026, set all balances to 21 total days and 0 used if they don't exist
-        # Only for annual leave type
-        if selected_year == 2026 and annual_leave_type:
-            # Create a set of existing balance keys (leave_type_id)
-            existing_balances = {b.leave_type_id for b in leave_balances}
-            
-            # If annual leave type doesn't have a 2026 balance
-            if annual_leave_type.id not in existing_balances:
-                # Create virtual balance object for 2026
-                # Total days = 21, Used days = 0, Remaining = 21
-                virtual_balance = type('VirtualBalance', (), {
-                    'id': None,
-                    'user_id': current_user.id,
-                    'leave_type_id': annual_leave_type.id,
-                    'year': 2026,
-                    'total_days': 21,
-                    'used_days': 0,
-                    'remaining_days': 21,
-                    'manual_remaining_days': None,
-                    'user': current_user,
-                    'leave_type': annual_leave_type,
-                    'created_at': datetime(2026, 1, 1),
-                    'updated_at': datetime.utcnow(),
-                    'is_virtual': True  # Flag to indicate this is calculated, not stored
-                })()
-                leave_balances.append(virtual_balance)
     
     # Get recent leave requests for context
     recent_requests = LeaveRequest.query.filter_by(

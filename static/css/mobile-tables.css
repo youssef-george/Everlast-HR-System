@@ -65,9 +65,9 @@
     table thead th,
     .employee-table thead th,
     .enhanced-table thead th {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-        background-color: #667eea !important;
-        background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        background: linear-gradient(135deg, #005d99 0%, #0066b3 100%) !important;
+        background-color: #005d99 !important;
+        background-image: linear-gradient(135deg, #005d99 0%, #0066b3 100%) !important;
         color: #ffffff !important;
         font-weight: 700 !important;
         font-size: 0.75rem !important;
@@ -79,7 +79,7 @@
         letter-spacing: 0.5px !important;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
         border: none !important;
-        border-bottom: 2px solid #5a67d8 !important;
+        border-bottom: 2px solid #005d99 !important;
         position: sticky !important;
         top: 0 !important;
         z-index: 5 !important;
@@ -205,7 +205,7 @@
     /* ===== Table Links ===== */
     .table a,
     table a {
-        color: #667eea !important;
+        color: #005d99 !important;
         font-weight: 600 !important;
         text-decoration: none !important;
         word-wrap: break-word !important;
@@ -213,7 +213,7 @@
     
     .table a:hover,
     table a:hover {
-        color: #5a67d8 !important;
+        color: #005d99 !important;
         text-decoration: underline !important;
     }
     

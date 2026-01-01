@@ -1,41 +1,461 @@
 {% extends "layout.html" %}
 
 {% block extra_css %}
-<!-- EMERGENCY TABLE HEADER VISIBILITY FIX FOR LEAVE BALANCES PAGE -->
+<!-- Select2 CSS for searchable dropdowns -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 <style>
-/* Force table headers to be visible with maximum specificity */
-.table thead th,
-.employee-table thead th,
-.enhanced-table thead th,
-table thead th {
-    background: #1e40af !important;
-    background-color: #1e40af !important;
-    background-color: #1e40af !important;
+/* Enhanced Leave Balances Page Styles */
+
+/* Search and Filter Bar */
+.search-filter-bar {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    margin-bottom: 1.5rem;
+}
+
+.search-input-wrapper {
+    position: relative;
+}
+
+.search-input-wrapper i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+}
+
+.search-input-wrapper input {
+    padding-left: 2.75rem;
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.search-input-wrapper input:focus {
+    border-color: #005d99;
+    box-shadow: 0 0 0 3px rgba(0, 93, 153, 0.15);
+}
+
+/* Enhanced Table */
+.leave-table-card {
+    border-radius: 16px;
+    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.1);
+    border: none;
+    overflow: hidden;
+    max-width: 100%;
+}
+
+.leave-table-card * {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.leave-table-card .card-header {
+    background: linear-gradient(135deg, #005d99 0%, #0066b3 100%);
+    color: white;
+    padding: 1.25rem 1.5rem;
+    border: none;
+}
+
+.leave-table-card .card-header h3 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.leave-table-card .nav-tabs {
+    border: none;
+    margin-top: 1rem;
+    gap: 0.5rem;
+    display: flex;
+}
+
+.leave-table-card .nav-tabs .nav-link {
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    border-radius: 8px;
+    padding: 0.6rem 1.5rem;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.leave-table-card .nav-tabs .nav-link:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.6);
+    color: white;
+}
+
+.leave-table-card .nav-tabs .nav-link.active {
+    background: white;
+    color: #005d99;
+    font-weight: 600;
+    border-color: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Table Styling */
+.enhanced-table {
+    margin: 0;
+    width: 100%;
+    table-layout: fixed;
+}
+
+.enhanced-table thead th {
+    background: #005d99 !important;
     color: #ffffff !important;
     font-weight: 700 !important;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.6) !important;
-    font-size: 0.9rem !important;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+    font-size: 0.85rem !important;
     text-transform: uppercase !important;
     letter-spacing: 0.5px !important;
     padding: 1rem 0.75rem !important;
     border: none !important;
-    border-bottom: 2px solid #1e3a8a !important;
-    opacity: 1 !important;
-    visibility: visible !important;
+    border-bottom: 2px solid #004d80 !important;
     -webkit-text-fill-color: #ffffff !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-/* Force all child elements in headers to be white */
-.table thead th *,
-.employee-table thead th *,
-.enhanced-table thead th *,
-table thead th * {
-    color: #ffffff !important;
-    font-weight: 700 !important;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.6) !important;
-    -webkit-text-fill-color: #ffffff !important;
-    opacity: 1 !important;
-    visibility: visible !important;
+/* Prevent horizontal scrolling */
+.leave-table-card .card-body {
+    overflow-x: hidden !important;
+}
+
+.leave-table-card .table-responsive {
+    overflow-x: hidden !important;
+    overflow-y: visible;
+}
+
+/* Column width adjustments */
+.enhanced-table th:nth-child(1),
+.enhanced-table td:nth-child(1) {
+    width: 20%;
+    min-width: 180px;
+}
+
+.enhanced-table th:nth-child(2),
+.enhanced-table td:nth-child(2) {
+    width: 12%;
+    min-width: 120px;
+}
+
+.enhanced-table th:nth-child(3),
+.enhanced-table td:nth-child(3) {
+    width: 8%;
+    min-width: 80px;
+}
+
+.enhanced-table th:nth-child(4),
+.enhanced-table td:nth-child(4),
+.enhanced-table th:nth-child(5),
+.enhanced-table td:nth-child(5) {
+    width: 10%;
+    min-width: 100px;
+}
+
+.enhanced-table th:nth-child(6),
+.enhanced-table td:nth-child(6) {
+    width: 15%;
+    min-width: 140px;
+}
+
+.enhanced-table th:nth-child(7),
+.enhanced-table td:nth-child(7) {
+    width: 10%;
+    min-width: 100px;
+}
+
+.enhanced-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-wrap: break-word;
+}
+
+.enhanced-table tbody tr {
+    transition: all 0.2s ease;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.enhanced-table tbody tr:hover {
+    background: linear-gradient(90deg, #f8fafc 0%, #f1f5f9 100%);
+    transform: scale(1.005);
+}
+
+.enhanced-table tbody td {
+    padding: 1rem 0.75rem;
+    vertical-align: middle;
+    max-width: 0;
+}
+
+/* Employee Avatar */
+.employee-avatar {
+    width: 42px;
+    height: 42px;
+    background: linear-gradient(135deg, #005d99 0%, #0066b3 100%);
+    color: white;
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 93, 153, 0.3);
+}
+
+.employee-info {
+    margin-left: 0.75rem;
+    min-width: 0;
+    flex: 1;
+}
+
+.employee-name {
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 0.95rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.employee-email {
+    color: #64748b;
+    font-size: 0.8rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Progress Bar for Remaining Days */
+.balance-progress-wrapper {
+    min-width: 150px;
+}
+
+.balance-progress {
+    height: 8px;
+    border-radius: 4px;
+    background: #e2e8f0;
+    overflow: hidden;
+    margin-top: 0.5rem;
+}
+
+.balance-progress-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.balance-progress-bar.high {
+    background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+}
+
+.balance-progress-bar.medium {
+    background: linear-gradient(90deg, #eab308 0%, #ca8a04 100%);
+}
+
+.balance-progress-bar.low {
+    background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+}
+
+.remaining-value {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.remaining-value.positive {
+    color: #16a34a;
+}
+
+.remaining-value.negative {
+    color: #dc2626;
+}
+
+/* Action Buttons */
+.action-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.action-btn.edit {
+    background: #eff6ff;
+    color: #005d99;
+}
+
+.action-btn.edit:hover {
+    background: #005d99;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.action-btn.delete {
+    background: #fef2f2;
+    color: #ef4444;
+}
+
+.action-btn.delete:hover {
+    background: #ef4444;
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* Empty State */
+.empty-state {
+    padding: 4rem 2rem;
+    text-align: center;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    color: #cbd5e1;
+    margin-bottom: 1.5rem;
+}
+
+.empty-state h5 {
+    color: #475569;
+    font-weight: 600;
+}
+
+.empty-state p {
+    color: #94a3b8;
+}
+
+/* Badges */
+.leave-type-badge {
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.8rem;
+}
+
+.year-badge {
+    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+    color: white;
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+/* Modal Styling */
+.modal-content {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #005d99 0%, #005d99 100%);
+    color: white;
+    border-radius: 16px 16px 0 0;
+    padding: 1.25rem 1.5rem;
+}
+
+.modal-header .btn-close {
+    filter: invert(1);
+}
+
+/* Hide rows when searching */
+.balance-row.hidden {
+    display: none;
+}
+
+/* No results message */
+.no-results-message {
+    display: none;
+    text-align: center;
+    padding: 2rem;
+    color: #64748b;
+}
+
+.no-results-message.show {
+    display: block;
+}
+
+/* Select2 Custom Styling */
+.select2-container {
+    width: 100% !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection,
+.select2-container .select2-selection--single {
+    border-radius: 8px !important;
+    border: 2px solid #e9ecef !important;
+    min-height: 44px !important;
+    padding: 0.375rem 0.75rem !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection:focus,
+.select2-container--bootstrap-5.select2-container--focus .select2-selection,
+.select2-container--focus .select2-selection--single {
+    border-color: #005d99 !important;
+    box-shadow: 0 0 0 3px rgba(0, 93, 153, 0.15) !important;
+}
+
+.select2-container--bootstrap-5 .select2-dropdown,
+.select2-dropdown {
+    border-radius: 8px !important;
+    border: 2px solid #e9ecef !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
+    margin-top: 4px !important;
+}
+
+.select2-container--bootstrap-5 .select2-results__option--highlighted,
+.select2-results__option--highlighted[aria-selected] {
+    background-color: #005d99 !important;
+    color: white !important;
+}
+
+.select2-search--dropdown {
+    padding: 8px !important;
+    background: #f8f9fa !important;
+    border-bottom: 1px solid #e9ecef !important;
+}
+
+.select2-container--bootstrap-5 .select2-search--dropdown .select2-search__field,
+.select2-search--dropdown .select2-search__field {
+    border-radius: 6px !important;
+    border: 2px solid #dee2e6 !important;
+    padding: 0.6rem 0.75rem !important;
+    font-size: 0.95rem !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.select2-container--bootstrap-5 .select2-search--dropdown .select2-search__field:focus,
+.select2-search--dropdown .select2-search__field:focus {
+    border-color: #005d99 !important;
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(0, 93, 153, 0.15) !important;
+}
+
+/* Ensure search is always visible */
+.select2-search--dropdown {
+    display: block !important;
+}
+
+.select2-results__option {
+    padding: 0.6rem 0.75rem !important;
+}
+
+.select2-selection__placeholder {
+    color: #6c757d !important;
+}
+
+.select2-selection__rendered {
+    color: #212529 !important;
+    padding-left: 0 !important;
 }
 </style>
 {% endblock %}
@@ -45,42 +465,54 @@ table thead th * {
     <h1 class="page-title">Leave Balances Management</h1>
     {% if current_user.role in ['admin', 'product_owner'] %}
     <div class="ms-auto">
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addBalanceModal">
-            <i class="fas fa-plus me-1"></i>Set Leave Balance
+        <button type="button" class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#addBalanceModal" style="border-radius: 10px; padding: 0.75rem 1.5rem;">
+            <i class="fas fa-plus me-2"></i>Set Leave Balance
         </button>
-    </div>
-    {% elif current_user.role == 'director' %}
-    <div class="ms-auto">
-        <span class="badge bg-info">View Only Mode</span>
     </div>
     {% endif %}
 </div>
 
+<!-- Search and Filter Bar -->
+<div class="search-filter-bar">
+    <div class="row align-items-center">
+        <div class="col-md-6">
+            <div class="search-input-wrapper">
+                <i class="fas fa-search"></i>
+                <input type="text" class="form-control" id="employeeSearch" placeholder="Search employees by name...">
+            </div>
+        </div>
+        <div class="col-md-6 text-md-end mt-3 mt-md-0">
+            <span class="text-muted me-3">
+                <i class="fas fa-filter me-1"></i>
+                Showing <strong id="visibleCount">{{ balances|length }}</strong> of <strong>{{ balances|length }}</strong> employees
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Main Table Card -->
 <div class="row">
     <div class="col-12">
-        <div class="card">
+        <div class="card leave-table-card">
             <div class="card-header">
-                <h3 class="card-title">Employee Leave Balances</h3>
+                <h3 class="card-title"><i class="fas fa-balance-scale me-2"></i>Employee Leave Balances</h3>
                 <!-- Year Tabs -->
-                <ul class="nav nav-tabs card-header-tabs mt-3" role="tablist">
+                <ul class="nav nav-tabs" role="tablist">
                     {% for year in available_years %}
                     <li class="nav-item" role="presentation">
                         <button class="nav-link {% if selected_year == year %}active{% endif %}" 
                                 type="button" 
                                 onclick="window.location.href='{{ url_for('dashboard.leave_balances', year=year) }}'">
-                            {{ year }}
-                            {% if year == 2026 %}
-                            <small class="text-muted d-block">(21 days)</small>
-                            {% endif %}
+                            <i class="fas fa-calendar me-1"></i>{{ year }}
                         </button>
                     </li>
                     {% endfor %}
                 </ul>
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 {% if balances %}
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="table enhanced-table" id="balancesTable">
                         <thead>
                             <tr>
                                 <th>Employee</th>
@@ -89,55 +521,67 @@ table thead th * {
                                 <th>Total Days</th>
                                 <th>Used Days</th>
                                 <th>Remaining</th>
-                                {% if current_user.role in ['admin', 'director'] %}
+                                {% if current_user.role in ['admin', 'product_owner'] %}
                                 <th>Actions</th>
                                 {% endif %}
                             </tr>
                         </thead>
                         <tbody>
                             {% for balance in balances %}
-                            <tr>
+                            <tr class="balance-row" data-employee-name="{{ balance.user.first_name|lower }} {{ balance.user.last_name|lower }}">
                                 <td>
                                     <div class="d-flex align-items-center">
-                                        <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                                        <div class="employee-avatar">
                                             {{ balance.user.first_name[0] }}{{ balance.user.last_name[0] }}
                                         </div>
-                                        <div>
-                                            <div class="fw-bold">{{ balance.user.first_name }} {{ balance.user.last_name }}</div>
-                                            <small class="text-muted">{{ balance.user.email }}</small>
+                                        <div class="employee-info">
+                                            <div class="employee-name">{{ balance.user.first_name }} {{ balance.user.last_name }}</div>
+                                            <div class="employee-email">{{ balance.user.email }}</div>
                                         </div>
                                     </div>
                                 </td>
                                 <td>
-                                    <span class="badge" style="background-color: {{ balance.leave_type.color }}; color: white;">
+                                    <span class="leave-type-badge" style="background-color: {{ balance.leave_type.color }}; color: white;">
                                         {{ balance.leave_type.name }}
                                     </span>
                                 </td>
                                 <td>
-                                    <span class="badge bg-info">{{ balance.year }}</span>
+                                    <span class="year-badge">{{ balance.year }}</span>
                                 </td>
                                 <td>
-                                    <span class="fw-bold">{{ balance.total_days }}</span>
+                                    <span class="fw-bold fs-5">{{ balance.total_days }}</span>
                                 </td>
                                 <td>
-                                    <span class="text-warning">{{ balance.used_days }}</span>
+                                    <span class="fw-bold fs-5" style="color: #f59e0b;">{{ balance.used_days }}</span>
                                 </td>
                                 <td>
-                                    {% if balance.remaining_days > 0 %}
-                                        <span class="text-success fw-bold">{{ balance.remaining_days }}</span>
-                                    {% else %}
-                                        <span class="text-danger fw-bold">{{ balance.remaining_days }}</span>
-                                    {% endif %}
-                                    {% if balance.manual_remaining_days is not none %}
-                                        <small class="text-muted d-block">(Manual)</small>
-                                    {% elif selected_year == 2026 and balance.id is none %}
-                                        <small class="text-info d-block">(Default: 21 days)</small>
-                                    {% endif %}
+                                    <div class="balance-progress-wrapper">
+                                        {% set percentage = (balance.remaining_days / balance.total_days * 100) if balance.total_days > 0 else 0 %}
+                                        {% if percentage > 50 %}
+                                            {% set progress_class = 'high' %}
+                                        {% elif percentage > 25 %}
+                                            {% set progress_class = 'medium' %}
+                                        {% else %}
+                                            {% set progress_class = 'low' %}
+                                        {% endif %}
+                                        
+                                        <span class="remaining-value {% if balance.remaining_days > 0 %}positive{% else %}negative{% endif %}">
+                                            {{ balance.remaining_days }}
+                                        </span>
+                                        <span class="text-muted">/ {{ balance.total_days }}</span>
+                                        {% if balance.manual_remaining_days is not none %}
+                                            <small class="text-info d-block"><i class="fas fa-hand-paper"></i> Manual</small>
+                                        {% endif %}
+                                        
+                                        <div class="balance-progress">
+                                            <div class="balance-progress-bar {{ progress_class }}" style="width: {{ percentage if percentage > 0 else 0 }}%"></div>
+                                        </div>
+                                    </div>
                                 </td>
-                                {% if current_user.role in ['admin', 'product_owner', 'director', 'manager'] %}
+                                {% if current_user.role in ['admin', 'product_owner'] %}
                                 <td>
-                                    <div class="btn-group" role="group">
-                                        <button type="button" class="btn btn-sm btn-outline-primary edit-balance-btn" 
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="action-btn edit edit-balance-btn" 
                                                 data-balance-id="{% if balance.id is not none %}{{ balance.id }}{% else %}null{% endif %}"
                                                 data-user-id="{{ balance.user_id }}"
                                                 data-leave-type-id="{{ balance.leave_type_id }}"
@@ -147,22 +591,20 @@ table thead th * {
                                                 data-used-days="{{ balance.used_days }}"
                                                 data-remaining-days="{{ balance.remaining_days }}"
                                                 data-manual-remaining="{% if balance.manual_remaining_days is not none %}{{ balance.manual_remaining_days }}{% else %}null{% endif %}"
-                                                data-year="{{ balance.year }}">
+                                                data-year="{{ balance.year }}"
+                                                title="Edit Balance">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                         {% if balance.id is not none %}
-                                        <button type="button" class="btn btn-sm btn-outline-danger delete-balance-btn" 
+                                        <button type="button" class="action-btn delete delete-balance-btn" 
                                                 data-balance-id="{{ balance.id }}"
                                                 data-employee="{{ balance.user.first_name }} {{ balance.user.last_name }}"
-                                                data-leave-type="{{ balance.leave_type.name }}">
+                                                data-leave-type="{{ balance.leave_type.name }}"
+                                                title="Delete Balance">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                         {% endif %}
                                     </div>
-                                </td>
-                                {% elif current_user.role == 'director' %}
-                                <td>
-                                    <span class="text-muted">View Only</span>
                                 </td>
                                 {% endif %}
                             </tr>
@@ -170,11 +612,20 @@ table thead th * {
                         </tbody>
                     </table>
                 </div>
+                <div class="no-results-message" id="noResultsMessage">
+                    <i class="fas fa-search fa-2x mb-2"></i>
+                    <p class="mb-0">No employees found matching your search.</p>
+                </div>
                 {% else %}
-                <div class="text-center py-4">
-                    <i class="fas fa-balance-scale fa-3x text-muted mb-3"></i>
-                    <h5 class="text-muted">No leave balances found</h5>
-                    <p class="text-muted">Set leave balances for employees to get started.</p>
+                <div class="empty-state">
+                    <i class="fas fa-balance-scale"></i>
+                    <h5>No leave balances found</h5>
+                    <p>Set leave balances for employees to get started.</p>
+                    {% if current_user.role in ['admin', 'product_owner'] %}
+                    <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#addBalanceModal">
+                        <i class="fas fa-plus me-2"></i>Set Leave Balance
+                    </button>
+                    {% endif %}
                 </div>
                 {% endif %}
             </div>
@@ -187,7 +638,7 @@ table thead th * {
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Set Leave Balance</h5>
+                <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Set Leave Balance</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ url_for('dashboard.create_leave_balance') }}">
@@ -195,8 +646,9 @@ table thead th * {
                     {{ form.hidden_tag() }}
                     
                     <div class="mb-3">
-                        {{ form.user_id.label(class="form-label") }}
-                        {{ form.user_id(class="form-select") }}
+                        {{ form.user_id.label(class="form-label fw-bold") }}
+                        {{ form.user_id(class="form-select", id="employeeSelect") }}
+                        <small class="form-text text-muted">Search by typing employee name</small>
                         {% if form.user_id.errors %}
                             <div class="text-danger">
                                 {% for error in form.user_id.errors %}
@@ -207,7 +659,7 @@ table thead th * {
                     </div>
                     
                     <div class="mb-3">
-                        {{ form.leave_type_id.label(class="form-label") }}
+                        {{ form.leave_type_id.label(class="form-label fw-bold") }}
                         {{ form.leave_type_id(class="form-select") }}
                         {% if form.leave_type_id.errors %}
                             <div class="text-danger">
@@ -221,7 +673,7 @@ table thead th * {
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">
-                                {{ form.total_days.label(class="form-label") }}
+                                {{ form.total_days.label(class="form-label fw-bold") }}
                                 {{ form.total_days(class="form-control", min="0") }}
                                 {% if form.total_days.errors %}
                                     <div class="text-danger">
@@ -234,7 +686,7 @@ table thead th * {
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
-                                {{ form.used_days.label(class="form-label") }}
+                                {{ form.used_days.label(class="form-label fw-bold") }}
                                 {{ form.used_days(class="form-control", min="0") }}
                                 {% if form.used_days.errors %}
                                     <div class="text-danger">
@@ -247,7 +699,7 @@ table thead th * {
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
-                                {{ form.year.label(class="form-label") }}
+                                {{ form.year.label(class="form-label fw-bold") }}
                                 {{ form.year(class="form-control", min="2020", max="2030") }}
                                 {% if form.year.errors %}
                                     <div class="text-danger">
@@ -261,7 +713,7 @@ table thead th * {
                     </div>
                     
                     <div class="mb-3">
-                        {{ form.manual_remaining_days.label(class="form-label") }}
+                        {{ form.manual_remaining_days.label(class="form-label fw-bold") }}
                         {{ form.manual_remaining_days(class="form-control", min="0", placeholder="Leave empty for automatic calculation") }}
                         <div class="form-text">{{ form.manual_remaining_days.description }}</div>
                         {% if form.manual_remaining_days.errors %}
@@ -287,7 +739,7 @@ table thead th * {
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Edit Leave Balance</h5>
+                <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Edit Leave Balance</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" id="editBalanceForm">
@@ -295,42 +747,42 @@ table thead th * {
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     
                     <div class="mb-3">
-                        <label class="form-label">Employee</label>
-                        <input type="text" class="form-control" id="edit_employee" readonly>
+                        <label class="form-label fw-bold">Employee</label>
+                        <input type="text" class="form-control" id="edit_employee" readonly style="background: #f8fafc;">
                     </div>
                     
                     <div class="mb-3">
-                        <label class="form-label">Leave Type</label>
-                        <input type="text" class="form-control" id="edit_leave_type" readonly>
+                        <label class="form-label fw-bold">Leave Type</label>
+                        <input type="text" class="form-control" id="edit_leave_type" readonly style="background: #f8fafc;">
                     </div>
                     
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label for="edit_total_days" class="form-label">Total Days</label>
+                                <label for="edit_total_days" class="form-label fw-bold">Total Days</label>
                                 <input type="number" class="form-control" id="edit_total_days" name="total_days" min="0" required>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label for="edit_used_days" class="form-label">Used Days</label>
+                                <label for="edit_used_days" class="form-label fw-bold">Used Days</label>
                                 <input type="number" class="form-control" id="edit_used_days" name="used_days" min="0">
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label for="edit_year" class="form-label">Year</label>
+                                <label for="edit_year" class="form-label fw-bold">Year</label>
                                 <input type="number" class="form-control" id="edit_year" name="year" min="2020" max="2030" required>
                             </div>
                         </div>
                     </div>
                     
                     <div class="mb-3">
-                        <label for="edit_manual_remaining_days" class="form-label">Manual Remaining Days (Override)</label>
+                        <label for="edit_manual_remaining_days" class="form-label fw-bold">Manual Remaining Days (Override)</label>
                         <div class="input-group">
                             <input type="number" class="form-control" id="edit_manual_remaining_days" name="manual_remaining_days" min="0" placeholder="Leave empty for automatic calculation">
                             <button type="button" class="btn btn-outline-secondary" onclick="clearManualOverride()">
-                                <i class="fas fa-times"></i> Clear Override
+                                <i class="fas fa-times"></i> Clear
                             </button>
                         </div>
                         <div class="form-text">Leave empty for automatic calculation (Total Days - Used Days)</div>
@@ -338,7 +790,7 @@ table thead th * {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update Balance</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Update Balance</button>
                 </div>
             </form>
         </div>
@@ -346,8 +798,41 @@ table thead th * {
 </div>
 
 <script>
-// Event delegation for edit balance buttons
+// Search functionality
 document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('employeeSearch');
+    const rows = document.querySelectorAll('.balance-row');
+    const visibleCount = document.getElementById('visibleCount');
+    const noResultsMessage = document.getElementById('noResultsMessage');
+    const totalCount = rows.length;
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            let visible = 0;
+            
+            rows.forEach(function(row) {
+                const employeeName = row.getAttribute('data-employee-name');
+                if (employeeName.includes(searchTerm)) {
+                    row.classList.remove('hidden');
+                    visible++;
+                } else {
+                    row.classList.add('hidden');
+                }
+            });
+            
+            visibleCount.textContent = visible;
+            
+            // Show/hide no results message
+            if (visible === 0 && searchTerm !== '') {
+                noResultsMessage.classList.add('show');
+            } else {
+                noResultsMessage.classList.remove('show');
+            }
+        });
+    }
+    
+    // Event delegation for edit balance buttons
     document.querySelectorAll('.edit-balance-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
             const id = this.getAttribute('data-balance-id');
@@ -448,6 +933,73 @@ function deleteBalance(id, employee, leaveType) {
             alert('Error deleting leave balance');
         });
     }
+}
+</script>
+
+<!-- Select2 JS for searchable dropdowns -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+// Wait for everything to load
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if jQuery and Select2 are loaded
+    if (typeof $ !== 'undefined' && typeof $.fn.select2 !== 'undefined') {
+        initSelect2();
+    } else {
+        // Retry after a short delay
+        setTimeout(function() {
+            if (typeof $ !== 'undefined' && typeof $.fn.select2 !== 'undefined') {
+                initSelect2();
+            }
+        }, 500);
+    }
+});
+
+function initSelect2() {
+    var select2Options = {
+        placeholder: 'Select an employee...',
+        allowClear: true,
+        dropdownParent: $('#addBalanceModal .modal-content'),
+        width: '100%',
+        minimumResultsForSearch: -1,  // -1 = Always show search box regardless of options count
+        matcher: function(params, data) {
+            // Custom matcher for better search
+            if ($.trim(params.term) === '') {
+                return data;
+            }
+            if (typeof data.text === 'undefined') {
+                return null;
+            }
+            if (data.text.toLowerCase().indexOf(params.term.toLowerCase()) > -1) {
+                return data;
+            }
+            return null;
+        }
+    };
+    
+    // Try to use bootstrap-5 theme if available
+    try {
+        select2Options.theme = 'bootstrap-5';
+    } catch(e) {
+        console.log('Bootstrap-5 theme not available, using default');
+    }
+    
+    // Destroy existing instance if any
+    if ($('#employeeSelect').hasClass('select2-hidden-accessible')) {
+        $('#employeeSelect').select2('destroy');
+    }
+    
+    // Initialize Select2 for the employee select with search enabled
+    $('#employeeSelect').select2(select2Options);
+    console.log('Select2 initialized with search box');
+    
+    // Re-initialize when modal opens
+    $('#addBalanceModal').on('shown.bs.modal', function() {
+        // Destroy and recreate to fix width issues
+        if ($('#employeeSelect').hasClass('select2-hidden-accessible')) {
+            $('#employeeSelect').select2('destroy');
+        }
+        $('#employeeSelect').select2(select2Options);
+    });
 }
 </script>
 {% endblock %}

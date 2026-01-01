@@ -1080,7 +1080,7 @@
     .employee-quick-action-item:hover {
         transform: translateY(-4px) !important;
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12) !important;
-        border-color: #667eea !important;
+        border-color: #005d99 !important;
         background: linear-gradient(135deg, #ffffff 0%, #f0f4ff 100%) !important;
     }
     
@@ -1127,7 +1127,7 @@
     .quick-action-item:hover .fw-bold,
     .employee-quick-action-item:hover span,
     .employee-quick-action-item:hover .fw-bold {
-        color: #667eea !important;
+        color: #005d99 !important;
     }
     
     /* Quick Action Small Text */
@@ -1161,7 +1161,7 @@
     .quick-action-item i.fa-user-friends,
     .employee-quick-action-item i.fa-users,
     .employee-quick-action-item i.fa-user-friends {
-        color: #8b5cf6 !important;
+        color: #005d99 !important;
     }
     
     .quick-action-item i.fa-chart-line,
@@ -1175,7 +1175,7 @@
     .quick-action-item i.fa-id-card,
     .employee-quick-action-item i.fa-user,
     .employee-quick-action-item i.fa-id-card {
-        color: #667eea !important;
+        color: #005d99 !important;
     }
 }
 

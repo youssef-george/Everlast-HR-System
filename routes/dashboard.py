@@ -100,15 +100,10 @@ dashboard_bp = Blueprint('dashboard', __name__, url_prefix='/dashboard')
 @login_required
 def index():
     """Main dashboard route that redirects based on user role"""
-    if current_user.role == 'employee':
-        return redirect(url_for('dashboard.employee'))
-    elif current_user.role == 'manager':
+    # All roles now use the dynamic manager dashboard
+    if current_user.role in ['employee', 'manager', 'admin', 'director', 'product_owner']:
         return redirect(url_for('dashboard.manager'))
-    elif current_user.role in ['admin', 'product_owner']:
-        return redirect(url_for('dashboard.admin'))
-    elif current_user.role == 'director':
-        return redirect(url_for('dashboard.director'))
-    return redirect(url_for('dashboard.employee'))  # Fallback
+    return redirect(url_for('dashboard.manager'))  # Fallback to manager dashboard
 
 @dashboard_bp.route('/employee')
 @login_required
@@ -296,85 +291,134 @@ def employee():
 
 @dashboard_bp.route('/manager')
 @login_required
-@role_required('manager', 'admin', 'director')
 def manager():
-    """Manager dashboard showing department employee requests"""
+    """Manager dashboard showing department employee requests - now supports all roles"""
     stats = get_dashboard_stats(current_user)
     
-    # Get employees from the manager's department
-    if current_user.managed_department:
-        department_id = current_user.managed_department[0].id if current_user.managed_department else None
-        employees = User.query.filter_by(department_id=department_id).all() if department_id else []
-        
-        # Get pending requests that need manager approval
-        pending_leave_requests = []
-        pending_permission_requests = []
-        
-        for employee in employees:
-            # Skip if this is the manager's own request (we'll display in a separate section)
-            if employee.id == current_user.id:
-                continue
-                
-            # Get leave requests needing manager approval
-            leave_requests = LeaveRequest.query.filter_by(
-                user_id=employee.id,
-                status='pending',
-                manager_status='pending'
-            ).order_by(LeaveRequest.created_at.desc()).all()
-            
-            # Get permission requests needing manager approval
-            permission_requests = PermissionRequest.query.filter_by(
-                user_id=employee.id,
-                status='pending',
-                manager_status='pending'
-            ).order_by(PermissionRequest.created_at.desc()).all()
-            
-            pending_leave_requests.extend(leave_requests)
-            pending_permission_requests.extend(permission_requests)
-    else:
-        employees = []
-        pending_leave_requests = []
-        pending_permission_requests = []
+    # Initialize variables
+    employees = []
+    pending_leave_requests = []
+    pending_permission_requests = []
+    team_leave_balances = []
     
-    # Get manager's own leave requests
+    # Role-specific logic
+    if current_user.role == 'employee':
+        # Employees only see their own data
+        employees = [current_user] if current_user.status == 'active' else []
+    elif current_user.role in ['manager', 'admin', 'director', 'product_owner']:
+        # Managers/Admins/Directors see their team/department
+        if current_user.managed_department:
+            department_id = current_user.managed_department[0].id if current_user.managed_department else None
+            employees = User.query.filter_by(department_id=department_id).all() if department_id else []
+            
+            # Get pending requests that need approval (only for managers)
+            if current_user.role == 'manager':
+                for employee in employees:
+                    # Skip if this is the manager's own request (we'll display in a separate section)
+                    if employee.id == current_user.id:
+                        continue
+                        
+                    # Get leave requests needing manager approval
+                    leave_requests = LeaveRequest.query.filter_by(
+                        user_id=employee.id,
+                        status='pending',
+                        manager_status='pending'
+                    ).order_by(LeaveRequest.created_at.desc()).all()
+                    
+                    # Get permission requests needing manager approval
+                    permission_requests = PermissionRequest.query.filter_by(
+                        user_id=employee.id,
+                        status='pending',
+                        manager_status='pending'
+                    ).order_by(PermissionRequest.created_at.desc()).all()
+                    
+                    pending_leave_requests.extend(leave_requests)
+                    pending_permission_requests.extend(permission_requests)
+        else:
+            employees = []
+    
+    # Get user's own leave requests
     personal_leave_requests = LeaveRequest.query.filter_by(
         user_id=current_user.id
     ).order_by(LeaveRequest.created_at.desc()).limit(5).all()
     
-    # Get manager's own permission requests
+    # Get user's own permission requests
     personal_permission_requests = PermissionRequest.query.filter_by(
         user_id=current_user.id
     ).order_by(PermissionRequest.created_at.desc()).limit(5).all()
     
-    # Get team leave balances summary
-    team_leave_balances = []
-    if current_user.department_id:
+    # Get team leave balances summary - filter to show only current year balances for all roles
+    from datetime import datetime
+    current_year = datetime.now().year
+    
+    if current_user.role in ['manager', 'admin', 'director', 'product_owner']:
         from models import LeaveBalance, LeaveType
-        team_members = User.query.filter_by(status='active', department_id=current_user.department_id).all()
-        team_member_ids = [user.id for user in team_members]
         
-        # Get leave balances for team members
-        balances = LeaveBalance.query.join(LeaveType).join(User).filter(
-            LeaveBalance.user_id.in_(team_member_ids)
+        # Get team members based on role
+        if current_user.role == 'manager' and current_user.department_id:
+            # Managers see their department employees
+            team_members = User.query.filter_by(status='active', department_id=current_user.department_id).all()
+        elif current_user.role in ['admin', 'product_owner', 'director']:
+            # Admins/Directors see all active employees
+            team_members = User.query.filter(
+                User.status == 'active',
+                User.role.notin_(['admin', 'product_owner', 'director'])
+            ).all()
+        else:
+            team_members = []
+        
+        if team_members:
+            team_member_ids = [user.id for user in team_members]
+            
+            # Get leave balances for team members - only current year
+            balances = LeaveBalance.query.join(LeaveType).join(User).filter(
+                LeaveBalance.user_id.in_(team_member_ids),
+                LeaveBalance.year == current_year
+            ).all()
+            
+            # Group balances by user
+            balances_by_user = {}
+            for balance in balances:
+                if balance.user_id not in balances_by_user:
+                    balances_by_user[balance.user_id] = []
+                balances_by_user[balance.user_id].append(balance)
+            
+            # Create summary for each team member
+            for user in team_members:
+                user_balances = balances_by_user.get(user.id, [])
+                team_leave_balances.append({
+                    'user': user,
+                    'balances': user_balances
+                })
+    elif current_user.role == 'employee':
+        # Employees should also see their own current year balances
+        from models import LeaveBalance, LeaveType
+        # Get leave balances for current user - only current year
+        balances = LeaveBalance.query.join(LeaveType).filter(
+            LeaveBalance.user_id == current_user.id,
+            LeaveBalance.year == current_year
         ).all()
         
-        # Group balances by user
-        balances_by_user = {}
-        for balance in balances:
-            if balance.user_id not in balances_by_user:
-                balances_by_user[balance.user_id] = []
-            balances_by_user[balance.user_id].append(balance)
-        
-        # Create summary for each team member
-        for user in team_members:
-            user_balances = balances_by_user.get(user.id, [])
+        if balances:
             team_leave_balances.append({
-                'user': user,
-                'balances': user_balances
+                'user': current_user,
+                'balances': balances
             })
     
+    # Set dashboard title based on role
+    if current_user.role == 'employee':
+        dashboard_title = 'Employee Dashboard'
+    elif current_user.role == 'manager':
+        dashboard_title = 'Manager Dashboard'
+    elif current_user.role in ['admin', 'product_owner']:
+        dashboard_title = 'Admin Dashboard'
+    elif current_user.role == 'director':
+        dashboard_title = 'Director Dashboard'
+    else:
+        dashboard_title = 'Dashboard'
+    
     return render_template('dashboard/manager.html',
-                          title='Manager Dashboard',
+                          title=dashboard_title,
                           stats=stats,
                           employees=employees,
                           pending_leave_requests=pending_leave_requests[:5],
@@ -385,8 +429,8 @@ def manager():
                           # Auto-fetch data attributes
                           pending_leave_requests_count=len(pending_leave_requests),
                           pending_permission_requests_count=len(pending_permission_requests),
-                          team_present_today=stats.get('team_present_today', 0),
-                          team_absent_today=stats.get('team_absent_today', 0),
+                          team_present_today=stats.get('team_present_today', stats.get('present_today', 0)),
+                          team_absent_today=stats.get('team_absent_today', stats.get('absent_today', 0)),
                           total_employees=stats.get('total_employees', 0))
 
 @dashboard_bp.route('/admin')
@@ -1936,6 +1980,7 @@ def leave_balances():
         ).first()
     
     # Get balances for selected year - only annual leave type
+    # New employees will have 0 balance until admin/support manually adds days
     if annual_leave_type and user_ids:
         balances = LeaveBalance.query.join(LeaveType).join(User).filter(
             LeaveBalance.user_id.in_(user_ids),
@@ -1945,39 +1990,13 @@ def leave_balances():
     else:
         balances = []
     
-    # For 2026, set all balances to 21 total days and 0 used if they don't exist
-    # Only for annual leave type and users with fingerprint_number
-    if selected_year == 2026 and annual_leave_type:
-        # Create a set of existing balance keys (user_id, leave_type_id)
-        existing_balances = {(b.user_id, b.leave_type_id) for b in balances}
-        
-        # For each user that doesn't have a 2026 annual balance
-        for user in users:
-            if (user.id, annual_leave_type.id) not in existing_balances:
-                # Create virtual balance object for 2026
-                # Total days = 21, Used days = 0, Remaining = 21
-                virtual_balance = type('VirtualBalance', (), {
-                    'id': None,
-                    'user_id': user.id,
-                    'leave_type_id': annual_leave_type.id,
-                    'year': 2026,
-                    'total_days': 21,
-                    'used_days': 0,
-                    'remaining_days': 21,
-                    'manual_remaining_days': None,
-                    'user': user,
-                    'leave_type': annual_leave_type,
-                    'created_at': datetime(2026, 1, 1),
-                    'updated_at': datetime.utcnow(),
-                    'is_virtual': True  # Flag to indicate this is calculated, not stored
-                })()
-                balances.append(virtual_balance)
-    
     form = LeaveBalanceForm()
     
-    # Set form choices
-    # Only show users with fingerprint_number
-    form.user_id.choices = [(u.id, f"{u.first_name} {u.last_name}") for u in users]
+    # Set form choices - show ALL active employees for the dropdown (for setting balances)
+    all_active_employees = User.query.filter(
+        User.status == 'active'
+    ).order_by(User.first_name, User.last_name).all()
+    form.user_id.choices = [(u.id, f"{u.first_name} {u.last_name}") for u in all_active_employees]
     # Only show annual leave type
     if annual_leave_type:
         form.leave_type_id.choices = [(annual_leave_type.id, annual_leave_type.name)]
@@ -1987,16 +2006,26 @@ def leave_balances():
     # Available years for tabs
     available_years = [2025, 2026]
     
+    # Calculate summary statistics
+    total_employees = len(balances)
+    total_days_allocated = sum(b.total_days for b in balances)
+    total_days_used = sum(b.used_days or 0 for b in balances)
+    total_days_remaining = sum(b.remaining_days for b in balances)
+    
     return render_template('dashboard/leave_balances.html',
                          title='Leave Balances Management',
                          balances=balances,
                          form=form,
                          selected_year=selected_year,
-                         available_years=available_years)
+                         available_years=available_years,
+                         total_employees=total_employees,
+                         total_days_allocated=total_days_allocated,
+                         total_days_used=total_days_used,
+                         total_days_remaining=total_days_remaining)
 
 @dashboard_bp.route('/leave-balances/create', methods=['POST'])
 @login_required
-@role_required(['admin', 'manager'])
+@role_required(['admin', 'product_owner'])
 def create_leave_balance():
     """Create or update leave balance for an employee"""
     from models import LeaveBalance
@@ -2071,20 +2100,6 @@ def create_leave_balance():
             flash('Leave balances can only be set for employees with fingerprint numbers.', 'danger')
             return redirect(url_for('dashboard.leave_balances'))
         
-        # Security check: Managers can only create balances for their team members
-        if current_user.role == 'manager':
-            if current_user.department_id:
-                # Manager has department - check if user is in their team
-                team_member_ids = [u.id for u in User.query.filter_by(status='active', department_id=current_user.department_id).all()]
-                if form.user_id.data not in team_member_ids:
-                    flash('You can only manage leave balances for your team members.', 'danger')
-                    return redirect(url_for('dashboard.leave_balances'))
-            else:
-                # Manager has no department - can only manage their own
-                if form.user_id.data != current_user.id:
-                    flash('You can only manage your own leave balances.', 'danger')
-                    return redirect(url_for('dashboard.leave_balances'))
-        
         # Check if balance already exists for this user, leave type, and year
         existing_balance = LeaveBalance.query.filter_by(
             user_id=form.user_id.data,
@@ -2122,7 +2137,7 @@ def create_leave_balance():
 
 @dashboard_bp.route('/leave-balances/create-virtual', methods=['POST'])
 @login_required
-@role_required(['admin', 'product_owner', 'director', 'manager'])
+@role_required(['admin', 'product_owner'])
 def create_virtual_leave_balance():
     """Create a leave balance from a virtual balance (for 2026)"""
     from models import LeaveBalance, User, LeaveType
@@ -2138,18 +2153,6 @@ def create_virtual_leave_balance():
         if not user_id or not leave_type_id or not total_days or not year:
             flash('Missing required fields.', 'danger')
             return redirect(url_for('dashboard.leave_balances', year=year))
-        
-        # Security check: Managers can only create balances for their team members
-        if current_user.role == 'manager':
-            if current_user.department_id:
-                team_member_ids = [u.id for u in User.query.filter_by(status='active', department_id=current_user.department_id).all()]
-                if user_id not in team_member_ids:
-                    flash('You can only manage leave balances for your team members.', 'danger')
-                    return redirect(url_for('dashboard.leave_balances', year=year))
-            else:
-                if user_id != current_user.id:
-                    flash('You can only manage your own leave balances.', 'danger')
-                    return redirect(url_for('dashboard.leave_balances', year=year))
         
         # Validate: Only allow annual leave type
         annual_leave_type = LeaveType.query.filter(
@@ -2207,26 +2210,12 @@ def create_virtual_leave_balance():
 
 @dashboard_bp.route('/leave-balances/<int:balance_id>/edit', methods=['POST'])
 @login_required
-@role_required(['admin', 'product_owner', 'director', 'manager'])
+@role_required(['admin', 'product_owner'])
 def edit_leave_balance(balance_id):
     """Edit a leave balance"""
     from models import LeaveBalance
     
     balance = LeaveBalance.query.get_or_404(balance_id)
-    
-    # Security check: Managers can only edit their team's balances
-    if current_user.role == 'manager':
-        if current_user.department_id:
-            # Manager has department - check if user is in their team
-            team_member_ids = [u.id for u in User.query.filter_by(status='active', department_id=current_user.department_id).all()]
-            if balance.user_id not in team_member_ids:
-                flash('You can only manage leave balances for your team members.', 'danger')
-                return redirect(url_for('dashboard.leave_balances'))
-        else:
-            # Manager has no department - can only edit their own
-            if balance.user_id != current_user.id:
-                flash('You can only manage your own leave balances.', 'danger')
-                return redirect(url_for('dashboard.leave_balances'))
     
     try:
         # Get form data directly from request
@@ -2267,26 +2256,12 @@ def edit_leave_balance(balance_id):
 
 @dashboard_bp.route('/leave-balances/<int:balance_id>/delete', methods=['POST'])
 @login_required
-@role_required(['admin', 'manager'])
+@role_required(['admin', 'product_owner'])
 def delete_leave_balance(balance_id):
     """Delete a leave balance"""
     from models import LeaveBalance
     
     balance = LeaveBalance.query.get_or_404(balance_id)
-    
-    # Security check: Managers can only delete their team's balances
-    if current_user.role == 'manager':
-        if current_user.department_id:
-            # Manager has department - check if user is in their team
-            team_member_ids = [u.id for u in User.query.filter_by(status='active', department_id=current_user.department_id).all()]
-            if balance.user_id not in team_member_ids:
-                flash('You can only manage leave balances for your team members.', 'danger')
-                return redirect(url_for('dashboard.leave_balances'))
-        else:
-            # Manager has no department - can only delete their own
-            if balance.user_id != current_user.id:
-                flash('You can only manage your own leave balances.', 'danger')
-                return redirect(url_for('dashboard.leave_balances'))
     
     employee_name = balance.user.get_full_name()
     leave_type_name = balance.leave_type.name

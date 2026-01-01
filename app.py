@@ -1,7 +1,7 @@
 import os
 import logging
 from dotenv import load_dotenv
-from flask import Flask, redirect, url_for, flash, request, render_template, jsonify
+from flask import Flask, redirect, url_for, flash, request, render_template, jsonify, session
 from flask_login import LoginManager, current_user
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from flask_session import Session
@@ -662,6 +662,40 @@ def create_app(config_name='default'):
     @app.before_request
     def before_request_ensure_tables():
         ensure_tables_exist()
+    
+    # Check session timeout based on remember me status
+    @app.before_request
+    def check_session_timeout():
+        """Check and enforce session timeout based on remember me selection"""
+        from flask_login import logout_user
+        from datetime import datetime, timedelta
+        
+        # Only check for authenticated users
+        if current_user.is_authenticated:
+            remember_me = session.get('remember_me', False)
+            login_timestamp = session.get('login_timestamp')
+            
+            if login_timestamp:
+                current_time = datetime.utcnow().timestamp()
+                elapsed_time = current_time - login_timestamp
+                
+                # Set timeout: 2 hours (7200 seconds) for remember me, 30 minutes (1800 seconds) for regular sessions
+                timeout_seconds = 7200 if remember_me else 1800
+                
+                # Check if session has expired
+                if elapsed_time > timeout_seconds:
+                    # Session expired, log out the user
+                    user_name = current_user.get_full_name() if hasattr(current_user, 'get_full_name') else 'User'
+                    logging.info(f'Session expired for user {user_name} (remember_me={remember_me}, elapsed={elapsed_time:.0f}s)')
+                    logout_user()
+                    session.clear()
+                    flash('Your session has expired. Please log in again.', 'info')
+                    return redirect(url_for('auth.login'))
+                else:
+                    # Update session lifetime dynamically based on remember me status
+                    session.permanent = True
+                    # Flask will use PERMANENT_SESSION_LIFETIME, but we track our own timeout
+                    # The session will be invalidated by our check above
     
     def admin_instance_required(f):
         @wraps(f)

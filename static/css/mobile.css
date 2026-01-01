@@ -69,7 +69,7 @@
     .mobile-menu-toggle,
     .menu-toggle,
     .hamburger-menu {
-        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+        background: linear-gradient(135deg, #005d99 0%, #0066b3 100%) !important;
         color: white !important;
         border: none !important;
         border-radius: 0.5rem !important;
@@ -135,7 +135,7 @@
     }
     
     .sidebar .nav-link.active {
-        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        background: linear-gradient(135deg, #005d99 0%, #0066b3 100%);
         color: white;
         box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
     }
@@ -243,7 +243,7 @@
     
     .form-control:focus,
     .form-select:focus {
-        border-color: #6366f1 !important;
+        border-color: #005d99 !important;
         box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
         outline: none !important;
     }
@@ -274,7 +274,7 @@
     
     .btn-primary,
     .employee-btn-primary {
-        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+        background: linear-gradient(135deg, #005d99 0%, #0066b3 100%) !important;
         color: white !important;
         box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
     }
@@ -520,13 +520,13 @@
     }
     
     .page-link:hover {
-        background: #6366f1;
+        background: #005d99;
         color: white;
         transform: translateY(-2px);
     }
     
     .page-item.active .page-link {
-        background: #6366f1;
+        background: #005d99;
         color: white;
         box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
     }

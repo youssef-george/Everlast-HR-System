@@ -29,6 +29,144 @@ def dashboard_stats():
             'message': 'Failed to fetch dashboard statistics'
         }), 500
 
+@api_bp.route('/dashboard/charts')
+@login_required
+@rate_limit(max_requests=60, window=60)
+def dashboard_charts():
+    """API endpoint to get chart data for dashboard analytics"""
+    try:
+        today = date.today()
+        
+        # Get employees based on role
+        if current_user.role == 'employee':
+            employees = [current_user] if current_user.status == 'active' else []
+        elif current_user.role == 'manager':
+            employees = get_employees_for_manager(current_user.id)
+        elif current_user.role in ['admin', 'product_owner', 'director']:
+            employees = User.query.filter(
+                User.status == 'active',
+                User.role.notin_(['admin', 'product_owner', 'director'])
+            ).all()
+        else:
+            employees = []
+        
+        employee_ids = [emp.id for emp in employees if emp.status == 'active']
+        
+        if not employee_ids:
+            return jsonify({
+                'status': 'success',
+                'data': {
+                    'weekly_attendance': [0] * 7,
+                    'weekly_leaves': [0] * 7,
+                    'weekly_productivity': [0] * 7,
+                    'team_status': {
+                        'present': 0,
+                        'on_leave': 0,
+                        'late': 0,
+                        'absent': 0
+                    }
+                }
+            })
+        
+        # Calculate weekly data (last 7 days)
+        weekly_data = {'attendance': [], 'leaves': [], 'productivity': []}
+        day_labels = []
+        
+        for i in range(6, -1, -1):  # Last 7 days
+            target_date = today - timedelta(days=i)
+            day_labels.append(target_date.strftime('%a'))
+            
+            # Get attendance rate for this day
+            start_datetime = datetime.combine(target_date, datetime.min.time())
+            end_datetime = datetime.combine(target_date, datetime.max.time())
+            
+            # Count present employees
+            present_count = db.session.query(AttendanceLog.user_id).filter(
+                AttendanceLog.timestamp.between(start_datetime, end_datetime),
+                AttendanceLog.user_id.in_(employee_ids)
+            ).distinct().count()
+            
+            # Calculate attendance rate
+            total_active = len(employee_ids)
+            attendance_rate = round((present_count / total_active * 100) if total_active > 0 else 0, 1)
+            weekly_data['attendance'].append(attendance_rate)
+            
+            # Count leave requests for this day
+            leave_count = LeaveRequest.query.filter(
+                LeaveRequest.user_id.in_(employee_ids),
+                LeaveRequest.start_date <= target_date,
+                LeaveRequest.end_date >= target_date,
+                LeaveRequest.status == 'approved'
+            ).count()
+            weekly_data['leaves'].append(leave_count)
+            
+            # Calculate productivity (based on working hours)
+            # For simplicity, use attendance rate as productivity proxy
+            weekly_data['productivity'].append(attendance_rate)
+        
+        # Calculate team status for today
+        start_datetime = datetime.combine(today, datetime.min.time())
+        end_datetime = datetime.combine(today, datetime.max.time())
+        
+        # Get present employees
+        present_user_ids = db.session.query(AttendanceLog.user_id).filter(
+            AttendanceLog.timestamp.between(start_datetime, end_datetime),
+            AttendanceLog.user_id.in_(employee_ids)
+        ).distinct().all()
+        present_ids_list = [uid[0] for uid in present_user_ids]
+        present_count = len(present_ids_list)
+        
+        # Count late employees (check-in after 9:00 AM)
+        late_threshold = datetime.combine(today, datetime.strptime('09:00', '%H:%M').time())
+        late_count = 0
+        for user_id in present_ids_list:
+            first_log = AttendanceLog.query.filter(
+                AttendanceLog.user_id == user_id,
+                AttendanceLog.timestamp.between(start_datetime, end_datetime)
+            ).order_by(AttendanceLog.timestamp.asc()).first()
+            
+            if first_log and first_log.timestamp > late_threshold:
+                late_count += 1
+        
+        # Count employees on leave today
+        on_leave_count = LeaveRequest.query.filter(
+            LeaveRequest.user_id.in_(employee_ids),
+            LeaveRequest.start_date <= today,
+            LeaveRequest.end_date >= today,
+            LeaveRequest.status == 'approved'
+        ).count()
+        
+        # Absent = total - present (excluding those on leave)
+        absent_count = len(employee_ids) - present_count
+        
+        # Adjust: if someone is on leave, they shouldn't be counted as absent
+        # Present count already excludes leave, so we need to adjust
+        team_status = {
+            'present': max(0, present_count - late_count),  # Present but not late
+            'on_leave': on_leave_count,
+            'late': late_count,
+            'absent': max(0, absent_count - on_leave_count)
+        }
+        
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'weekly_attendance': weekly_data['attendance'],
+                'weekly_leaves': weekly_data['leaves'],
+                'weekly_productivity': weekly_data['productivity'],
+                'day_labels': day_labels,
+                'team_status': team_status,
+                'total_team': len(employee_ids)
+            }
+        })
+        
+    except Exception as e:
+        logging.error(f"Error fetching chart data: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': 'Failed to fetch chart data'
+        }), 500
+
 @api_bp.route('/requests/recent')
 @login_required
 @rate_limit(max_requests=60, window=60)  # 60 requests per minute

@@ -1,17 +1,137 @@
 {% extends 'base.html' %}
 
+{% block extra_css %}
+<style>
+/* Leave Balances Management Page Styling */
+.leave-management-header {
+    background: linear-gradient(135deg, #005d99 0%, #0066b3 100%);
+    color: white;
+    padding: 1.5rem 2rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 15px rgba(0, 93, 153, 0.2);
+}
+
+.leave-management-header h4 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.leave-management-header .text-muted {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.leave-management-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.leave-management-card .card-header {
+    background: linear-gradient(135deg, #005d99 0%, #0066b3 100%);
+    color: white;
+    padding: 1.25rem 1.5rem;
+    border-bottom: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.leave-management-card .card-header h5 {
+    margin: 0;
+    font-weight: 600;
+    color: white;
+}
+
+.leave-management-card .table thead th {
+    background-color: #005d99 !important;
+    color: white !important;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    padding: 1rem 0.75rem;
+    border: none;
+}
+
+.leave-management-card .table tbody tr {
+    transition: all 0.2s ease;
+}
+
+.leave-management-card .table tbody tr:hover {
+    background-color: rgba(0, 93, 153, 0.05);
+}
+
+.avatar-initial {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+    background: linear-gradient(135deg, #005d99 0%, #0066b3 100%) !important;
+    color: white !important;
+}
+
+.bg-label-primary {
+    background: linear-gradient(135deg, #005d99 0%, #0066b3 100%) !important;
+    color: white !important;
+}
+
+.btn-allocate {
+    background: linear-gradient(135deg, #17a74a 0%, #28a745 100%);
+    border: none;
+    color: white;
+    padding: 0.5rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-allocate:hover {
+    background: linear-gradient(135deg, #138a3d 0%, #218838 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(23, 167, 74, 0.3);
+    color: white;
+}
+
+.badge.bg-label-success {
+    background-color: rgba(23, 167, 74, 0.15) !important;
+    color: #17a74a !important;
+    font-weight: 600;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+}
+
+.badge.bg-label-danger {
+    background-color: rgba(220, 53, 69, 0.15) !important;
+    color: #dc3545 !important;
+    font-weight: 600;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-xxl flex-grow-1 container-p-y">
-    <h4 class="fw-bold py-3 mb-4">
-    <span class="text-muted fw-light">Dashboard /</span> Leave Balances Management
-</h4>
+    <div class="leave-management-header">
+        <h4 class="fw-bold">
+            <span class="text-muted fw-light">Dashboard /</span> Leave Balances Management
+        </h4>
+    </div>
 
-<div class="card">
-    <h5 class="card-header">Leave Balances for {{ current_year }}
+<div class="card leave-management-card">
+    <div class="card-header">
+        <h5>Leave Balances for {{ current_year }}</h5>
         <form action="{{ url_for('dashboard.allocate_default_leave') }}" method="post" style="display: inline;">
-            <button type="submit" class="btn btn-primary btn-sm float-end">Allocate Default Leave</button>
+            <button type="submit" class="btn btn-allocate">
+                <i class="fas fa-calendar-plus me-2"></i>Allocate Default Leave
+            </button>
         </form>
-    </h5>
+    </div>
     <div class="table-responsive text-nowrap">
         <table class="table card-table">
             <thead>

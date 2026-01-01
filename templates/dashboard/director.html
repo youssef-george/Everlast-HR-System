@@ -5,12 +5,12 @@
 <style>
     /* Enhanced Director Dashboard Styles - Matching Admin Theme with Director Branding */
     .dashboard-header {
-        background-color: #8b5cf6;
+        background-color: #005d99;
         color: white;
         border-radius: 15px;
         padding: 2rem;
         margin-bottom: 2rem;
-        box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+        box-shadow: 0 10px 30px rgba(0, 93, 153, 0.3);
         position: relative;
         overflow: hidden;
     }
@@ -242,7 +242,7 @@
 
     .quick-action-item:hover {
         transform: translateY(-5px) !important;
-        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3) !important;
+        box-shadow: 0 8px 25px rgba(0, 93, 153, 0.3) !important;
     }
 
     .quick-action-item i {
@@ -316,7 +316,7 @@
     /* View-only indicators */
     .view-only-badge {
         background: rgba(139, 92, 246, 0.1);
-        color: #8b5cf6;
+        color: #005d99;
         border: 1px solid rgba(139, 92, 246, 0.2);
     }
     
@@ -354,22 +354,22 @@
     
     .chart-toggle-btn:hover {
         background-color: #e9ecef !important;
-        border-color: #8b5cf6 !important;
-        color: #8b5cf6 !important;
+        border-color: #005d99 !important;
+        color: #005d99 !important;
         transform: translateY(-2px) !important;
         box-shadow: 0 8px 25px rgba(139, 92, 246, 0.2) !important;
     }
     
     .chart-toggle-btn.active {
-        background-color: #8b5cf6 !important;
-        border-color: #8b5cf6 !important;
+        background-color: #005d99 !important;
+        border-color: #005d99 !important;
         color: white !important;
         box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4) !important;
         transform: translateY(-2px) !important;
     }
     
     .chart-toggle-btn.active:hover {
-        background-color: #7c3aed !important;
+        background-color: #0066b3 !important;
         box-shadow: 0 12px 35px rgba(139, 92, 246, 0.5) !important;
     }
     
@@ -477,7 +477,7 @@
     }
     
     .director-table thead th {
-        background-color: #8b5cf6 !important;
+        background-color: #005d99 !important;
         color: white !important;
         font-weight: 600 !important;
         padding: 1rem 0.75rem !important;
@@ -509,7 +509,7 @@
     }
     
     .director-table-sm thead th {
-        background-color: #3b82f6 !important;
+        background-color: #005d99 !important;
         color: white !important;
         font-weight: 600 !important;
         padding: 0.75rem 0.5rem !important;
@@ -542,7 +542,7 @@
         padding: 1rem;
         background: #f8fafc;
         border-radius: 12px;
-        border-left: 4px solid #8b5cf6;
+        border-left: 4px solid #005d99;
         transition: all 0.3s ease;
     }
     
@@ -915,7 +915,7 @@
     
     /* Overview Cards Styling - Matching Screenshot Design */
     .overview-header-container {
-        background-color: #8b5cf6;
+        background-color: #005d99;
         border-radius: 20px;
         padding: 2rem;
         box-shadow: 0 10px 30px rgba(139, 92, 246, 0.2);
@@ -1035,7 +1035,7 @@
     }
     
     .primary-bar {
-        background-color: #3b82f6;
+        background-color: #005d99;
     }
     
     /* Responsive Design for Overview Cards */
@@ -1141,7 +1141,7 @@
     
     /* Enhanced View All Button Styling */
     .view-all-btn {
-        background-color: #3b82f6 !important;
+        background-color: #005d99 !important;
         color: white !important;
         font-weight: 600;
         padding: 0.5rem 1rem !important;
@@ -1161,7 +1161,7 @@
     }
     
     .view-all-btn:hover {
-        background-color: #2563eb !important;
+        background-color: #0066b3 !important;
         color: white !important;
         text-decoration: none !important;
         transform: translateY(-1px);
@@ -1273,14 +1273,14 @@
     }
     
     .chart-toggle-btn.active {
-        background-color: #8b5cf6 !important;
+        background-color: #005d99 !important;
         color: white !important;
         border-color: transparent !important;
         box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
     }
     
     .chart-toggle-btn.active:hover {
-        background-color: #7c3aed !important;
+        background-color: #0066b3 !important;
         color: white !important;
     }
 </style>
@@ -1317,7 +1317,7 @@
         <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
             <div class="stat-card">
                 <div class="stat-content">
-                    <div class="stat-icon" style="background-color: #8b5cf6;">
+                    <div class="stat-icon" style="background-color: #005d99;">
                         <i class="fas fa-users text-white"></i>
                 </div>
                     <div class="stat-details">
@@ -1398,7 +1398,7 @@
                     </div>
                     <div class="col-lg-3 col-md-6 col-6">
                         <a href="{{ url_for('dashboard.users') }}" class="action-btn action-btn-secondary w-100 text-center quick-action-item">
-                            <i class="fas fa-users d-block mb-2" style="font-size: 2.5rem; color: #6f42c1;"></i>
+                            <i class="fas fa-users d-block mb-2" style="font-size: 2.5rem; color: #005d99;"></i>
                             <span class="d-block fw-bold">See Employees</span>
                             <small class="text-muted">View company employees</small>
                         </a>
@@ -1422,7 +1422,7 @@
             <div class="employee-card">
                 <div class="employee-card-header d-flex justify-content-between align-items-center">
                     <h3 class="card-title mb-0" style="color: #2d3748 !important; font-weight: 600;">
-                        <i class="fas fa-chart-bar me-2" style="color: #8b5cf6;"></i>
+                        <i class="fas fa-chart-bar me-2" style="color: #005d99;"></i>
                         Department Analytics
                     </h3>
                     <div class="card-toolbar ms-auto">
@@ -1494,7 +1494,7 @@
                     </div>
                     
                     <!-- Permission Requests Card -->
-                    <div class="summary-card-item" style="background-color: #8b5cf6;">
+                    <div class="summary-card-item" style="background-color: #005d99;">
                         <div class="summary-card-icon">
                             <i class="fas fa-user-clock"></i>
                         </div>
@@ -1689,7 +1689,7 @@
         <div class="employee-card">
             <div class="employee-card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title mb-0" style="color: #2d3748 !important; font-weight: 600;">
-                    <i class="fas fa-balance-scale me-2" style="color: #3b82f6;"></i>
+                    <i class="fas fa-balance-scale me-2" style="color: #005d99;"></i>
                     Recent Leave Balances
                 </h3>
                 <div class="card-toolbar">
@@ -1906,7 +1906,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         backgroundColor: 'rgba(0, 0, 0, 0.9)',
                         titleColor: '#fff',
                         bodyColor: '#fff',
-                        borderColor: '#8b5cf6',
+                        borderColor: '#005d99',
                         borderWidth: 1,
                         cornerRadius: 12,
                         displayColors: true,

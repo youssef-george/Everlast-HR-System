@@ -3,7 +3,7 @@ from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_wtf.csrf import CSRFError
 from forms import LoginForm, RegistrationForm
-from models import db, User, Department
+from models import db, User, Department, LeaveType, LeaveBalance
 from datetime import datetime
 from helpers import log_activity
 import logging
@@ -74,7 +74,13 @@ def login():
                             flash('Your account is inactive. Please contact an administrator.', 'danger')
                             return redirect(url_for('auth.login'))
                         
-                        login_user(user, remember=form.remember.data)
+                        remember_me = form.remember.data
+                        login_user(user, remember=remember_me)
+                        
+                        # Store remember me status and login timestamp for session timeout management
+                        session['remember_me'] = remember_me
+                        session['login_timestamp'] = datetime.utcnow().timestamp()
+                        session.permanent = True
                         
                         # Log successful login (IP will be detected from proxy headers if available)
                         log_activity(
@@ -121,6 +127,10 @@ def logout():
         ip_address=None,  # Let log_activity detect real IP from headers
         description=f'User {user.get_full_name()} logged out'
     )
+    
+    # Clear session timeout tracking data
+    session.pop('remember_me', None)
+    session.pop('login_timestamp', None)
     
     logout_user()
     flash('You have been logged out.', 'success')
@@ -197,17 +207,17 @@ def register():
 
             # Initialize leave balances for the new active user
             current_year = datetime.now().year
-            leave_types = models.LeaveType.query.all()
+            leave_types = LeaveType.query.all()
             for lt in leave_types:
                 # Check if a LeaveBalance already exists for this user, leave type, and year
-                existing_balance = models.LeaveBalance.query.filter_by(
+                existing_balance = LeaveBalance.query.filter_by(
                     user_id=new_user.id,
                     leave_type_id=lt.id,
                     year=current_year
                 ).first()
                 
                 if not existing_balance:
-                    new_balance = models.LeaveBalance(
+                    new_balance = LeaveBalance(
                         user_id=new_user.id,
                         leave_type_id=lt.id,
                         year=current_year,

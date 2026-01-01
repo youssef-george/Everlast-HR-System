@@ -509,7 +509,7 @@ def ensure_attendance_logs_processed(start_date, end_date):
 
 @final_report_bp.route('/final-report')
 @login_required
-@role_required(['admin', 'product_owner', 'manager'])
+@role_required(['admin', 'product_owner'])
 def final_report():
     """Final Report - Admin, Product Owner, Manager, and Employee attendance report with auto-fetch and duplicate removal"""
     
@@ -751,7 +751,7 @@ def final_report():
 
 @final_report_bp.route('/final-report/export')
 @login_required
-@role_required(['admin', 'product_owner', 'manager', 'employee'])
+@role_required(['admin', 'product_owner'])
 def export_final_report():
     """Export final report to Excel"""
     
@@ -982,8 +982,17 @@ def detailed_attendance_report():
         # Managers see their employees AND themselves
         from helpers import get_employees_for_manager
         team_members = get_employees_for_manager(current_user.id)
-        # Include manager themselves
-        users = [current_user] + list(team_members)
+        # Include manager themselves, but ensure no duplicates
+        # Use a set to track user IDs to avoid duplicates
+        user_ids_seen = {current_user.id}
+        users = [current_user]
+        
+        # Add team members, skipping the manager if they're already in the list
+        for member in team_members:
+            if member.id not in user_ids_seen:
+                users.append(member)
+                user_ids_seen.add(member.id)
+        
         # Filter to active users only with fingerprint numbers (excluding fingerprint 1)
         users = [u for u in users if u.status == 'active' and 
                  not u.first_name.startswith('User') and 
@@ -2298,7 +2307,7 @@ def export_detailed_attendance_report_pdf():
 
 @final_report_bp.route('/final-report/export-pdf')
 @login_required
-@role_required(['admin', 'product_owner', 'manager', 'employee'])
+@role_required(['admin', 'product_owner'])
 def export_final_report_pdf():
     """Export final report to PDF"""
     

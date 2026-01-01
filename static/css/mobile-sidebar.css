@@ -7,7 +7,7 @@
     .sidebar {
         width: 280px !important;
         max-width: 85vw !important;
-        background: #ffffff !important;
+        background: #1f2937 !important;
         box-shadow: 2px 0 20px rgba(0, 0, 0, 0.15) !important;
         z-index: 1050 !important;
     }
@@ -15,8 +15,8 @@
     /* ===== Sidebar Header ===== */
     .sidebar-header {
         padding: 1rem 1.25rem !important;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-        border-bottom: 2px solid rgba(255, 255, 255, 0.2) !important;
+        background: #1f2937 !important;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.1) !important;
         gap: 0.5rem !important;
         display: flex !important;
         align-items: center !important;
@@ -79,7 +79,7 @@
     .sidebar .nav-icon,
     .sidebar .nav-link .fas,
     .sidebar .nav-link .far {
-        color: #667eea !important;
+        color: #ffffff !important;
         font-size: 1.1rem !important;
         margin-right: 0.875rem !important;
         width: 24px !important;
@@ -91,7 +91,7 @@
     .sidebar .nav-link .nav-text,
     .sidebar .nav-link span:not(.badge):not(.btn),
     .sidebar .nav-link {
-        color: #374151 !important;
+        color: rgba(255, 255, 255, 0.85) !important;
         font-weight: 600 !important;
         white-space: nowrap !important;
         overflow: hidden !important;
@@ -103,11 +103,13 @@
     .sidebar .nav-item.active .nav-link,
     .sidebar .nav-link[aria-current="page"],
     .sidebar a.nav-link.active {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        background-color: #005d99 !important;
         color: #ffffff !important;
-        font-weight: 700 !important;
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
-        border-left: 4px solid #ffffff !important;
+        font-weight: 600 !important;
+        box-shadow: 0 4px 12px rgba(0, 93, 153, 0.3) !important;
+        border-left: none !important;
+        border-radius: 8px !important;
+        margin: 0 0.75rem !important;
     }
     
     .sidebar .nav-link.active i,
@@ -125,25 +127,26 @@
     
     /* ===== Hover State ===== */
     .sidebar .nav-link:hover:not(.active) {
-        background: #f8fafc !important;
-        color: #667eea !important;
-        transform: translateX(4px) !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+        color: #ffffff !important;
+        transform: none !important;
     }
     
     .sidebar .nav-link:hover:not(.active) i {
-        color: #667eea !important;
+        color: #ffffff !important;
     }
     
     /* ===== Section Headers ===== */
     .sidebar .nav-section-header,
     .sidebar .nav-section-title,
     .sidebar .sb-sidenav-menu-heading {
-        padding: 1rem 1.25rem 0.5rem 1.25rem !important;
-        font-size: 0.75rem !important;
-        font-weight: 700 !important;
+        padding: 1.25rem 1.25rem 0.5rem 1.25rem !important;
+        font-size: 0.7rem !important;
+        font-weight: 600 !important;
         text-transform: uppercase !important;
         letter-spacing: 0.1em !important;
-        color: #000000 !important;
+        color: rgba(255, 255, 255, 0.6) !important;
+        opacity: 1 !important;
         margin-top: 1rem !important;
         text-align: left !important;
         display: block !important;
@@ -157,7 +160,7 @@
     }
     
     .sidebar .nav-link.dropdown-toggle::after {
-        color: #667eea !important;
+        color: #ffffff !important;
         font-size: 0.875rem !important;
         margin-left: auto !important;
     }
@@ -193,19 +196,19 @@
     
     .sidebar .dropdown-item:hover,
     .sidebar .dropdown-item:focus {
-        background: #e5e7eb !important;
-        color: #667eea !important;
+        background: rgba(0, 93, 153, 0.1) !important;
+        color: #005d99 !important;
     }
     
     .sidebar .dropdown-item.active,
     .sidebar .dropdown-item[aria-current="page"] {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        background: #005d99 !important;
         color: #ffffff !important;
         font-weight: 600 !important;
     }
     
     .sidebar .dropdown-item i {
-        color: #667eea !important;
+        color: #374151 !important;
         margin-right: 0.75rem !important;
         font-size: 0.95rem !important;
         width: 20px !important;
@@ -229,37 +232,37 @@
     
     .sidebar .btn-primary,
     .sidebar .btn-info {
-        background: linear-gradient(135deg, #667eea 0%, #5a67d8 100%) !important;
+        background: linear-gradient(135deg, #005d99 0%, #0066b3 100%) !important;
         color: #ffffff !important;
         border: none !important;
-        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3) !important;
+        box-shadow: 0 2px 8px rgba(0, 93, 153, 0.3) !important;
     }
     
     .sidebar .btn-primary:hover,
     .sidebar .btn-info:hover {
-        background: linear-gradient(135deg, #5a67d8 0%, #4c51bf 100%) !important;
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;
+        background: linear-gradient(135deg, #004d80 0%, #005d99 100%) !important;
+        box-shadow: 0 4px 12px rgba(0, 93, 153, 0.4) !important;
     }
     
     /* ===== Sidebar Footer ===== */
     .sidebar-footer {
         padding: 1rem 1.25rem !important;
-        background: #f8fafc !important;
-        border-top: 1px solid #e5e7eb !important;
+        background: #1f2937 !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
         margin-top: auto !important;
     }
     
     .sidebar-footer .user-info {
-        color: #374151 !important;
+        color: #ffffff !important;
     }
     
     .sidebar-footer .user-info .small {
-        color: #6b7280 !important;
+        color: rgba(255, 255, 255, 0.7) !important;
         font-size: 0.75rem !important;
     }
     
     .sidebar-footer .user-info .fw-bold {
-        color: #1e293b !important;
+        color: #ffffff !important;
         font-weight: 700 !important;
         font-size: 0.9rem !important;
     }
@@ -308,11 +311,11 @@
         z-index: 1049 !important;
     }
     
-    /* ===== Fix for Purple Background Items ===== */
+    /* ===== Fix for Primary Color Background Items ===== */
     .sidebar .nav-link[style*="background"],
     .sidebar .nav-link[class*="bg-"],
     .sidebar .nav-link[class*="purple"] {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        background: #005d99 !important;
         color: #ffffff !important;
     }
     
@@ -335,13 +338,13 @@
     .sidebar .btn[class*="sync"],
     .sidebar button[class*="sync"],
     .sidebar .badge[class*="sync"] {
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+        background: linear-gradient(135deg, #005d99 0%, #0066b3 100%) !important;
         color: #ffffff !important;
         border: none !important;
         font-weight: 600 !important;
         padding: 0.5rem 1rem !important;
         border-radius: 8px !important;
-        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3) !important;
+        box-shadow: 0 2px 8px rgba(0, 93, 153, 0.3) !important;
     }
 }
 

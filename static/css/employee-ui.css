@@ -4,7 +4,7 @@
 
 /* Enhanced Page Headers for All Roles */
 .employee-page-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #005d99 0%, #0066b3 100%);
     color: white;
     border-radius: 20px;
     padding: 2rem;
@@ -110,8 +110,8 @@
 }
 
 .employee-form-control:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 93, 153, 0.1);
 }
 
 /* Enhanced Tables for All Roles */
@@ -124,7 +124,7 @@
 }
 
 .employee-table thead {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    background: linear-gradient(135deg, #005d99 0%, #0066b3 100%) !important;
     color: white !important;
 }
 
@@ -136,7 +136,7 @@
     letter-spacing: 0.5px !important;
     font-size: 0.9rem !important;
     color: white !important;
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    background: linear-gradient(135deg, #005d99 0%, #0066b3 100%) !important;
     text-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
 }
 
@@ -182,7 +182,7 @@
 }
 
 .enhanced-table thead {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    background: linear-gradient(135deg, #005d99 0%, #0066b3 100%) !important;
 }
 
 .enhanced-table thead th {
@@ -193,7 +193,7 @@
     font-size: 0.9rem !important;
     padding: 1rem !important;
     border: none !important;
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    background: linear-gradient(135deg, #005d99 0%, #0066b3 100%) !important;
     text-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
 }
 
@@ -209,7 +209,7 @@
 }
 
 .table.employee-table thead th {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    background: linear-gradient(135deg, #005d99 0%, #0066b3 100%) !important;
     color: white !important;
     border: none !important;
     font-weight: 700 !important;
@@ -416,7 +416,7 @@ table thead th *,
 div thead th,
 div thead th * {
     color: white !important;
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    background: linear-gradient(135deg, #005d99 0%, #0066b3 100%) !important;
     font-weight: 700 !important;
     text-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
     opacity: 1 !important;
@@ -476,7 +476,7 @@ thead th[style] *,
 
 /* View All Button Global Styling */
 .view-all-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    background: linear-gradient(135deg, #005d99 0%, #0066b3 100%) !important;
     color: white !important;
     border: none !important;
     padding: 0.5rem 1rem !important;
@@ -489,15 +489,15 @@ thead th[style] *,
     align-items: center !important;
     gap: 0.25rem !important;
     margin-left: auto !important;
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2) !important;
+    box-shadow: 0 2px 8px rgba(0, 93, 153, 0.2) !important;
 }
 
 .view-all-btn:hover {
     transform: translateY(-2px) !important;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3) !important;
+    box-shadow: 0 4px 15px rgba(0, 93, 153, 0.3) !important;
     color: white !important;
     text-decoration: none !important;
-    background: linear-gradient(135deg, #5a6fd8 0%, #6b4190 100%) !important;
+    background: linear-gradient(135deg, #004d80 0%, #005d99 100%) !important;
 }
 
 .view-all-btn:active {
@@ -508,7 +508,7 @@ thead th[style] *,
 .view-all-btn:focus {
     color: white !important;
     text-decoration: none !important;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3) !important;
+    box-shadow: 0 0 0 3px rgba(0, 93, 153, 0.3) !important;
 }
 
 .view-all-btn i {
@@ -702,15 +702,15 @@ thead th[style] *,
 }
 
 .employee-nav-link:hover {
-    color: #667eea;
-    background: rgba(102, 126, 234, 0.1);
+    color: var(--primary-color);
+    background: rgba(0, 93, 153, 0.1);
     transform: translateX(5px);
 }
 
 .employee-nav-link.active {
-    color: #667eea;
-    background: rgba(102, 126, 234, 0.15);
-    border-left: 4px solid #667eea;
+    color: var(--primary-color);
+    background: rgba(0, 93, 153, 0.15);
+    border-left: 4px solid var(--primary-color);
 }
 
 .employee-nav-link i {
@@ -761,7 +761,7 @@ thead th[style] *,
 }
 
 .employee-modal .modal-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #005d99 0%, #0066b3 100%);
     color: white;
     border-radius: 20px 20px 0 0;
     border-bottom: none;
@@ -795,15 +795,15 @@ thead th[style] *,
 }
 
 .employee-pagination .page-link:hover {
-    background: #667eea;
+    background: var(--primary-color);
     color: white;
-    border-color: #667eea;
+    border-color: var(--primary-color);
     transform: translateY(-2px);
 }
 
 .employee-pagination .page-item.active .page-link {
-    background: #667eea;
-    border-color: #667eea;
+    background: var(--primary-color);
+    border-color: var(--primary-color);
     color: white;
 }
 
@@ -835,8 +835,8 @@ thead th[style] *,
 }
 
 .dropdown-item:hover {
-    background: rgba(102, 126, 234, 0.1);
-    color: #667eea;
+    background: rgba(0, 93, 153, 0.1);
+    color: var(--primary-color);
     transform: translateX(5px);
 }
 
@@ -1021,8 +1021,8 @@ table thead th,
 #historicalAttendanceTable thead th,
 .dataTable thead th,
 .dataTables_wrapper thead th {
-    /* High contrast blue background */
-    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%) !important;
+    /* High contrast primary color background */
+    background: linear-gradient(135deg, #005d99 0%, #004d80 100%) !important;
     
     /* Bold white text with shadow for maximum readability */
     color: #ffffff !important;
@@ -1070,7 +1070,7 @@ table thead th[style*="color"],
 table thead th[style*="background"],
 .table thead th[style*="background"] {
     color: #ffffff !important;
-    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%) !important;
+    background: linear-gradient(135deg, #005d99 0%, #004d80 100%) !important;
     text-shadow: 0 1px 3px rgba(0,0,0,0.4) !important;
 }
 
@@ -1079,9 +1079,9 @@ table thead th:hover,
 .table thead th:hover,
 .employee-table thead th:hover,
 .enhanced-table thead th:hover {
-    background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%) !important;
+    background: linear-gradient(135deg, #004d80 0%, #005d99 100%) !important;
     transform: translateY(-1px) !important;
-    box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3) !important;
+    box-shadow: 0 4px 12px rgba(0, 93, 153, 0.3) !important;
     transition: all 0.2s ease !important;
 }
 
@@ -1106,9 +1106,9 @@ html body * .dataTables_wrapper thead th,
 html body * .table-header-enhanced th,
 html body * .quick-action-card table thead th,
 html body * .leave-balance-card table thead th {
-    background: #1e40af !important;
-    background-color: #1e40af !important;
-    background-image: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%) !important;
+    background: #005d99 !important;
+    background-color: #005d99 !important;
+    background-image: linear-gradient(135deg, #005d99 0%, #004d80 100%) !important;
     color: #ffffff !important;
     font-weight: 700 !important;
     text-shadow: 0 2px 4px rgba(0,0,0,0.6) !important;
@@ -1117,7 +1117,7 @@ html body * .leave-balance-card table thead th {
     letter-spacing: 0.5px !important;
     padding: 1rem 0.75rem !important;
     border: none !important;
-    border-bottom: 2px solid #1e3a8a !important;
+    border-bottom: 2px solid #004d80 !important;
     opacity: 1 !important;
     visibility: visible !important;
     display: table-cell !important;

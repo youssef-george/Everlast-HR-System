@@ -3,10 +3,10 @@
 
 /* ===== MOBILE COLOR FIXES - Enhanced Contrast & Visibility ===== */
 @media (max-width: 991.98px) {
-    /* ===== Purple Gradient Headers - Enhanced for Mobile ===== */
+    /* ===== Primary Color Gradient Headers - Enhanced for Mobile ===== */
     .dashboard-header,
     .employee-page-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        background: linear-gradient(135deg, #005d99 0%, #0066b3 100%) !important;
         color: #ffffff !important;
         text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
     }
@@ -64,17 +64,17 @@
     
     /* ===== Buttons - Enhanced Colors for Mobile ===== */
     .btn-primary {
-        background: linear-gradient(135deg, #667eea 0%, #5a67d8 100%) !important;
+        background: linear-gradient(135deg, #005d99 0%, #0066b3 100%) !important;
         color: #ffffff !important;
         border: none !important;
         font-weight: 600 !important;
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;
+        box-shadow: 0 4px 12px rgba(0, 93, 153, 0.4) !important;
     }
     
     .btn-primary:hover {
-        background: linear-gradient(135deg, #5a67d8 0%, #4c51bf 100%) !important;
+        background: linear-gradient(135deg, #004d80 0%, #005d99 100%) !important;
         color: #ffffff !important;
-        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5) !important;
+        box-shadow: 0 6px 16px rgba(0, 93, 153, 0.5) !important;
     }
     
     .btn-success {
@@ -186,9 +186,9 @@
     
     .badge-light-primary,
     .badge.bg-primary {
-        background-color: #667eea !important;
+        background-color: #005d99 !important;
         color: #ffffff !important;
-        box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3) !important;
+        box-shadow: 0 2px 4px rgba(0, 93, 153, 0.3) !important;
     }
     
     .badge.bg-secondary {
@@ -224,7 +224,7 @@
     }
     
     .text-primary {
-        color: #667eea !important;
+        color: #005d99 !important;
     }
     
     .text-success {
@@ -287,8 +287,8 @@
     
     .employee-quick-action-item:hover {
         background: #ffffff !important;
-        border-color: #667eea !important;
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15) !important;
+        border-color: #005d99 !important;
+        box-shadow: 0 4px 12px rgba(0, 93, 153, 0.15) !important;
     }
     
     .employee-quick-action-item .fw-bold {
@@ -296,7 +296,7 @@
     }
     
     .employee-quick-action-item:hover .fw-bold {
-        color: #667eea !important;
+        color: #005d99 !important;
     }
     
     /* ===== Status Indicators - Enhanced Colors ===== */
@@ -400,7 +400,7 @@
     }
     
     .progress-bar.bg-primary {
-        background-color: #667eea !important;
+        background-color: #005d99 !important;
     }
     
     /* ===== Modals - Enhanced Colors ===== */
@@ -421,22 +421,22 @@
     
     /* ===== Links - Enhanced Colors ===== */
     a {
-        color: #667eea !important;
+        color: #005d99 !important;
     }
     
     a:hover {
-        color: #5a67d8 !important;
+        color: #004d80 !important;
     }
     
     /* ===== Form Controls - Enhanced Colors ===== */
     .form-control:focus {
-        border-color: #667eea !important;
-        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25) !important;
+        border-color: #005d99 !important;
+        box-shadow: 0 0 0 0.2rem rgba(0, 93, 153, 0.25) !important;
     }
     
     .form-select:focus {
-        border-color: #667eea !important;
-        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25) !important;
+        border-color: #005d99 !important;
+        box-shadow: 0 0 0 0.2rem rgba(0, 93, 153, 0.25) !important;
     }
 }
 

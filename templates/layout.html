@@ -249,27 +249,29 @@
         }, true);
     })();
     
-    // Hide page loader immediately if possible
+    // Hide page loader with smooth fade animation
     (function() {
         'use strict';
         
-        // Hide page loader as soon as possible
-        function hideLoaderNow() {
+        // Hide page loader with fade animation
+        function hideLoaderWithFade() {
             const loader = document.getElementById('page-loader');
-            if (loader) {
+            if (loader && !loader.classList.contains('fade-out')) {
+                loader.classList.add('fade-out');
+                setTimeout(function() {
                 loader.style.display = 'none';
-                loader.style.visibility = 'hidden';
+                }, 300);
             }
         }
         
-        // Try to hide immediately
+        // Try to hide when page is fully loaded
         if (document.readyState === 'complete') {
-            hideLoaderNow();
+            hideLoaderWithFade();
         } else {
-            // Hide when DOM is ready
-            document.addEventListener('DOMContentLoaded', hideLoaderNow);
-            // Fallback after 2 seconds
-            setTimeout(hideLoaderNow, 2000);
+            // Hide when window loads (images, etc.)
+            window.addEventListener('load', hideLoaderWithFade);
+            // Fallback after 3 seconds
+            setTimeout(hideLoaderWithFade, 3000);
         }
     })();
     
@@ -383,11 +385,13 @@
 <body data-user-role="{{ current_user.role }}">
     <!-- Page Loader -->
     <div id="page-loader" class="page-loader">
-        <div class="d-flex flex-column align-items-center">
-            <div class="page-loader-logo mb-3">
-                <span class="fw-bold fs-2 text-primary">Everlast ERP</span>
-            </div>
+        <div class="d-flex flex-column align-items-center justify-content-center">
+            <div class="page-loader-container">
             <div class="page-loader-spinner"></div>
+                <div class="page-loader-logo">
+                    <img src="{{ url_for('static', filename='images/login-logo.png') }}" alt="Everlast ERP Logo">
+                </div>
+            </div>
         </div>
     </div>
 
@@ -397,7 +401,9 @@
         <aside id="sidebar" class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
-                    <i class="fas fa-calendar-check logo-icon"></i>
+                    <div class="logo-icon">
+                        <img src="{{ url_for('static', filename='images/login-logo.png') }}" alt="Everlast ERP Logo" class="logo-img">
+                    </div>
                     <span class="logo-text">Everlast ERP</span>
                 </div>
                 <button id="sidebar-toggle" class="sidebar-toggle">
@@ -591,7 +597,7 @@
             </a>
         </li>
         {% endif %}
-        {% if current_user.role in ['admin', 'product_owner', 'manager'] %}
+        {% if current_user.role in ['admin', 'product_owner'] %}
         <li class="nav-item">
             <a href="{{ url_for('final_report.final_report') }}" class="nav-link {{ 'active' if request.path.startswith('/final-report') }}">
                 <i class="fas fa-chart-bar nav-icon"></i>
@@ -709,8 +715,8 @@
             <!-- Sidebar Footer -->
             <div class="sidebar-footer d-flex align-items-center justify-content-between">
                 <div class="user-info">
-                    <div class="small text-muted">Logged in as:</div>
-                    <div class="fw-bold">{% if current_user.is_authenticated %}{{ current_user.get_full_name() }}{% else %}Guest{% endif %}</div>
+                    <div class="small sidebar-footer-label">Logged in as:</div>
+                    <div class="fw-bold sidebar-footer-name">{% if current_user.is_authenticated %}{{ current_user.get_full_name() }}{% else %}Guest{% endif %}</div>
                 </div>
                 <div class="sidebar-logout d-flex align-items-center ms-3">
                     <a href="{{ url_for('auth.logout') }}" class="logout-icon-btn" title="Logout" aria-label="Logout">
@@ -1435,13 +1441,15 @@
         // Debug: Log when DOM is ready
         console.log('DOM Content Loaded - Page should be visible now');
         
-        // Force hide loader after DOM is ready
+        // Force hide loader after DOM is ready with fade
         setTimeout(function() {
             const loader = document.getElementById('page-loader');
-            if (loader) {
-                console.log('Force hiding page loader');
+            if (loader && !loader.classList.contains('fade-out')) {
+                console.log('Force hiding page loader with fade');
+                loader.classList.add('fade-out');
+                setTimeout(function() {
                 loader.style.display = 'none';
-                loader.style.visibility = 'hidden';
+                }, 300);
             }
         }, 1000);
         

@@ -78,8 +78,25 @@ document.addEventListener('DOMContentLoaded', function() {
         USER_SESSION_KEY: 'everlast_user_session',
         LAST_ACTIVITY_KEY: 'everlast_last_activity',
         
-        // Session timeout (30 minutes - matches Flask session timeout)
-        SESSION_TIMEOUT: 30 * 60 * 1000,
+        // Session timeout - dynamic based on remember me status
+        // 2 hours (7200000 ms) for remember me users, 30 minutes (1800000 ms) for regular sessions
+        get SESSION_TIMEOUT() {
+            // Check if remember me cookie exists (Flask-Login's remember_token)
+            const hasRememberMe = this.hasRememberMeCookie();
+            return hasRememberMe ? 2 * 60 * 60 * 1000 : 30 * 60 * 1000;
+        },
+        
+        // Check if remember me cookie exists
+        hasRememberMeCookie() {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name] = cookie.trim().split('=');
+                if (name === 'remember_token') {
+                    return true;
+                }
+            }
+            return false;
+        },
         
         // Current session ID
         currentSessionId: null,
@@ -123,8 +140,9 @@ document.addEventListener('DOMContentLoaded', function() {
         checkSessionValidity() {
             const lastActivity = localStorage.getItem(this.LAST_ACTIVITY_KEY);
             const now = Date.now();
+            const timeout = this.SESSION_TIMEOUT; // Get current timeout (may change based on remember me)
             
-            if (lastActivity && (now - parseInt(lastActivity)) > this.SESSION_TIMEOUT) {
+            if (lastActivity && (now - parseInt(lastActivity)) > timeout) {
                 // Session has timed out, reset sidebar state
                 this.resetSidebarState();
                 return false;
