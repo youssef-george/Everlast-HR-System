@@ -115,11 +115,11 @@
         width: 100% !important;
         max-width: 100% !important;
         margin: 0 auto !important;
-        padding: 1.25rem 1rem !important;
-        min-height: 140px !important;
+        padding: 0.75rem 0.5rem !important;
+        min-height: 100px !important;
         margin-bottom: 0 !important;
         border-radius: 12px !important;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
         display: flex !important;
         flex-direction: column !important;
         align-items: center !important;
@@ -157,14 +157,14 @@
         text-align: center !important;
     }
     
-    /* Stat Icon - Ensure visibility and proper display */
+    /* Stat Icon - Ensure visibility and proper display - MINIMUM SIZE */
     .stat-icon {
-        width: 55px !important;
-        height: 55px !important;
-        min-width: 55px !important;
-        min-height: 55px !important;
-        font-size: 1.6rem !important;
-        margin: 0 auto 0.75rem auto !important;
+        width: 35px !important;
+        height: 35px !important;
+        min-width: 35px !important;
+        min-height: 35px !important;
+        font-size: 1rem !important;
+        margin: 0 auto 0.4rem auto !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
@@ -185,7 +185,7 @@
         display: inline-block !important;
         visibility: visible !important;
         opacity: 1 !important;
-        font-size: 1.6rem !important;
+        font-size: 1rem !important;
         width: auto !important;
         height: auto !important;
         line-height: 1 !important;
@@ -202,7 +202,7 @@
         display: inline-block !important;
         visibility: visible !important;
         opacity: 1 !important;
-        font-size: 1.6rem !important;
+        font-size: 1rem !important;
     }
     
     .stat-content {
@@ -218,22 +218,22 @@
     }
     
     .stat-value {
-        font-size: 1.75rem !important;
+        font-size: 1.1rem !important;
         font-weight: 700 !important;
-        margin: 0 auto 0.5rem auto !important;
+        margin: 0 auto 0.25rem auto !important;
         text-align: center !important;
         width: 100% !important;
         display: block !important;
-        line-height: 1.2 !important;
+        line-height: 1.1 !important;
         visibility: visible !important;
         opacity: 1 !important;
         color: #2d3748 !important;
     }
     
     .stat-label {
-        font-size: 0.85rem !important;
+        font-size: 0.6rem !important;
         font-weight: 500 !important;
-        line-height: 1.3 !important;
+        line-height: 1.2 !important;
         text-align: center !important;
         width: 100% !important;
         margin: 0 auto !important;
@@ -245,6 +245,7 @@
         overflow: visible !important;
         white-space: normal !important;
         word-wrap: break-word !important;
+        padding: 0 2px !important;
     }
     
     /* Ensure all text inside stat cards is centered */
@@ -1022,37 +1023,50 @@
     }
 }
 
+/* ===== GLOBAL ICON VISIBILITY FIX FOR MOBILE ===== */
+@media (max-width: 991.98px) {
+    /* Ensure all Font Awesome icons are visible on mobile */
+    .quick-action-item i.fas::before,
+    .quick-action-item i.far::before,
+    .quick-action-item i.fal::before,
+    .employee-quick-action-item i.fas::before,
+    .employee-quick-action-item i.far::before,
+    .employee-quick-action-item i.fal::before {
+        display: inline-block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        font-family: "Font Awesome 6 Free" !important;
+        font-weight: 900 !important;
+    }
+}
+
 /* ===== QUICK ACTIONS - 2 Columns Layout (All Dashboards) ===== */
 @media (max-width: 991.98px) {
-    /* Quick Actions Container - 2 Columns Layout */
+    /* Quick Actions Container - 2 Columns Grid Layout */
     .quick-action-card-body .row.g-4,
     .quick-action-card-body .row {
-        display: flex !important;
-        flex-direction: row !important;
-        flex-wrap: wrap !important;
-        justify-content: center !important;
-        align-items: stretch !important;
-        gap: 0.75rem !important;
-        margin-left: -0.375rem !important;
-        margin-right: -0.375rem !important;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
     
-    /* Quick Action Columns - 2 Columns (50% each, 1 card per column) */
+    /* Quick Action Columns - Fill grid cell */
     .quick-action-card-body .row.g-4 > .col-lg-3,
     .quick-action-card-body .row.g-4 > .col-md-6,
+    .quick-action-card-body .row.g-4 > .col-6,
     .quick-action-card-body .row.g-4 > [class*="col-lg-3"],
     .quick-action-card-body .row.g-4 > [class*="col-md-6"],
     .quick-action-card-body .row > .col-lg-3,
     .quick-action-card-body .row > .col-md-6,
+    .quick-action-card-body .row > .col-6,
     .quick-action-card-body .row > [class*="col-lg-3"],
     .quick-action-card-body .row > [class*="col-md-6"] {
-        flex: 0 0 calc(50% - 0.75rem) !important;
-        max-width: calc(50% - 0.75rem) !important;
-        width: calc(50% - 0.75rem) !important;
+        width: 100% !important;
+        max-width: 100% !important;
         margin: 0 !important;
-        padding-left: 0.375rem !important;
-        padding-right: 0.375rem !important;
-        margin-bottom: 0.75rem !important;
+        padding: 0 !important;
     }
     
     /* Quick Action Item - Enhanced UI with Better Colors */
@@ -1063,16 +1077,26 @@
         align-items: center !important;
         justify-content: center !important;
         text-align: center !important;
-        padding: 1.5rem 1rem !important;
-        min-height: 150px !important;
+        padding: 1rem 0.5rem !important;
+        min-height: 120px !important;
         width: 100% !important;
-        border-radius: 16px !important;
+        border-radius: 12px !important;
         background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
         border: 2px solid #e2e8f0 !important;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
         transition: all 0.3s ease !important;
         text-decoration: none !important;
         color: #2d3748 !important;
+    }
+    
+    /* Prevent text breaking in Quick Action items */
+    .quick-action-item *,
+    .employee-quick-action-item * {
+        word-break: normal !important;
+        word-wrap: normal !important;
+        overflow-wrap: normal !important;
+        white-space: nowrap !important;
+        hyphens: none !important;
     }
     
     /* Quick Action Item Hover State */
@@ -1091,15 +1115,41 @@
         box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2) !important;
     }
     
-    /* Quick Action Icons - Enhanced Colors */
+    /* Quick Action Icons - Enhanced Colors - MOBILE FIX */
     .quick-action-item i,
     .employee-quick-action-item i {
         text-align: center !important;
-        width: 100% !important;
-        margin-bottom: 0.75rem !important;
-        font-size: 2.5rem !important;
-        display: block !important;
+        width: auto !important;
+        margin-bottom: 0.5rem !important;
+        font-size: 1.75rem !important;
+        min-width: 30px !important;
+        min-height: 30px !important;
+        display: inline-block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
         transition: all 0.3s ease !important;
+        line-height: 1.2 !important;
+        font-family: "Font Awesome 6 Free" !important;
+        font-weight: 900 !important;
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
+    }
+    
+    /* Ensure Font Awesome icons are visible */
+    .quick-action-item i.fas,
+    .quick-action-item i.far,
+    .quick-action-item i.fal,
+    .quick-action-item i[class*="fa-"],
+    .employee-quick-action-item i.fas,
+    .employee-quick-action-item i.far,
+    .employee-quick-action-item i.fal,
+    .employee-quick-action-item i[class*="fa-"] {
+        display: inline-block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        font-family: "Font Awesome 6 Free" !important;
+        font-weight: 900 !important;
+        font-size: 1.75rem !important;
     }
     
     /* Icon color overrides for better visibility */
@@ -1108,7 +1158,7 @@
         transform: scale(1.1) !important;
     }
     
-    /* Quick Action Text */
+    /* Quick Action Text - MOBILE FIX */
     .quick-action-item span,
     .quick-action-item .fw-bold,
     .employee-quick-action-item span,
@@ -1116,11 +1166,15 @@
         text-align: center !important;
         width: 100% !important;
         display: block !important;
-        font-size: 0.95rem !important;
+        font-size: 0.75rem !important;
         font-weight: 600 !important;
         color: #2d3748 !important;
-        margin-bottom: 0.5rem !important;
+        margin-bottom: 0.25rem !important;
         line-height: 1.3 !important;
+        white-space: normal !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+        hyphens: auto !important;
     }
     
     .quick-action-item:hover span,
@@ -1130,16 +1184,10 @@
         color: #005d99 !important;
     }
     
-    /* Quick Action Small Text */
+    /* Quick Action Small Text - MOBILE FIX - Hidden for cleaner look */
     .quick-action-item small,
     .employee-quick-action-item small {
-        text-align: center !important;
-        width: 100% !important;
-        display: block !important;
-        font-size: 0.8rem !important;
-        color: #64748b !important;
-        line-height: 1.4 !important;
-        margin-top: 0.25rem !important;
+        display: none !important;
     }
     
     /* Specific icon colors for different action types - Enhanced */
@@ -1177,6 +1225,44 @@
     .employee-quick-action-item i.fa-id-card {
         color: #005d99 !important;
     }
+    
+    /* Additional icon classes for all dashboards */
+    .quick-action-item i.fa-balance-scale,
+    .employee-quick-action-item i.fa-balance-scale {
+        color: #f59e0b !important;
+    }
+    
+    .quick-action-item i.fa-clipboard-check,
+    .quick-action-item i.fa-clipboard-list,
+    .employee-quick-action-item i.fa-clipboard-check,
+    .employee-quick-action-item i.fa-clipboard-list {
+        color: #005d99 !important;
+    }
+    
+    .quick-action-item i.fa-fingerprint,
+    .employee-quick-action-item i.fa-fingerprint {
+        color: #ef4444 !important;
+    }
+    
+    .quick-action-item i.fa-user-plus,
+    .employee-quick-action-item i.fa-user-plus {
+        color: #10b981 !important;
+    }
+    
+    .quick-action-item i.fa-calendar-plus,
+    .employee-quick-action-item i.fa-calendar-plus {
+        color: #10b981 !important;
+    }
+    
+    .quick-action-item i.fa-user-cog,
+    .employee-quick-action-item i.fa-user-cog {
+        color: #f59e0b !important;
+    }
+    
+    .quick-action-item i.fa-bolt,
+    .employee-quick-action-item i.fa-bolt {
+        color: #005d99 !important;
+    }
 }
 
 /* ===== QUICK ACTIONS - Single Column on Very Small Screens (< 360px) ===== */
@@ -1184,12 +1270,51 @@
     /* Quick Action Columns - Single column on very small screens */
     .quick-action-card-body .row.g-4 > .col-lg-3,
     .quick-action-card-body .row.g-4 > .col-md-6,
+    .quick-action-card-body .row.g-4 > .col-6,
     .quick-action-card-body .row > .col-lg-3,
-    .quick-action-card-body .row > .col-md-6 {
+    .quick-action-card-body .row > .col-md-6,
+    .quick-action-card-body .row > .col-6 {
         flex: 0 0 100% !important;
         max-width: 100% !important;
         width: 100% !important;
-        margin-bottom: 0.75rem !important;
+        margin-bottom: 0.5rem !important;
+        padding: 0.25rem !important;
+    }
+    
+    .quick-action-item,
+    .employee-quick-action-item {
+        min-height: 80px !important;
+        padding: 0.75rem 0.5rem !important;
+        flex-direction: row !important;
+        justify-content: flex-start !important;
+        gap: 0.75rem !important;
+    }
+    
+    /* Ensure icons are visible on very small screens */
+    .quick-action-item i,
+    .employee-quick-action-item i {
+        display: inline-block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        font-size: 1.5rem !important;
+        margin-bottom: 0 !important;
+        width: auto !important;
+        min-width: 30px !important;
+        text-align: center !important;
+        line-height: 1 !important;
+        font-family: "Font Awesome 6 Free" !important;
+        font-weight: 900 !important;
+    }
+    
+    .quick-action-item span,
+    .employee-quick-action-item span {
+        font-size: 0.85rem !important;
+        white-space: normal !important;
+    }
+    
+    .quick-action-item small,
+    .employee-quick-action-item small {
+        display: none !important;
     }
 }
 
@@ -1506,24 +1631,24 @@
         margin: 0.5rem !important;
     }
     
-    /* Ensure stat card icons are visible and properly styled */
+    /* Ensure stat card icons are visible and properly styled - MINIMUM SIZE */
     .stat-card .stat-icon {
         display: flex !important;
         visibility: visible !important;
         opacity: 1 !important;
-        width: 55px !important;
-        height: 55px !important;
-        min-width: 55px !important;
-        min-height: 55px !important;
-        font-size: 1.6rem !important;
-        margin: 0 auto 0.75rem auto !important;
+        width: 35px !important;
+        height: 35px !important;
+        min-width: 35px !important;
+        min-height: 35px !important;
+        font-size: 1rem !important;
+        margin: 0 auto 0.4rem auto !important;
     }
     
     .stat-card .stat-icon i {
         display: inline-block !important;
         visibility: visible !important;
         opacity: 1 !important;
-        font-size: 1.6rem !important;
+        font-size: 1rem !important;
         line-height: 1 !important;
     }
     
@@ -1559,15 +1684,16 @@
     .col-sm-6 .overview-stat-card {
         width: 100% !important;
         max-width: 100% !important;
-        margin: 0 auto 0.75rem auto !important;
-        padding: 1rem 0.75rem !important;
+        margin: 0 auto 0.5rem auto !important;
+        padding: 0.75rem 0.5rem !important;
         border-radius: 12px !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
         display: flex !important;
         flex-direction: column !important;
         align-items: center !important;
         justify-content: center !important;
         text-align: center !important;
+        min-height: 90px !important;
     }
     
     /* Summary card items - Same width and centered */
@@ -1731,5 +1857,165 @@
     /* Consistent gap between sub cards */
     .row.g-4 > * {
         margin-bottom: 0.75rem !important;
+    }
+}
+
+/* ===== FINAL OVERRIDE: QUICK ACTIONS MOBILE FIX ===== */
+/* This must be at the end to override all other styles */
+@media (max-width: 991.98px) {
+    /* Quick Actions Container - Force 2 column grid */
+    .quick-action-card-body .row,
+    .quick-action-card-body .row.g-4 {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    /* Force all columns to fill grid cell */
+    .quick-action-card-body .row > div[class*="col"],
+    .quick-action-card-body .row.g-4 > div[class*="col"],
+    .quick-action-card-body .row > .col-lg-3,
+    .quick-action-card-body .row > .col-md-6,
+    .quick-action-card-body .row > .col-6,
+    .quick-action-card-body .row.g-4 > .col-lg-3,
+    .quick-action-card-body .row.g-4 > .col-md-6,
+    .quick-action-card-body .row.g-4 > .col-6 {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    /* Quick Action Card Styling */
+    .quick-action-item,
+    .employee-quick-action-item,
+    a.quick-action-item,
+    a.employee-quick-action-item {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        min-height: 110px !important;
+        height: auto !important;
+        padding: 0.75rem 0.5rem !important;
+        border-radius: 12px !important;
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+        width: 100% !important;
+    }
+    
+    /* ICON - Force visible with proper size */
+    .quick-action-item i,
+    .quick-action-item i.fas,
+    .quick-action-item i.far,
+    .quick-action-item i.fal,
+    .quick-action-item i[class*="fa-"],
+    .employee-quick-action-item i,
+    .employee-quick-action-item i.fas,
+    .employee-quick-action-item i.far,
+    .employee-quick-action-item i.fal,
+    .employee-quick-action-item i[class*="fa-"],
+    a.quick-action-item i,
+    a.employee-quick-action-item i {
+        display: inline-block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        font-size: 1.5rem !important;
+        min-width: 28px !important;
+        min-height: 28px !important;
+        width: auto !important;
+        height: auto !important;
+        margin-bottom: 0.5rem !important;
+        line-height: 1.2 !important;
+        font-family: "Font Awesome 6 Free" !important;
+        font-weight: 900 !important;
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
+        text-rendering: auto !important;
+    }
+    
+    /* TEXT - Title - Full text visible */
+    .quick-action-item span,
+    .quick-action-item .fw-bold,
+    .employee-quick-action-item span,
+    .employee-quick-action-item .fw-bold,
+    .employee-quick-action-item .text-start > div:first-child,
+    a.quick-action-item span,
+    a.employee-quick-action-item span {
+        display: block !important;
+        font-size: 0.75rem !important;
+        font-weight: 600 !important;
+        color: #2d3748 !important;
+        text-align: center !important;
+        white-space: normal !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+        hyphens: auto !important;
+        max-width: 100% !important;
+        margin-bottom: 0.25rem !important;
+        line-height: 1.3 !important;
+    }
+    
+    /* SMALL TEXT - Hide on mobile for cleaner look */
+    .quick-action-item small,
+    .employee-quick-action-item small,
+    .employee-quick-action-item .text-start > small,
+    a.quick-action-item small,
+    a.employee-quick-action-item small {
+        display: none !important;
+    }
+}
+
+/* Very small screens - still 2 columns but smaller */
+@media (max-width: 359.98px) {
+    .quick-action-card-body .row,
+    .quick-action-card-body .row.g-4 {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+    }
+    
+    .quick-action-item,
+    .employee-quick-action-item {
+        min-height: 90px !important;
+        padding: 0.5rem 0.4rem !important;
+    }
+    
+    .quick-action-item i,
+    .employee-quick-action-item i {
+        font-size: 1.25rem !important;
+        margin-bottom: 0.4rem !important;
+    }
+    
+    .quick-action-item span,
+    .employee-quick-action-item span {
+        font-size: 0.65rem !important;
+    }
+    
+    /* Stat cards - even smaller on very small screens */
+    .stat-card {
+        padding: 0.6rem 0.4rem !important;
+        min-height: 80px !important;
+    }
+    
+    .stat-icon {
+        width: 30px !important;
+        height: 30px !important;
+        font-size: 0.9rem !important;
+        margin-bottom: 0.3rem !important;
+    }
+    
+    .stat-value {
+        font-size: 1rem !important;
+        margin-bottom: 0.2rem !important;
+    }
+    
+    .stat-label {
+        font-size: 0.55rem !important;
+        line-height: 1.15 !important;
     }
 }
